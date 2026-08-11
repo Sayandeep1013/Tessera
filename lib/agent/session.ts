@@ -37,6 +37,22 @@ export type SessionOutcome = {
   stoppedBy: 'finish' | 'cap' | 'abort' | 'error' | 'no-calls'
 }
 
+/**
+ * The session currently open, if any.
+ *
+ * Spec §4: opening a second session cancels and finalises the first. Without
+ * this, two sessions share one document and both diff against their own
+ * `before`, so the second's collapsed command would contain the first's changes
+ * as well — and undoing once would silently revert work the user believed was
+ * already committed.
+ */
+let openSession: AgentSession | null = null
+
+/** The session that is currently intercepting commits, if any. */
+export function currentSession(): AgentSession | null {
+  return openSession
+}
+
 export class AgentSession {
   readonly id: string
   readonly instruction: string
@@ -53,6 +69,14 @@ export class AgentSession {
     // Snapshot BEFORE anything happens. cloneDoc copies every typed array, so the
     // session's baseline cannot be mutated from under it.
     this.before = cloneDoc(doc)
+
+    // Opening a second session finalises the first against the document as it
+    // stands, so its work becomes its own undo entry rather than being folded
+    // into this one's.
+    if (openSession && !openSession.isClosed) {
+      openSession.finalise(doc, 'Superseded by a new request.', 'abort')
+    }
+    openSession = this
   }
 
   get isClosed(): boolean {
@@ -127,6 +151,7 @@ export class AgentSession {
    */
   finalise(current: Doc, summary: string, stoppedBy: SessionOutcome['stoppedBy'], frame = 0): SessionOutcome {
     this.closed = true
+    if (openSession === this) openSession = null
 
     // A resize or new_document changes dimensions, which diff() cannot compare.
     // Fall back to a whole-document replacement so undo still works.

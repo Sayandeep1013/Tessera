@@ -96,95 +96,44 @@ tool rail rotating to a bottom row on mobile.
 
 ## 3. Tokens
 
-Declared once in `app/globals.css`. **No hard-coded hex anywhere else in the codebase** — this is
-enforced by an ESLint rule (`no-restricted-syntax` on hex literals in `.tsx`).
+> **Superseded, 11 Aug 2026 (rule 10).** Everything this section used to specify is dead, and
+> leaving it standing actively caused a bug. It declared a token vocabulary — `--bg`,
+> `--surface-2`, `--fg-muted`, `--fg-faint`, `--fg-invert` — that `app/globals.css` never
+> implemented. Components were written against **this document** while the stylesheet used a
+> different set, and an undefined CSS custom property does not warn, does not throw and does not
+> fail a typecheck: it silently resolves to nothing. Eight such references had accumulated in the AI
+> proposal bar, which is a large part of why that panel looked unfinished. Recorded in
+> `docs/research/ui-audit.md` and fixed in commit `aa8ed3c`.
+>
+> It also claimed enforcement by "an ESLint rule (`no-restricted-syntax` on hex literals in
+> `.tsx`)". **There is no ESLint config in this repository and never was.** A spec that names a
+> guard which does not exist is worse than one that names none, because it stops anyone looking.
 
-```css
-:root {
-  /* ── surfaces ─────────────────────────────── */
-  --bg:          #fafaf9;   /* page behind everything */
-  --surface:     #ffffff;   /* floating cards: rail, composer, popovers */
-  --surface-2:   #f4f4f3;   /* inset wells, inactive segment track */
-  --hover:       #00000009;
-  --line:        #00000014;  /* hairline borders */
+**The token set now lives in exactly one place: `app/globals.css`.** That file is the source of
+truth; this document does not restate it, because restating it is what broke it.
 
-  /* ── text ─────────────────────────────────── */
-  --fg:          #18181b;
-  --fg-muted:    #71717a;
-  --fg-faint:    #a1a1aa;
-  --fg-invert:   #fafaf9;
+For the reasoning behind the current values — the surface ladder, the single accent taken from the
+product's own default palette, the radius lattice, the type scale, the motion tokens — see
+[13 — Visual identity](./13-visual-identity.md), direction 2.B.
 
-  /* ── accent ───────────────────────────────── */
-  --accent:      #4f46e5;   /* focus ring, selection, primary action */
-  --accent-fg:   #ffffff;
-  --accent-soft: #4f46e51f;
+### Enforcement, as actually built
 
-  /* ── diff (AI proposal) ───────────────────── */
-  --diff-add:    #16a34a;
-  --diff-change: #d97706;
-  --diff-remove: #dc2626;
+`lib/__tests__/tokens.test.ts`, which runs in the normal suite:
 
-  /* ── canvas ───────────────────────────────── */
-  --canvas-bg:   #ffffff;   /* the artwork's own backdrop */
-  --grid:        #00000012;
-  --grid-major:  #00000024;
-  --checker-a:   #ffffff;
-  --checker-b:   #f0f0ef;
-  --canvas-edge: #d4d4d3;
-}
+| Check | Catches |
+|---|---|
+| Every `var(--token)` reference resolves to a declared token | The failure above — a component naming a token the stylesheet does not define |
+| Both themes declare the same token set | A token defined only in dark, which renders as nothing in light |
+| No hex literal in any `.tsx` | Colour bypassing the token layer |
 
-:root:not([data-theme="light"]) {
-  @media (prefers-color-scheme: dark) {
-    --bg:          #0e0e11;
-    --surface:     #18181c;
-    --surface-2:   #232329;
-    --hover:       #ffffff12;
-    --line:        #ffffff1f;
+The hex rule has real exceptions — a `themeColor` meta tag is read by the OS before any stylesheet
+loads, and an artwork colour is document data rather than a design token. Those carry an explicit
+`token-exempt:` comment on the line, so an exception has to be written down and argued in review
+instead of the rule being watered down until it catches nothing.
 
-    --fg:          #f4f4f5;
-    --fg-muted:    #a1a1aa;
-    --fg-faint:    #71717a;
-    --fg-invert:   #18181b;
-
-    --accent:      #818cf8;
-    --accent-fg:   #10101a;
-    --accent-soft: #818cf82e;
-
-    --diff-add:    #4ade80;
-    --diff-change: #fbbf24;
-    --diff-remove: #f87171;
-
-    --canvas-bg:   #1a1a1f;
-    --grid:        #ffffff10;
-    --grid-major:  #ffffff20;
-    --checker-a:   #1a1a1f;
-    --checker-b:   #212127;
-    --canvas-edge: #3a3a42;
-  }
-}
-
-/* Explicit toggle must beat the media query in both directions. */
-:root[data-theme="dark"] { /* the same declarations again */ }
-```
-
-The dark declarations genuinely have to appear twice — once under the media query for the
-system-preference case, once under the attribute selector so an explicit toggle wins over the system.
-Plain CSS has no way to share them.
-
-**Implementation:** the dark values are written once in `app/tokens.dark.css` and included into both
-selectors by PostCSS at build time, so a token can never be updated in one place and missed in the
-other. A test parses the built stylesheet and asserts the two blocks declare an identical set of
-custom properties with identical values.
-
-**Theme rules**
-
-1. Every colour has its base value on bare `:root`. A token whose only definition lives inside a
-   media query is a bug — it will be undefined for one of the three theme states.
-2. Three states exist: explicit `light`, explicit `dark`, and unset (follows `prefers-color-scheme`).
-   Test all three.
-3. `body` gets `background: var(--bg)` explicitly. Never transparent.
-
----
+Custom properties set per-element in JSX (`['--d' as string]: n`, used by the loaders to give each
+cell its own animation delay) are read from the actual assignments rather than allowlisted, so a
+typo in one still fails.
 
 ## 4. Type
 

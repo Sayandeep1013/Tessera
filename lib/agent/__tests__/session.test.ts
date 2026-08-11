@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AgentSession } from '../session'
+import { AgentSession, currentSession } from '../session'
 import { MAX_SESSION_COLORS, MAX_SESSION_PIXELS } from '../limits'
 import { loadStarter } from '../../artwork-core/create'
 import { applyCommand, invertCommand } from '../../artwork-core/commands'
@@ -189,5 +189,42 @@ describe('dimension changes fall back to replace_doc', () => {
     const back = applyCommand(applyCommand(start, out.command!), invertCommand(out.command!))
     expect(back.w).toBe(16)
     expect(back.h).toBe(16)
+  })
+})
+
+describe('only one session is open at a time', () => {
+  /**
+   * Spec §4. Two sessions sharing one document would each diff against their own
+   * `before`, so the second's collapsed command would contain the first's
+   * changes too — and one undo would silently revert work the user believed was
+   * already committed.
+   */
+  it('opening a second session finalises the first', () => {
+    const doc = loadStarter('face')
+    const first = new AgentSession('a', 'one', doc)
+    expect(first.isClosed).toBe(false)
+    expect(currentSession()).toBe(first)
+
+    const second = new AgentSession('b', 'two', doc)
+    expect(first.isClosed).toBe(true)
+    expect(currentSession()).toBe(second)
+  })
+
+  it('clears the open session when it finalises', () => {
+    const doc = loadStarter('face')
+    const s = new AgentSession('a', 'one', doc)
+    s.finalise(doc, 'done', 'finish')
+    expect(currentSession()).toBeNull()
+  })
+
+  it('a finalised session is not re-finalised by the next one opening', () => {
+    const doc = loadStarter('face')
+    const first = new AgentSession('a', 'one', doc)
+    const out = first.finalise(doc, 'done', 'finish')
+    expect(out.stoppedBy).toBe('finish')
+
+    new AgentSession('b', 'two', doc)
+    // still 'finish' — opening another session must not rewrite a closed one
+    expect(out.stoppedBy).toBe('finish')
   })
 })
