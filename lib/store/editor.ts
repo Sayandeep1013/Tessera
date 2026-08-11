@@ -15,7 +15,15 @@ import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import { saveDraft } from '../persist/idb'
 
-export type Tool = 'brush' | 'eraser' | 'fill' | 'eyedropper' | 'rect'
+export type Tool =
+  | 'select'
+  | 'brush'
+  | 'eraser'
+  | 'fill'
+  | 'rect'
+  | 'marquee'
+  | 'eyedropper'
+  | 'gradient'
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 const HISTORY_CAP = 100

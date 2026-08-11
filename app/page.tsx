@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Canvas } from '@/components/Canvas'
-import { TopBar, ToolRail, Palette, ZoomBar } from '@/components/Chrome'
+import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
 import { AiComposer } from '@/components/AiComposer'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { loadStarter } from '@/lib/artwork-core/create'
@@ -112,31 +112,41 @@ export default function EditorPage() {
   }, [])
 
   return (
-    <main style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100dvh',
+        overflow: 'hidden',
+        background: 'var(--surface)',
+        color: 'var(--fg)',
+      }}
+    >
       <TopBar />
-      {doc && (
-        <>
-          <Canvas />
-          <ToolRail />
-          <Palette />
-          <ZoomBar />
-          <AiComposer />
-        </>
-      )}
+      <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
+        {doc && (
+          <>
+            <Canvas />
+            <ToolRail />
+            <ZoomBar />
+            <AiComposer />
+          </>
+        )}
+      </main>
       {notice && (
         <div
           role="status"
           style={{
             position: 'absolute', left: '50%', top: 60, transform: 'translateX(-50%)',
-            background: 'var(--surface)', color: 'var(--fg)', fontSize: 12,
-            padding: '8px 14px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-2)',
-            zIndex: 20,
+            background: 'var(--panel)', color: 'var(--fg)', fontSize: 12,
+            padding: '8px 14px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-lg)',
+            zIndex: 50,
           }}
         >
           {notice}
         </div>
       )}
-    </main>
+    </div>
   )
 }
 

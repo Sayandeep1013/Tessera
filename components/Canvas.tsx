@@ -92,7 +92,7 @@ export function Canvas() {
       const showAfter = reviewing && ai.view === 'after'
       const shown = showAfter ? ai.proposal!.preview : doc
 
-      renderDoc(ctx, shown, frame, viewport, theme, { showGrid, showChecker: true })
+      renderDoc(ctx, shown, frame, viewport, theme, { showGrid })
 
       if (showAfter) {
         renderDiffOverlay(ctx, ai.proposal!.diff, viewport, theme)
@@ -260,7 +260,7 @@ export function Canvas() {
   }, [])
 
   return (
-    <div ref={wrapRef} style={{ position: 'absolute', inset: '48px 0 0 0' }}>
+    <div ref={wrapRef} style={{ position: 'relative', height: '100%', width: '100%', overflow: 'hidden' }}>
       <canvas
         ref={ref}
         role="img"
@@ -271,7 +271,6 @@ export function Canvas() {
         onPointerCancel={onPointerCancel}
         onPointerLeave={() => useEditorStore.getState().setCursor(null)}
         onWheel={onWheel}
-        style={{ cursor: useEditorStore.getState().panning ? 'grab' : 'crosshair' }}
       />
     </div>
   )

@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from 'next'
+import { GeistSans } from 'geist/font/sans'
+import { GeistMono } from 'geist/font/mono'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -13,14 +15,31 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#fafaf9' },
-    { media: '(prefers-color-scheme: dark)', color: '#0e0e11' },
+    { media: '(prefers-color-scheme: light)', color: '#f4f4f5' },
+    { media: '(prefers-color-scheme: dark)', color: '#17171b' },
   ],
 }
 
+/**
+ * Theme is resolved before paint to avoid a flash. Default is light — matching
+ * the reference, whose `:root` is dark with a `.light` class layered on top.
+ */
+const themeScript = `(function(){try{
+var s=localStorage.getItem('tessera-theme');
+var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+document.documentElement.classList.add(d?'dark':'light');
+}catch(e){document.documentElement.classList.add('light')}})()`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body>{children}</body>
     </html>
   )

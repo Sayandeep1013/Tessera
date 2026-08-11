@@ -18,13 +18,13 @@ export type Viewport = {
 }
 
 export type ThemeColors = {
-  bg: string
-  canvasBg: string
+  /** artwork background — flat and opaque, never a checkerboard */
+  artBg: string
   grid: string
-  gridMajor: string
-  checkerA: string
-  checkerB: string
-  canvasEdge: string
+  /** artwork border, top + left edges */
+  edgeTL: string
+  /** artwork border, bottom + right edges — measurably darker than TL */
+  edgeBR: string
   diffAdd: string
   diffChange: string
   diffRemove: string
@@ -33,26 +33,25 @@ export type ThemeColors = {
 
 export type RenderOptions = {
   showGrid?: boolean
-  showChecker?: boolean
 }
 
-/** Below this zoom, grid lines would dominate the artwork. */
-export const GRID_MIN_SCALE = 8
-const GRID_MAJOR_EVERY = 8
-/** Fixed in CSS px so it does not zoom with the artwork. */
-const CHECKER_PX = 8
+/**
+ * Below this zoom the grid would dominate the artwork.
+ *
+ * Measured on the reference (§8.4): the grid is exactly 1 CSS px at the cell
+ * pitch on BOTH axes, with **no heavier line at any interval** — verified
+ * exhaustively over the whole backing store. Do not reintroduce major lines.
+ */
+export const GRID_MIN_SCALE = 6
 
 export function readTheme(el: HTMLElement): ThemeColors {
   const s = getComputedStyle(el)
   const v = (n: string) => s.getPropertyValue(n).trim()
   return {
-    bg: v('--bg'),
-    canvasBg: v('--canvas-bg'),
-    grid: v('--grid'),
-    gridMajor: v('--grid-major'),
-    checkerA: v('--checker-a'),
-    checkerB: v('--checker-b'),
-    canvasEdge: v('--canvas-edge'),
+    artBg: v('--art-bg'),
+    grid: v('--art-grid'),
+    edgeTL: v('--art-edge-tl'),
+    edgeBR: v('--art-edge-br'),
     diffAdd: v('--diff-add'),
     diffChange: v('--diff-change'),
     diffRemove: v('--diff-remove'),
@@ -72,7 +71,10 @@ export function resizeCanvas(canvas: HTMLCanvasElement, cssW: number, cssH: numb
   }
   canvas.style.width = `${cssW}px`
   canvas.style.height = `${cssH}px`
-  const ctx = canvas.getContext('2d', { alpha: false })
+  // alpha MUST stay on: the canvas paints nothing outside the artwork and lets
+  // the app-shell --surface show through (measured: 57.5% of the backing store
+  // is fully transparent).
+  const ctx = canvas.getContext('2d', { alpha: true })
   if (ctx) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.imageSmoothingEnabled = false
@@ -88,29 +90,23 @@ export function renderDoc(
   opts: RenderOptions = {},
 ): void {
   const showGrid = opts.showGrid ?? true
-  const showChecker = opts.showChecker ?? true
 
   const cssW = ctx.canvas.width / (ctx.getTransform().a || 1)
   const cssH = ctx.canvas.height / (ctx.getTransform().d || 1)
 
   ctx.imageSmoothingEnabled = false
 
-  // 1. clear
-  ctx.fillStyle = theme.bg
-  ctx.fillRect(0, 0, cssW, cssH)
+  // 1. clear to TRANSPARENT — the canvas paints no background of its own.
+  ctx.clearRect(0, 0, cssW, cssH)
 
   const ax = Math.round(vp.offsetX)
   const ay = Math.round(vp.offsetY)
   const aw = doc.w * vp.scale
   const ah = doc.h * vp.scale
 
-  // 2. artwork backdrop
-  if (showChecker) {
-    drawChecker(ctx, ax, ay, aw, ah, theme)
-  } else {
-    ctx.fillStyle = theme.canvasBg
-    ctx.fillRect(ax, ay, aw, ah)
-  }
+  // 2. artwork backdrop — flat and opaque, never a checkerboard
+  ctx.fillStyle = theme.artBg
+  ctx.fillRect(ax, ay, aw, ah)
 
   // 3. layers, bottom to top, with horizontal run merging
   const paletteCss = doc.palette.map((p) => p.c)
@@ -122,15 +118,19 @@ export function renderDoc(
     }
   }
 
-  // 4. grid
+  // 4. grid — 1px at the cell pitch, no majors
   if (showGrid && vp.scale >= GRID_MIN_SCALE) {
     drawGrid(ctx, ax, ay, doc.w, doc.h, vp.scale, theme)
   }
 
-  // 5. artwork border, drawn outside so it never covers a pixel
-  ctx.strokeStyle = theme.canvasEdge
-  ctx.lineWidth = 1
-  ctx.strokeRect(ax - 0.5, ay - 0.5, aw + 1, ah + 1)
+  // 5. artwork border. Two-tone: top/left is lighter than bottom/right — a
+  // uniform strokeRect does not match the reference.
+  ctx.fillStyle = theme.edgeTL
+  ctx.fillRect(ax - 1, ay - 1, aw + 1, 1) // top
+  ctx.fillRect(ax - 1, ay - 1, 1, ah + 1) // left
+  ctx.fillStyle = theme.edgeBR
+  ctx.fillRect(ax - 1, ay + ah, aw + 2, 1) // bottom
+  ctx.fillRect(ax + aw, ay - 1, 1, ah + 2) // right
 }
 
 function drawLayer(
@@ -162,29 +162,14 @@ function drawLayer(
   }
 }
 
-function drawChecker(
-  ctx: CanvasRenderingContext2D,
-  ax: number,
-  ay: number,
-  aw: number,
-  ah: number,
-  theme: ThemeColors,
-): void {
-  ctx.save()
-  ctx.beginPath()
-  ctx.rect(ax, ay, aw, ah)
-  ctx.clip()
-  ctx.fillStyle = theme.checkerA
-  ctx.fillRect(ax, ay, aw, ah)
-  ctx.fillStyle = theme.checkerB
-  for (let y = 0; y < ah; y += CHECKER_PX) {
-    for (let x = ((y / CHECKER_PX) % 2) * CHECKER_PX; x < aw; x += CHECKER_PX * 2) {
-      ctx.fillRect(ax + x, ay + y, CHECKER_PX, CHECKER_PX)
-    }
-  }
-  ctx.restore()
-}
-
+/**
+ * 1 CSS px lines at exactly the cell pitch, both axes. No heavier line at any
+ * interval — that is measured, not assumed (§8.4).
+ *
+ * Drawn with fillRect rather than stroke: a stroked line straddles the
+ * coordinate and needs a half-pixel fudge, which goes wrong at fractional DPR.
+ * A 1px fill lands exactly where it is told.
+ */
 function drawGrid(
   ctx: CanvasRenderingContext2D,
   ax: number,
@@ -194,25 +179,12 @@ function drawGrid(
   scale: number,
   theme: ThemeColors,
 ): void {
-  ctx.lineWidth = 1
-  for (const major of [false, true]) {
-    ctx.strokeStyle = major ? theme.gridMajor : theme.grid
-    ctx.beginPath()
-    for (let cx = 0; cx <= w; cx++) {
-      if ((cx % GRID_MAJOR_EVERY === 0) !== major) continue
-      // half-pixel offset keeps a 1px line crisp rather than a 2px blur
-      const x = ax + cx * scale + 0.5
-      ctx.moveTo(x, ay)
-      ctx.lineTo(x, ay + h * scale)
-    }
-    for (let cy = 0; cy <= h; cy++) {
-      if ((cy % GRID_MAJOR_EVERY === 0) !== major) continue
-      const y = ay + cy * scale + 0.5
-      ctx.moveTo(ax, y)
-      ctx.lineTo(ax + w * scale, y)
-    }
-    ctx.stroke()
-  }
+  ctx.fillStyle = theme.grid
+  const width = w * scale
+  const height = h * scale
+  // interior lines only — the outer edge is the border, drawn separately
+  for (let cx = 1; cx < w; cx++) ctx.fillRect(ax + cx * scale, ay, 1, height)
+  for (let cy = 1; cy < h; cy++) ctx.fillRect(ax, ay + cy * scale, width, 1)
 }
 
 /** Diff overlay, drawn above a preview document during an AI proposal. */

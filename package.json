@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.52.0",
+    "geist": "^1.7.2",
     "idb": "^8.0.3",
     "immer": "^11.1.16",
     "nanoid": "^6.0.1",

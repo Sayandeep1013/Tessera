@@ -3,15 +3,17 @@
 import { useEffect, useRef } from 'react'
 import { useAiStore } from '@/lib/store/ai'
 import { diffCounts } from '@/lib/artwork-core/diff'
-import { SparkIcon } from './icons'
+import { ArrowUp, PlusCircleless } from './icons'
 
+/** Measured: 320x52 card at (12, bottom 12), r16, --panel, shadow S5, padding 8. */
 const shell: React.CSSProperties = {
   position: 'absolute',
-  left: 16,
-  bottom: 16,
-  background: 'var(--surface)',
+  left: 12,
+  bottom: 12,
+  padding: 8,
+  background: 'var(--panel)',
   borderRadius: 'var(--r-xl)',
-  boxShadow: 'var(--shadow-1)',
+  boxShadow: 'var(--shadow-lg)',
   zIndex: 6,
 }
 
@@ -39,22 +41,23 @@ export function AiComposer() {
 
   const busy = status === 'pending'
 
+  const ready = Boolean(instruction.trim()) && !busy
+
   return (
-    <div style={{ ...shell, width: 380 }}>
+    <div style={{ ...shell, width: 320 }}>
       {error && (
         <div
           role="alert"
           style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '8px 12px', fontSize: 12, color: 'var(--diff-remove)',
-            borderBottom: '1px solid var(--line)',
+            padding: '2px 4px 8px', fontSize: 12, color: 'var(--diff-remove)',
           }}
         >
           <span style={{ flex: 1 }}>{error}</span>
           <button onClick={() => void submit()} style={{ color: 'var(--fg)', fontWeight: 500 }}>
             Retry
           </button>
-          <button onClick={dismissError} aria-label="Dismiss" style={{ color: 'var(--fg-faint)' }}>
+          <button onClick={dismissError} aria-label="Dismiss" style={{ color: 'var(--faint)' }}>
             ✕
           </button>
         </div>
@@ -65,18 +68,28 @@ export function AiComposer() {
           e.preventDefault()
           void submit()
         }}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, height: 48, padding: '0 8px 0 14px' }}
+        style={{ display: 'flex', alignItems: 'center', gap: 4, height: 36 }}
       >
-        <span
-          aria-hidden
+        <button
+          type="button"
+          title="AI options"
+          aria-label="AI options"
           style={{
-            color: busy ? 'var(--accent)' : 'var(--fg-faint)',
-            display: 'grid', placeItems: 'center',
-            animation: busy ? 'tessera-pulse 1s ease-in-out infinite' : undefined,
+            width: 32, height: 32, flex: 'none', display: 'grid', placeItems: 'center',
+            borderRadius: 'var(--r-pill)', color: 'var(--muted)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--hover)'
+            e.currentTarget.style.color = 'var(--fg)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = 'var(--muted)'
           }}
         >
-          <SparkIcon />
-        </span>
+          <PlusCircleless size={20} />
+        </button>
+
         <input
           ref={inputRef}
           value={instruction}
@@ -84,31 +97,31 @@ export function AiComposer() {
             setInstruction(e.target.value)
             if (error) dismissError()
           }}
-          placeholder="Ask AI…  “make it angrier”"
+          placeholder="Ask AI… “make it angrier”"
           aria-label="Describe the change you want"
           style={{
-            flex: 1, height: 36, border: 0, outline: 'none', background: 'transparent',
-            fontSize: 14, color: 'var(--fg)',
+            flex: '1 1 0', minWidth: 0, height: 36, padding: '8px 4px',
+            background: 'transparent', fontSize: 14, fontWeight: 400, color: 'var(--fg)',
           }}
         />
+
         <button
           type="submit"
-          disabled={busy || !instruction.trim()}
+          disabled={!ready}
+          title={busy ? 'Working…' : 'Send'}
           aria-label={busy ? 'Working' : 'Send'}
           style={{
-            width: 32, height: 32, display: 'grid', placeItems: 'center',
+            width: 32, height: 32, flex: 'none', display: 'grid', placeItems: 'center',
             borderRadius: 'var(--r-pill)',
-            background: instruction.trim() && !busy ? 'var(--accent)' : 'var(--surface-2)',
-            color: instruction.trim() && !busy ? 'var(--accent-fg)' : 'var(--fg-faint)',
-            cursor: busy ? 'progress' : instruction.trim() ? 'pointer' : 'default',
+            background: ready ? 'var(--accent)' : 'var(--panel2)',
+            color: ready ? 'var(--onaccent)' : 'var(--faint)',
           }}
         >
-          {busy ? <Spinner /> : '↑'}
+          {busy ? <Spinner /> : <ArrowUp size={16} />}
         </button>
       </form>
 
-      <style>{`@keyframes tessera-pulse{0%,100%{opacity:1}50%{opacity:.4}}
-@keyframes tessera-spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@keyframes tessera-spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }

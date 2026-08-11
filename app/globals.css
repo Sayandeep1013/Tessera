@@ -1,124 +1,84 @@
 @import 'tailwindcss';
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Design tokens — docs/specs/02-design-system.md §3
-   Every colour in the app comes from here. No hard-coded hex in any .tsx.
+   Design tokens.
+
+   Values measured from the reference product (docs/research/newt/VISUAL-SPEC.md
+   §3.1) so the layout matches 1:1. Ten semantic tokens, defined twice: the
+   default is DARK, and `.light` on <html> overrides it — same structure as the
+   reference. Our own flavour goes on top of this later, in one place.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
-  /* surfaces */
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --surface-2: #f4f4f3;
-  --hover: #00000009;
-  --line: #00000014;
+:root,
+.dark {
+  --surface: #17171b;
+  --panel: #202024;
+  --panel2: #2c2c32;
+  --fg: #f4f4f5;
+  --muted: #a1a1aa;
+  --faint: #71717a;
+  --line: #ffffff21;
+  --hover: #ffffff12;
+  --accent: #f4f4f5;
+  --onaccent: #18181b;
 
-  /* text */
+  /* canvas — measured: flat opaque artwork, 1px grid at cell pitch, no majors */
+  --art-bg: #1e1e22;
+  --art-grid: #2a2a30;
+  --art-edge-tl: #ffffff2e;
+  --art-edge-br: #ffffff3c;
+
+  /* ours, not theirs: the AI diff */
+  --diff-add: #00bb7f;
+  --diff-change: #fcbb00;
+  --diff-remove: #ff6568;
+}
+
+.light {
+  --surface: #f4f4f5;
+  --panel: #ffffff;
+  --panel2: #f1f1f4;
   --fg: #18181b;
-  --fg-muted: #71717a;
-  --fg-faint: #a1a1aa;
-  --fg-invert: #fafaf9;
+  --muted: #71717a;
+  --faint: #a1a1aa;
+  --line: #0000001a;
+  --hover: #0000000d;
+  --accent: #18181b;
+  --onaccent: #ffffff;
 
-  /* accent */
-  --accent: #4f46e5;
-  --accent-fg: #ffffff;
-  --accent-soft: #4f46e51f;
+  --art-bg: #ffffff;
+  --art-grid: #ededed;
+  --art-edge-tl: #0000002e;
+  --art-edge-br: #0000003c;
 
-  /* diff */
-  --diff-add: #16a34a;
-  --diff-change: #d97706;
-  --diff-remove: #dc2626;
+  --diff-add: #009767;
+  --diff-change: #b75000;
+  --diff-remove: #e40014;
+}
 
-  /* canvas */
-  --canvas-bg: #ffffff;
-  --grid: #00000012;
-  --grid-major: #00000024;
-  --checker-a: #ffffff;
-  --checker-b: #f0f0ef;
-  --canvas-edge: #d4d4d3;
-
-  /* shape */
+/* Shape + elevation, measured §5 */
+:root {
   --r-sm: 4px;
   --r-md: 8px;
   --r-lg: 12px;
   --r-xl: 16px;
-  --r-pill: 999px;
+  --r-pill: 9999px;
 
-  --shadow-1: 0 1px 2px #0000000d, 0 0 0 1px var(--line);
-  --shadow-2: 0 8px 24px -6px #00000026, 0 0 0 1px var(--line);
+  /* S3 shadow-sm */
+  --shadow-sm: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
+  /* S4 ring-1 ring-line shadow-sm — tool rail, zoom pill */
+  --shadow-card: 0 0 0 1px #0000001a, 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
+  /* S5 ring-1 ring-line shadow-lg — composer */
+  --shadow-lg: 0 0 0 1px #0000001a, 0 10px 15px -3px #0000001a, 0 4px 6px -4px #0000001a;
 
-  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo,
-    Consolas, monospace;
-
-  color-scheme: light dark;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur: 0.15s;
 }
 
-/* Dark values live in one place and are applied by two selectors: the system
-   preference, and an explicit toggle that must beat it. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0e0e11;
-    --surface: #18181c;
-    --surface-2: #232329;
-    --hover: #ffffff12;
-    --line: #ffffff1f;
-
-    --fg: #f4f4f5;
-    --fg-muted: #a1a1aa;
-    --fg-faint: #71717a;
-    --fg-invert: #18181b;
-
-    --accent: #818cf8;
-    --accent-fg: #10101a;
-    --accent-soft: #818cf82e;
-
-    --diff-add: #4ade80;
-    --diff-change: #fbbf24;
-    --diff-remove: #f87171;
-
-    --canvas-bg: #1a1a1f;
-    --grid: #ffffff10;
-    --grid-major: #ffffff20;
-    --checker-a: #1a1a1f;
-    --checker-b: #212127;
-    --canvas-edge: #3a3a42;
-
-    --shadow-1: 0 1px 2px #00000059, 0 0 0 1px var(--line);
-    --shadow-2: 0 8px 24px -6px #00000073, 0 0 0 1px var(--line);
-  }
-}
-
-:root[data-theme='dark'] {
-  --bg: #0e0e11;
-  --surface: #18181c;
-  --surface-2: #232329;
-  --hover: #ffffff12;
-  --line: #ffffff1f;
-
-  --fg: #f4f4f5;
-  --fg-muted: #a1a1aa;
-  --fg-faint: #71717a;
-  --fg-invert: #18181b;
-
-  --accent: #818cf8;
-  --accent-fg: #10101a;
-  --accent-soft: #818cf82e;
-
-  --diff-add: #4ade80;
-  --diff-change: #fbbf24;
-  --diff-remove: #f87171;
-
-  --canvas-bg: #1a1a1f;
-  --grid: #ffffff10;
-  --grid-major: #ffffff20;
-  --checker-a: #1a1a1f;
-  --checker-b: #212127;
-  --canvas-edge: #3a3a42;
-
-  --shadow-1: 0 1px 2px #00000059, 0 0 0 1px var(--line);
-  --shadow-2: 0 8px 24px -6px #00000073, 0 0 0 1px var(--line);
+.dark {
+  --shadow-sm: 0 1px 3px 0 #00000059, 0 1px 2px -1px #00000059;
+  --shadow-card: 0 0 0 1px #ffffff21, 0 1px 3px 0 #00000059, 0 1px 2px -1px #00000059;
+  --shadow-lg: 0 0 0 1px #ffffff21, 0 10px 15px -3px #00000073, 0 4px 6px -4px #00000073;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -137,20 +97,14 @@ body {
 }
 
 body {
-  /* explicit — never transparent, or the host paints its own ground behind us */
-  background: var(--bg);
+  background: var(--surface);
   color: var(--fg);
-  font-family: var(--font-ui);
-  font-size: 13px;
-  line-height: 1.5;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  overflow: hidden;
+  overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden; /* the canvas owns the viewport */
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: inherit;
 }
 
 button {
@@ -159,24 +113,46 @@ button {
   background: none;
   border: 0;
   padding: 0;
-  cursor: pointer;
+  /* measured: every <button> on the reference computes cursor:default */
+  cursor: default;
+  transition:
+    color var(--dur) var(--ease),
+    background-color var(--dur) var(--ease);
 }
 
 input {
   font: inherit;
   color: inherit;
+  background: none;
+  border: 0;
 }
 
-/* Numeric readouts must not jitter as their value changes width. */
-.tabular {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+input:focus {
+  outline: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
 canvas {
   display: block;
-  image-rendering: pixelated;
   touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+
+/* Numeric readouts must not jitter as their value changes width. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Unlike the reference, which falls back to the UA ring, we ship a real one. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: inherit;
 }
 
 @media (prefers-reduced-motion: reduce) {

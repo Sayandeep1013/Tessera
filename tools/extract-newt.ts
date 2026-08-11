@@ -564,7 +564,9 @@ function diffStyles(a: Record<string, string>, b: Record<string, string>) {
   const d: Record<string, { from: string; to: string }> = {}
   for (const k of Object.keys(b)) {
     if (k === 'box') continue
-    if (JSON.stringify(a?.[k]) !== JSON.stringify(b[k])) d[k] = { from: a?.[k] as string, to: b[k] }
+    if (JSON.stringify(a?.[k]) !== JSON.stringify(b[k])) {
+      d[k] = { from: a?.[k] ?? '', to: b[k] ?? '' }
+    }
   }
   return d
 }
