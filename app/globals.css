@@ -39,6 +39,13 @@
   --accent-soft: #41a6f626;
   --onaccent: #0b0b0d;
 
+  /* The primary-action fill: maximum contrast against the surface, inverted per
+     theme. A mid-tone blue is a weaker call to action than plain white-on-black,
+     and reserving --accent for state (focus, active tool, the loaders) keeps the
+     one colour meaning one thing. */
+  --solid: #f4f4f5;
+  --onsolid: #0b0b0d;
+
   /* Canvas — flat white in BOTH themes, and deliberately not on the surface
      ladder.
 
@@ -80,6 +87,9 @@
   --accent: #1565b0;
   --accent-soft: #1565b01f;
   --onaccent: #ffffff;
+
+  --solid: #18181b;
+  --onsolid: #ffffff;
 
   /* Identical to dark on purpose — see the note above. */
   --art-bg: #ffffff;

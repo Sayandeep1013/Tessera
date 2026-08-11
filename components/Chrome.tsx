@@ -41,12 +41,14 @@ const TOOLS: Array<{ id: Tool; title: string; Icon: IconCmp; enabled: boolean }>
  * all — hovering it produces zero change.
  */
 function GlyphBtn({
-  title, Icon, size = 36, icon = 20, active, muted = true, lift, onClick, disabled,
+  title, Icon, size = 40, icon = 22, pad = 0, active, muted = true, lift, onClick, disabled,
 }: {
   title: string
   Icon: IconCmp
   size?: number
   icon?: number
+  /** Shrinks the painted fill without shrinking the hit target. */
+  pad?: number
   active?: boolean
   muted?: boolean
   lift?: boolean
@@ -73,6 +75,10 @@ function GlyphBtn({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        // The hit target is the whole box; the fill stops short of it, so buttons
+        // can sit flush with no gap between them and still look separated.
+        padding: pad,
+        backgroundClip: 'content-box',
         borderRadius: size >= 44 ? 'var(--r-lg)' : 'var(--r-pill)',
         background: active
           ? 'var(--accent)'
@@ -136,7 +142,7 @@ export function TopBar() {
   return (
     <header
       style={{
-        position: 'relative', flex: 'none', height: 48, zIndex: 40,
+        position: 'relative', flex: 'none', height: 56, zIndex: 40,
         display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px',
         background: 'color-mix(in srgb, var(--panel) 80%, transparent)',
         backdropFilter: 'blur(8px)',
@@ -191,14 +197,14 @@ export function TopBar() {
         {/* brush-size pill 149x36 */}
         <div
           style={{
-            height: 36, display: 'flex', alignItems: 'center', gap: 4,
+            height: 40, display: 'flex', alignItems: 'center', gap: 4,
             padding: '4px 6px', borderRadius: 'var(--r-pill)', background: 'var(--panel2)',
           }}
         >
-          <GlyphBtn title="Smaller brush" Icon={Minus} size={28} icon={16} muted={false} lift
+          <GlyphBtn title="Smaller brush" Icon={Minus} size={32} icon={18} muted={false} lift
             onClick={() => setBrushSize(brushSize - 1)} />
           <span className="tabular" style={{ width: 32, textAlign: 'center' }}>{brushSize}px</span>
-          <GlyphBtn title="Bigger brush" Icon={Plus} size={28} icon={16} muted={false} lift
+          <GlyphBtn title="Bigger brush" Icon={Plus} size={32} icon={18} muted={false} lift
             onClick={() => setBrushSize(brushSize + 1)} />
           <span style={{ width: 1, height: 20, background: 'var(--line)', margin: '0 2px' }} />
           <GlyphBtn
@@ -229,7 +235,7 @@ export function TopBar() {
               aria-checked={shape === s}
               onClick={() => setShape(s)}
               style={{
-                height: 24, padding: '4px 10px', borderRadius: 'var(--r-pill)',
+                height: 26, padding: '4px 10px', borderRadius: 'var(--r-pill)',
                 font: 'var(--t-label-sm)',
                 background: shape === s ? 'var(--panel)' : 'transparent',
                 boxShadow: shape === s ? 'var(--shadow-sm)' : 'none',
@@ -246,7 +252,7 @@ export function TopBar() {
         <button
           title="Dither: Solid"
           style={{
-            height: 28, alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6,
+            height: 32, alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6,
             padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)', background: 'var(--panel2)',
             font: 'var(--t-label-sm)', color: 'var(--fg)',
           }}
@@ -269,7 +275,7 @@ export function TopBar() {
           spellCheck={false}
           aria-label="Artwork name"
           style={{
-            width: 192, height: 28, padding: '4px 8px', borderRadius: 'var(--r-md)',
+            width: 240, height: 32, padding: '4px 8px', borderRadius: 'var(--r-md)',
             font: 'var(--t-label-lg)', textAlign: 'center', color: 'var(--fg)',
             pointerEvents: 'auto',
           }}
@@ -299,7 +305,7 @@ export function TopBar() {
           title="Share — export, publish"
           disabled
           style={{
-            height: 36, display: 'flex', alignItems: 'center', gap: 6,
+            height: 40, display: 'flex', alignItems: 'center', gap: 6,
             padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
             font: 'var(--t-label-lg)', color: 'var(--disabled)',
           }}
@@ -342,7 +348,7 @@ export function ToolRail() {
   return (
     <div
       style={{
-        position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+        position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
         pointerEvents: 'none', zIndex: 10,
       }}
     >
@@ -351,7 +357,10 @@ export function ToolRail() {
         aria-label="Tools"
         aria-orientation="vertical"
         style={{
-          display: 'flex', flexDirection: 'column', gap: 4, padding: 6,
+          // gap 0, not 4: each button owns its own vertical padding instead, so
+          // the rhythm is identical but a pointer travelling down the rail is
+          // never over nothing. Dead zones between targets are a real miss source.
+          display: 'flex', flexDirection: 'column', gap: 0, padding: 6,
           borderRadius: 'var(--r-xl)',
           background: 'color-mix(in srgb, var(--panel) 90%, transparent)',
           backdropFilter: 'blur(8px)',
@@ -364,8 +373,9 @@ export function ToolRail() {
             key={id}
             title={enabled ? title : `${title} — not built yet`}
             Icon={Icon}
-            size={44}
-            icon={24}
+            size={52}
+            icon={28}
+            pad={2}
             active={tool === id}
             disabled={!enabled}
             onClick={() => enabled && setTool(id)}
@@ -391,10 +401,10 @@ export function ZoomBar() {
   }
 
   return (
-    <div style={{ position: 'absolute', right: 12, bottom: 12, zIndex: 20, pointerEvents: 'none' }}>
+    <div style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 20, pointerEvents: 'none' }}>
       <div
         style={{
-          height: 40, display: 'flex', alignItems: 'center', gap: 2, padding: 4,
+          height: 44, display: 'flex', alignItems: 'center', gap: 0, padding: 4,
           borderRadius: 'var(--r-pill)',
           background: 'color-mix(in srgb, var(--panel) 90%, transparent)',
           backdropFilter: 'blur(8px)',
@@ -403,7 +413,7 @@ export function ZoomBar() {
           pointerEvents: 'auto',
         }}
       >
-        <GlyphBtn title="Zoom out" Icon={Minus} size={32} icon={16}
+        <GlyphBtn title="Zoom out" Icon={Minus} size={36} icon={18}
           onClick={() => setViewport({ ...vp, scale: nextScale(vp.scale, -1) })} />
         <button
           title="Fit to screen (1)"
@@ -413,13 +423,13 @@ export function ZoomBar() {
           style={{
             // 16 tall was the one WCAG 2.5.8 target-size failure in the app, and it
             // came straight from the reference. 24 is the floor.
-            minWidth: 48, height: 24, padding: '0 8px', borderRadius: 'var(--r-pill)',
+            minWidth: 56, height: 36, padding: '0 8px', borderRadius: 'var(--r-pill)',
             color: 'var(--muted)',
           }}
         >
           {vp.scale}×
         </button>
-        <GlyphBtn title="Zoom in" Icon={Plus} size={32} icon={16}
+        <GlyphBtn title="Zoom in" Icon={Plus} size={36} icon={18}
           onClick={() => setViewport({ ...vp, scale: nextScale(vp.scale, 1) })} />
       </div>
     </div>

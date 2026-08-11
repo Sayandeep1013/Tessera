@@ -29,9 +29,9 @@ import { ArrowUp, Sliders } from './icons'
 
 const shell: React.CSSProperties = {
   position: 'absolute',
-  left: 12,
-  bottom: 12,
-  width: 380,
+  left: 16,
+  bottom: 16,
+  width: 400,
   padding: 10,
   background: 'var(--panel)',
   borderRadius: 'var(--r-xl)',
@@ -122,8 +122,8 @@ export function AgentPanel() {
           style={{
             width: 36, height: 36, flex: 'none', display: 'grid', placeItems: 'center',
             borderRadius: 'var(--r-pill)',
-            background: ready || busy ? 'var(--accent)' : 'var(--panel2)',
-            color: ready || busy ? 'var(--onaccent)' : 'var(--disabled)',
+            background: ready || busy ? 'var(--solid)' : 'var(--panel2)',
+            color: ready || busy ? 'var(--onsolid)' : 'var(--disabled)',
           }}
         >
           {busy ? <TurnMark /> : <ArrowUp size={16} />}
@@ -408,7 +408,7 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
             disabled={!value.trim()}
             style={{
               height: 34, padding: '0 14px', borderRadius: 'var(--r-md)',
-              font: 'var(--t-label-sm)', background: 'var(--accent)', color: 'var(--onaccent)',
+              font: 'var(--t-label-sm)', background: 'var(--solid)', color: 'var(--onsolid)',
             }}
           >
             Save

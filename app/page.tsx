@@ -15,6 +15,25 @@ export default function EditorPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const doc = useDocStore((s) => s.doc)
 
+  /**
+   * The editor does not server-render.
+   *
+   * Everything it displays comes from somewhere the server cannot see: the
+   * document from IndexedDB, the theme from localStorage, the viewport from a
+   * measured canvas rect. Prerendering it produced markup that could not match —
+   * React reported a hydration mismatch on the undo and redo buttons on every
+   * single load, and "this won't be patched up" means the client keeps whatever
+   * the server guessed.
+   *
+   * Rendering the shell on the server and mounting the editor after hydration
+   * removes the whole class of bug rather than one instance of it, and costs
+   * nothing visible: the boot loader occupies exactly this gap and gates itself,
+   * so a fast load still shows nothing at all.
+   */
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const ready = mounted && doc
+
   // ── initial document ──────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
@@ -123,9 +142,12 @@ export default function EditorPage() {
         color: 'var(--fg)',
       }}
     >
-      <TopBar />
+      {/* The header reserves its height on the server so nothing jumps when the
+          real chrome mounts. */}
+      {ready ? <TopBar /> : <div style={{ flex: 'none', height: 48 }} />}
+
       <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
-        {doc ? (
+        {ready ? (
           <>
             <Canvas />
             <ToolRail />
@@ -134,13 +156,8 @@ export default function EditorPage() {
           </>
         ) : (
           // Boot previously rendered an empty <main> — a blank rectangle that is
-          // indistinguishable from a broken app. The loader gates itself, so a
-          // document that resolves quickly still shows nothing at all.
-          <div
-            style={{
-              position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
-            }}
-          >
+          // indistinguishable from a broken app.
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
             <MosaicLoader />
           </div>
         )}
