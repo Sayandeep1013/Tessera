@@ -96,3 +96,51 @@ complete behind them. But the README must not claim the AI editing works well un
   after each. The gate stays at ≥ 6/9.
 
 **The gate itself is not lowered.** A future run either clears 6/9 or it does not.
+
+---
+
+## Re-test, 11 Aug 2026 — after the agent loop and at 32×32
+
+Two things changed since the 0/9 gate, and this re-test deliberately changes both
+at once rather than isolating them, because both were already committed for other
+reasons:
+
+1. **Architecture.** Single-shot forced-JSON became a look-act-verify loop
+   (`docs/specs/12-agent-actions.md`). The model now reads state, acts, and
+   decides when it is done, instead of emitting one blind batch.
+2. **Canvas size.** The top-ranked hypothesis in this document was *"the canvas is
+   too small. 16×16 leaves almost no room for expression… Retry at 32×32."*
+
+### Result
+
+`"give the face a hat"`, 32×32, `gemini-3.1-flash-lite`:
+
+```
+get_state → add_palette_color(#0000ff) → draw_rect(9,0,14×3) → draw_rect(7,3,18×1) → finish
+5 turns · 13.4s · 60 pixels · stopped by finish
+```
+
+Rendered: `docs/shots/probe-ai-result.png`. A blue crown with a wider brim, sitting
+on top of the head. The face underneath is untouched.
+
+### Honest assessment
+
+**This is a pass on the thing that failed, and not a pass on quality.**
+
+What changed: the result is *recognisable as the thing that was asked for*, placed
+correctly, and destroys nothing else. Every one of the nine Phase 0 outputs failed
+at least one of those three. The model also chose a sensible decomposition on its
+own — crown and brim as two rects rather than a pixel list — which is the
+behaviour the action vocabulary was designed to make available.
+
+What has not changed: it is flat, unshaded, and the brim is not symmetric about
+the head. No competent pixel artist would ship it.
+
+**The remaining gap is model capability, not engineering.** There is no validation
+gate, prompt line, or action that turns a flat blue rectangle into good pixel art.
+That matches the standing decision on this project — *"focus on toolcalling and
+that working rather than the actual output… if it can modify that's enough"* — so
+Phase 6 stays open rather than being declared solved.
+
+**Cost note.** 5 turns is roughly one minute of the shared 5-requests-per-minute
+budget, which is what sets the two-free-session allowance in spec 12 §9.

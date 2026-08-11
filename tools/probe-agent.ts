@@ -56,7 +56,22 @@ globalThis.fetch = (async (url: string, init: RequestInit) => {
   return { ok: true, status: 200, json: async () => ({ parts: res.parts }) } as Response
 }) as typeof fetch
 
+const size = Number(process.argv[3] ?? 16)
 let doc: Doc = loadStarter('face')
+if (size !== 16) {
+  // Phase 0's top hypothesis was that 16x16 leaves no room for expression.
+  // Upscale the starter so the subject is identical and only the canvas differs.
+  const k = Math.max(1, Math.round(size / 16))
+  const w = 16 * k
+  const px = new Uint8Array(w * w)
+  const src = doc.frames[0]!.layers[0]!.px
+  for (let y = 0; y < w; y++) {
+    for (let x = 0; x < w; x++) {
+      px[y * w + x] = src[Math.floor(y / k) * 16 + Math.floor(x / k)]!
+    }
+  }
+  doc = { ...doc, w, h: w, frames: [{ ms: 100, layers: [{ n: 'base', px }] }] }
+}
 const editor: EditorSnapshot = {
   tool: 'brush',
   colorIndex: 1,
