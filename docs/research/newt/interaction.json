@@ -1,0 +1,285 @@
+{
+  "toolrail-inactive": {
+    "target": {
+      "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(2) > button",
+      "text": "",
+      "x": 18,
+      "y": 332,
+      "w": 44,
+      "h": 44,
+      "hasSvg": true
+    },
+    "changed": {}
+  },
+  "toolrail-second": {
+    "target": {
+      "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(4) > button",
+      "text": "",
+      "x": 18,
+      "y": 428,
+      "w": 44,
+      "h": 44,
+      "hasSvg": true
+    },
+    "changed": {
+      "background-color": {
+        "from": "rgba(0, 0, 0, 0)",
+        "to": "rgba(0, 0, 0, 0.05)"
+      }
+    }
+  },
+  "topbar-right-icon": {
+    "target": {
+      "sel": "body > div:nth-of-type(2) > header > div:nth-of-type(3) > div:nth-of-type(1) > button",
+      "text": "Share",
+      "x": 1118,
+      "y": 6,
+      "w": 108,
+      "h": 36,
+      "hasSvg": true
+    },
+    "changed": {
+      "background-color": {
+        "from": "rgba(0, 0, 0, 0)",
+        "to": "rgba(0, 0, 0, 0.05)"
+      },
+      "border-block-end-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-block-start-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-bottom-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-inline-end-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-inline-start-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-left-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-right-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-top-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "caret-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "column-rule-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "outline-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "row-rule-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "text-decoration-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "text-emphasis-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "-webkit-text-fill-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "-webkit-text-stroke-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "__svg_fill": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "__svg_color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      }
+    }
+  },
+  "topbar-left-icon": {
+    "target": {
+      "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(1) > button:nth-of-type(1)",
+      "text": "",
+      "x": 209,
+      "y": 10,
+      "w": 28,
+      "h": 28,
+      "hasSvg": true
+    },
+    "changed": {
+      "background-color": {
+        "from": "rgba(0, 0, 0, 0)",
+        "to": "rgb(255, 255, 255)"
+      }
+    }
+  },
+  "zoom-plus": {
+    "target": {
+      "sel": "body > div:nth-of-type(2) > main > div:nth-of-type(5) > div > button:nth-of-type(1)",
+      "text": "",
+      "x": 1308,
+      "y": 852,
+      "w": 32,
+      "h": 32,
+      "hasSvg": true
+    },
+    "changed": {
+      "background-color": {
+        "from": "rgba(0, 0, 0, 0)",
+        "to": "rgba(0, 0, 0, 0.05)"
+      }
+    }
+  },
+  "composer-send": {
+    "target": {
+      "sel": "main > div:nth-of-type(4) > div > div > div > button",
+      "text": "",
+      "x": 20,
+      "y": 846,
+      "w": 32,
+      "h": 32,
+      "hasSvg": true
+    },
+    "changed": {
+      "background-color": {
+        "from": "rgba(0, 0, 0, 0)",
+        "to": "rgba(0, 0, 0, 0.05)"
+      },
+      "border-block-end-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-block-start-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-bottom-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-inline-end-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-inline-start-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-left-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-right-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "border-top-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "caret-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "column-rule-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "outline-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "row-rule-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "text-decoration-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "text-emphasis-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "-webkit-text-fill-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "-webkit-text-stroke-color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "__svg_fill": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      },
+      "__svg_color": {
+        "from": "rgb(113, 113, 122)",
+        "to": "rgb(24, 24, 27)"
+      }
+    }
+  },
+  "focusVisible_firstTab": {
+    "tag": "button",
+    "cls": "group flex select-none items-center gap-1.5 rounded-lg py-1 pl-1 pr-1.5 text-base font-semibold tracking-tight text-fg hover:bg-hover",
+    "text": "Newt",
+    "box": {
+      "x": 12,
+      "y": 8,
+      "w": 101,
+      "h": 32
+    },
+    "outline": "rgb(16, 16, 16) auto 1px",
+    "outlineOffset": "0px",
+    "outlineColor": "rgb(16, 16, 16)",
+    "outlineWidth": "1px",
+    "outlineStyle": "auto",
+    "boxShadow": "none",
+    "border": "0px solid rgb(24, 24, 27)",
+    "background": "rgba(0, 0, 0, 0)",
+    "matchesFocusVisible": true
+  },
+  "focusVisible_secondTab": {
+    "tag": "button",
+    "cls": "flex flex-none items-center justify-center rounded-full transition-colors h-9 w-9 text-muted hover:bg-hover",
+    "text": "",
+    "box": {
+      "x": 117,
+      "y": 6,
+      "w": 36,
+      "h": 36
+    },
+    "outline": "rgb(16, 16, 16) auto 1px",
+    "outlineOffset": "0px",
+    "boxShadow": "none"
+  }
+}

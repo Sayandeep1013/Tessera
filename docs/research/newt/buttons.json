@@ -1,0 +1,245 @@
+[
+  {
+    "sel": "body > div:nth-of-type(2) > header > div:nth-of-type(1) > div:nth-of-type(1) > button",
+    "text": "Newt",
+    "x": 12,
+    "y": 8,
+    "w": 101,
+    "h": 32,
+    "hasSvg": true
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > header > div:nth-of-type(1) > div:nth-of-type(2) > button",
+    "text": "",
+    "x": 117,
+    "y": 6,
+    "w": 36,
+    "h": 36,
+    "hasSvg": true
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > header > div:nth-of-type(1) > div:nth-of-type(3) > button",
+    "text": "",
+    "x": 159,
+    "y": 6,
+    "w": 36,
+    "h": 36,
+    "hasSvg": false
+  },
+  {
+    "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(1) > button:nth-of-type(1)",
+    "text": "",
+    "x": 209,
+    "y": 10,
+    "w": 28,
+    "h": 28,
+    "hasSvg": true
+  },
+  {
+    "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(1) > button:nth-of-type(2)",
+    "text": "",
+    "x": 277,
+    "y": 10,
+    "w": 28,
+    "h": 28,
+    "hasSvg": true
+  },
+  {
+    "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(1) > button:nth-of-type(3)",
+    "text": "",
+    "x": 318,
+    "y": 10,
+    "w": 28,
+    "h": 28,
+    "hasSvg": true
+  },
+  {
+    "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(2) > button:nth-of-type(1)",
+    "text": "Square",
+    "x": 362,
+    "y": 12,
+    "w": 60,
+    "h": 24,
+    "hasSvg": false
+  },
+  {
+    "sel": "header > div:nth-of-type(1) > div:nth-of-type(4) > div > div:nth-of-type(2) > button:nth-of-type(2)",
+    "text": "Round",
+    "x": 422,
+    "y": 12,
+    "w": 56,
+    "h": 24,
+    "hasSvg": false
+  },
+  {
+    "sel": "div:nth-of-type(2) > header > div:nth-of-type(1) > div:nth-of-type(4) > div > button",
+    "text": "Solid",
+    "x": 489,
+    "y": 10,
+    "w": 87,
+    "h": 28,
+    "hasSvg": true
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > header > div:nth-of-type(3) > div:nth-of-type(1) > button",
+    "text": "Share",
+    "x": 1118,
+    "y": 6,
+    "w": 108,
+    "h": 36,
+    "hasSvg": true
+  },
+  {
+    "sel": "html > body > div:nth-of-type(2) > header > div:nth-of-type(3) > button:nth-of-type(1)",
+    "text": "",
+    "x": 1230,
+    "y": 6,
+    "w": 36,
+    "h": 36,
+    "hasSvg": true
+  },
+  {
+    "sel": "html > body > div:nth-of-type(2) > header > div:nth-of-type(3) > button:nth-of-type(2)",
+    "text": "",
+    "x": 1270,
+    "y": 6,
+    "w": 36,
+    "h": 36,
+    "hasSvg": true
+  },
+  {
+    "sel": "html > body > div:nth-of-type(2) > header > div:nth-of-type(3) > button:nth-of-type(3)",
+    "text": "",
+    "x": 1310,
+    "y": 6,
+    "w": 36,
+    "h": 36,
+    "hasSvg": true
+  },
+  {
+    "sel": "html > body > div:nth-of-type(2) > header > div:nth-of-type(3) > a",
+    "text": "Sign in",
+    "x": 1359,
+    "y": 6,
+    "w": 69,
+    "h": 36,
+    "hasSvg": false
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(1) > button",
+    "text": "",
+    "x": 18,
+    "y": 284,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(2) > button",
+    "text": "",
+    "x": 18,
+    "y": 332,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(3) > button",
+    "text": "",
+    "x": 18,
+    "y": 380,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(4) > button",
+    "text": "",
+    "x": 18,
+    "y": 428,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(5) > button",
+    "text": "",
+    "x": 18,
+    "y": 476,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(6) > button",
+    "text": "",
+    "x": 18,
+    "y": 524,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(7) > button",
+    "text": "",
+    "x": 18,
+    "y": 572,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(2) > div > div:nth-of-type(8) > button",
+    "text": "",
+    "x": 18,
+    "y": 620,
+    "w": 44,
+    "h": 44,
+    "hasSvg": true
+  },
+  {
+    "sel": "main > div:nth-of-type(4) > div > div > div > button",
+    "text": "",
+    "x": 20,
+    "y": 846,
+    "w": 32,
+    "h": 32,
+    "hasSvg": true
+  },
+  {
+    "sel": "div:nth-of-type(2) > main > div:nth-of-type(4) > div > div > button",
+    "text": "",
+    "x": 292,
+    "y": 846,
+    "w": 32,
+    "h": 32,
+    "hasSvg": true
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > main > div:nth-of-type(5) > div > button:nth-of-type(1)",
+    "text": "",
+    "x": 1308,
+    "y": 852,
+    "w": 32,
+    "h": 32,
+    "hasSvg": true
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > main > div:nth-of-type(5) > div > button:nth-of-type(2)",
+    "text": "45×",
+    "x": 1342,
+    "y": 860,
+    "w": 48,
+    "h": 16,
+    "hasSvg": false
+  },
+  {
+    "sel": "body > div:nth-of-type(2) > main > div:nth-of-type(5) > div > button:nth-of-type(3)",
+    "text": "",
+    "x": 1392,
+    "y": 852,
+    "w": 32,
+    "h": 32,
+    "hasSvg": true
+  }
+]

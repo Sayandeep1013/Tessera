@@ -1,0 +1,25 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets — never commit
+.env
+.env.local
+.env*.local
+
+# Generated artifacts
+spike/out/
+test-results/
+playwright-report/
+coverage/
+
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

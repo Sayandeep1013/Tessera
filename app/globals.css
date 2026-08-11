@@ -1,0 +1,189 @@
+@import 'tailwindcss';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Design tokens — docs/specs/02-design-system.md §3
+   Every colour in the app comes from here. No hard-coded hex in any .tsx.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* surfaces */
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f4f4f3;
+  --hover: #00000009;
+  --line: #00000014;
+
+  /* text */
+  --fg: #18181b;
+  --fg-muted: #71717a;
+  --fg-faint: #a1a1aa;
+  --fg-invert: #fafaf9;
+
+  /* accent */
+  --accent: #4f46e5;
+  --accent-fg: #ffffff;
+  --accent-soft: #4f46e51f;
+
+  /* diff */
+  --diff-add: #16a34a;
+  --diff-change: #d97706;
+  --diff-remove: #dc2626;
+
+  /* canvas */
+  --canvas-bg: #ffffff;
+  --grid: #00000012;
+  --grid-major: #00000024;
+  --checker-a: #ffffff;
+  --checker-b: #f0f0ef;
+  --canvas-edge: #d4d4d3;
+
+  /* shape */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 16px;
+  --r-pill: 999px;
+
+  --shadow-1: 0 1px 2px #0000000d, 0 0 0 1px var(--line);
+  --shadow-2: 0 8px 24px -6px #00000026, 0 0 0 1px var(--line);
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI Variable', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo,
+    Consolas, monospace;
+
+  color-scheme: light dark;
+}
+
+/* Dark values live in one place and are applied by two selectors: the system
+   preference, and an explicit toggle that must beat it. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0e0e11;
+    --surface: #18181c;
+    --surface-2: #232329;
+    --hover: #ffffff12;
+    --line: #ffffff1f;
+
+    --fg: #f4f4f5;
+    --fg-muted: #a1a1aa;
+    --fg-faint: #71717a;
+    --fg-invert: #18181b;
+
+    --accent: #818cf8;
+    --accent-fg: #10101a;
+    --accent-soft: #818cf82e;
+
+    --diff-add: #4ade80;
+    --diff-change: #fbbf24;
+    --diff-remove: #f87171;
+
+    --canvas-bg: #1a1a1f;
+    --grid: #ffffff10;
+    --grid-major: #ffffff20;
+    --checker-a: #1a1a1f;
+    --checker-b: #212127;
+    --canvas-edge: #3a3a42;
+
+    --shadow-1: 0 1px 2px #00000059, 0 0 0 1px var(--line);
+    --shadow-2: 0 8px 24px -6px #00000073, 0 0 0 1px var(--line);
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0e0e11;
+  --surface: #18181c;
+  --surface-2: #232329;
+  --hover: #ffffff12;
+  --line: #ffffff1f;
+
+  --fg: #f4f4f5;
+  --fg-muted: #a1a1aa;
+  --fg-faint: #71717a;
+  --fg-invert: #18181b;
+
+  --accent: #818cf8;
+  --accent-fg: #10101a;
+  --accent-soft: #818cf82e;
+
+  --diff-add: #4ade80;
+  --diff-change: #fbbf24;
+  --diff-remove: #f87171;
+
+  --canvas-bg: #1a1a1f;
+  --grid: #ffffff10;
+  --grid-major: #ffffff20;
+  --checker-a: #1a1a1f;
+  --checker-b: #212127;
+  --canvas-edge: #3a3a42;
+
+  --shadow-1: 0 1px 2px #00000059, 0 0 0 1px var(--line);
+  --shadow-2: 0 8px 24px -6px #00000073, 0 0 0 1px var(--line);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Base
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  /* explicit — never transparent, or the host paints its own ground behind us */
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* the canvas owns the viewport */
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+input {
+  font: inherit;
+  color: inherit;
+}
+
+/* Numeric readouts must not jitter as their value changes width. */
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+canvas {
+  display: block;
+  image-rendering: pixelated;
+  touch-action: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

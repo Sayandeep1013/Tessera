@@ -1,0 +1,162 @@
+[
+  {
+    "status": 200,
+    "type": "document",
+    "url": "https://newt.sh/",
+    "contentType": "text/html; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "stylesheet",
+    "url": "https://newt.sh/_next/static/chunks/07bxp6vx.1px6.css?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "text/css; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "font",
+    "url": "https://newt.sh/_next/static/media/797e433ab948586e-s.p.08e28id.o-okb.woff2?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "font/woff2",
+    "size": "23108"
+  },
+  {
+    "status": 200,
+    "type": "font",
+    "url": "https://newt.sh/_next/static/media/caa3a2e1cccd8315-s.p.09~u27dqhyhd6.woff2?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "font/woff2",
+    "size": "29288"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0k8b7mnxtkx8h.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0ohxv37-qmp5m.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/1713am26y.w8m.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/02h~w-gg5znzj.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0hfec5xp4ikm~.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0b9bbxae0s3-u.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0s9hg4bw_q1p1.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/turbopack-10m5bpdqw31vr.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0kkjba~t_mlg7.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0pwojtorekaiy.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0-jdp1k0ojzcg.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/14g-mr20ra1ai.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/d4afe21c9250f955/script.js",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=5CB68i4pnAekjehf",
+    "contentType": "text/x-component",
+    "size": "688"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=7h4NYy5eoyMcNlUN",
+    "contentType": "text/x-component"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=fGJn87jYv0bW619I",
+    "contentType": "text/x-component"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=nC3siu_m_4Fu2Aui",
+    "contentType": "text/x-component",
+    "size": "559"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=yIp22O3xgPPxC28X",
+    "contentType": "text/x-component"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0za~vboggtt6l.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "fetch",
+    "url": "https://newt.sh/login?_rsc=w7y6nB6E5Nueb3gD",
+    "contentType": "text/x-component"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/0atowaxuh1g6f.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  },
+  {
+    "status": 200,
+    "type": "script",
+    "url": "https://newt.sh/_next/static/chunks/05h0smqs2m8bo.js?dpl=dpl_FrbjG3ZZ7T2JY4B6D6gJnCz4jLU6",
+    "contentType": "application/javascript; charset=utf-8"
+  }
+]

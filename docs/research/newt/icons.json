@@ -1,0 +1,2794 @@
+[
+  {
+    "index": 0,
+    "box": {
+      "x": 16,
+      "y": 12,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 16,
+        "y": 11.5,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 16 16",
+    "widthAttr": "16",
+    "heightAttr": "16",
+    "classes": "h-full w-full group-hover:opacity-0",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(24, 24, 27)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(24, 24, 27)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "shape-rendering": "crispEdges",
+      "fill": "currentColor",
+      "aria-hidden": "true",
+      "class": "h-full w-full group-hover:opacity-0"
+    },
+    "shapes": [
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "1",
+        "width": "3",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "1",
+        "width": "3",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "2",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "2",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "2",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "2",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "3",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "4",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "5",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "5",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "5",
+        "width": "4",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "5",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "5",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "6",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "7",
+        "y": "6",
+        "width": "2",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "6",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "7",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "7",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "8",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "8",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "8",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "8",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "9",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "9",
+        "width": "10",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "9",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "10",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "10",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "11",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "11",
+        "width": "1",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "12",
+        "width": "3",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "12",
+        "y": "12",
+        "width": "3",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "13",
+        "width": "2",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "13",
+        "width": "2",
+        "height": "1"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "14",
+        "width": "8",
+        "height": "1"
+      }
+    ],
+    "outerHTML": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" shape-rendering=\"crispEdges\" fill=\"currentColor\" aria-hidden=\"true\" class=\"h-full w-full group-hover:opacity-0\"><rect x=\"3\" y=\"1\" width=\"3\" height=\"1\"></rect><rect x=\"10\" y=\"1\" width=\"3\" height=\"1\"></rect><rect x=\"2\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"11\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"11\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"5\" width=\"4\" height=\"1\"></rect><rect x=\"11\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"14\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"6\" width=\"1\" height=\"1\"></rect><rect x=\"7\" y=\"6\" width=\"2\" height=\"1\"></rect><rect x=\"15\" y=\"6\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"7\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"7\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"9\" width=\"1\" height=\"1\"></rect><rect x=\"3\" y=\"9\" width=\"10\" height=\"1\"></rect><rect x=\"15\" y=\"9\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"10\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"10\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"11\" width=\"1\" height=\"1\"></rect><rect x=\"14\" y=\"11\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"12\" width=\"3\" height=\"1\"></rect><rect x=\"12\" y=\"12\" width=\"3\" height=\"1\"></rect><rect x=\"3\" y=\"13\" width=\"2\" height=\"1\"></rect><rect x=\"11\" y=\"13\" width=\"2\" height=\"1\"></rect><rect x=\"4\" y=\"14\" width=\"8\" height=\"1\"></rect></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.group.flex.select-none.items-center.gap-1.5",
+      "text": "Newt",
+      "title": "File — new, recent, import",
+      "box": {
+        "x": 12,
+        "y": 8,
+        "w": 101,
+        "h": 32,
+        "exact": {
+          "x": 12,
+          "y": 7.5,
+          "w": 101.13,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "8px",
+      "padding": "4px 6px 4px 4px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "File — new, recent, import"
+  },
+  {
+    "index": 1,
+    "box": {
+      "x": 16,
+      "y": 12,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 16,
+        "y": 11.5,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 16 16",
+    "widthAttr": "16",
+    "heightAttr": "16",
+    "classes": "absolute inset-0 h-full w-full opacity-0 group-hover:opacity-100",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(0, 0, 0)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(24, 24, 27)",
+      "opacity": "0",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "width": "16",
+      "height": "16",
+      "viewBox": "0 0 16 16",
+      "shape-rendering": "crispEdges",
+      "aria-hidden": "true",
+      "class": "absolute inset-0 h-full w-full opacity-0 group-hover:opacity-100"
+    },
+    "shapes": [
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "1",
+        "width": "3",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "1",
+        "width": "3",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "2",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "2",
+        "width": "3",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "2",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "2",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "2",
+        "width": "3",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "2",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "12",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "3",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "12",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "4",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "5",
+        "width": "2",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "5",
+        "width": "4",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "10",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "12",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#9dee72"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "5",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "6",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "6",
+        "width": "6",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "7",
+        "y": "6",
+        "width": "2",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "9",
+        "y": "6",
+        "width": "5",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "6",
+        "width": "1",
+        "height": "1",
+        "fill": "#9dee72"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "6",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "7",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "7",
+        "width": "2",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "7",
+        "width": "2",
+        "height": "1",
+        "fill": "#e56666"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "7",
+        "width": "6",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "7",
+        "width": "2",
+        "height": "1",
+        "fill": "#e56666"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "7",
+        "width": "2",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "7",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "8",
+        "width": "10",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "8",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "9",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "9",
+        "width": "1",
+        "height": "1",
+        "fill": "#33993a"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "9",
+        "width": "1",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "9",
+        "width": "10",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "13",
+        "y": "9",
+        "width": "2",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "9",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "0",
+        "y": "10",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "10",
+        "width": "2",
+        "height": "1",
+        "fill": "#33993a"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "10",
+        "width": "12",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "15",
+        "y": "10",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "11",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "2",
+        "y": "11",
+        "width": "3",
+        "height": "1",
+        "fill": "#33993a"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "11",
+        "width": "9",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "14",
+        "y": "11",
+        "width": "1",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "1",
+        "y": "12",
+        "width": "3",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "12",
+        "width": "2",
+        "height": "1",
+        "fill": "#33993a"
+      },
+      {
+        "tag": "rect",
+        "x": "6",
+        "y": "12",
+        "width": "6",
+        "height": "1",
+        "fill": "#79d265"
+      },
+      {
+        "tag": "rect",
+        "x": "12",
+        "y": "12",
+        "width": "3",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "3",
+        "y": "13",
+        "width": "2",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "5",
+        "y": "13",
+        "width": "6",
+        "height": "1",
+        "fill": "#33993a"
+      },
+      {
+        "tag": "rect",
+        "x": "11",
+        "y": "13",
+        "width": "2",
+        "height": "1",
+        "fill": "#191e43"
+      },
+      {
+        "tag": "rect",
+        "x": "4",
+        "y": "14",
+        "width": "8",
+        "height": "1",
+        "fill": "#191e43"
+      }
+    ],
+    "outerHTML": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" shape-rendering=\"crispEdges\" aria-hidden=\"true\" class=\"absolute inset-0 h-full w-full opacity-0 group-hover:opacity-100\"><rect x=\"3\" y=\"1\" width=\"3\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"10\" y=\"1\" width=\"3\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"2\" y=\"2\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"3\" y=\"2\" width=\"3\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"6\" y=\"2\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"9\" y=\"2\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"10\" y=\"2\" width=\"3\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"13\" y=\"2\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"2\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"3\" y=\"3\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"4\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"5\" y=\"3\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"6\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"9\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"10\" y=\"3\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"11\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"12\" y=\"3\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"13\" y=\"3\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"2\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"3\" y=\"4\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"4\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"5\" y=\"4\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"6\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"9\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"10\" y=\"4\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"11\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"12\" y=\"4\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"13\" y=\"4\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"5\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"2\" y=\"5\" width=\"2\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"4\" y=\"5\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"5\" y=\"5\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"6\" y=\"5\" width=\"4\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"10\" y=\"5\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"11\" y=\"5\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"12\" y=\"5\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"13\" y=\"5\" width=\"1\" height=\"1\" fill=\"#9dee72\"></rect><rect x=\"14\" y=\"5\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"0\" y=\"6\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"6\" width=\"6\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"7\" y=\"6\" width=\"2\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"9\" y=\"6\" width=\"5\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"14\" y=\"6\" width=\"1\" height=\"1\" fill=\"#9dee72\"></rect><rect x=\"15\" y=\"6\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"0\" y=\"7\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"7\" width=\"2\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"3\" y=\"7\" width=\"2\" height=\"1\" fill=\"#e56666\"></rect><rect x=\"5\" y=\"7\" width=\"6\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"11\" y=\"7\" width=\"2\" height=\"1\" fill=\"#e56666\"></rect><rect x=\"13\" y=\"7\" width=\"2\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"15\" y=\"7\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"0\" y=\"8\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"8\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"2\" y=\"8\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"3\" y=\"8\" width=\"10\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"13\" y=\"8\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"14\" y=\"8\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"15\" y=\"8\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"0\" y=\"9\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"9\" width=\"1\" height=\"1\" fill=\"#33993a\"></rect><rect x=\"2\" y=\"9\" width=\"1\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"3\" y=\"9\" width=\"10\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"13\" y=\"9\" width=\"2\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"15\" y=\"9\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"0\" y=\"10\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"10\" width=\"2\" height=\"1\" fill=\"#33993a\"></rect><rect x=\"3\" y=\"10\" width=\"12\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"15\" y=\"10\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"11\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"2\" y=\"11\" width=\"3\" height=\"1\" fill=\"#33993a\"></rect><rect x=\"5\" y=\"11\" width=\"9\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"14\" y=\"11\" width=\"1\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"1\" y=\"12\" width=\"3\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"4\" y=\"12\" width=\"2\" height=\"1\" fill=\"#33993a\"></rect><rect x=\"6\" y=\"12\" width=\"6\" height=\"1\" fill=\"#79d265\"></rect><rect x=\"12\" y=\"12\" width=\"3\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"3\" y=\"13\" width=\"2\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"5\" y=\"13\" width=\"6\" height=\"1\" fill=\"#33993a\"></rect><rect x=\"11\" y=\"13\" width=\"2\" height=\"1\" fill=\"#191e43\"></rect><rect x=\"4\" y=\"14\" width=\"8\" height=\"1\" fill=\"#191e43\"></rect></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.group.flex.select-none.items-center.gap-1.5",
+      "text": "Newt",
+      "title": "File — new, recent, import",
+      "box": {
+        "x": 12,
+        "y": 8,
+        "w": 101,
+        "h": 32,
+        "exact": {
+          "x": 12,
+          "y": 7.5,
+          "w": 101.13,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "8px",
+      "padding": "4px 6px 4px 4px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "File — new, recent, import"
+  },
+  {
+    "index": 2,
+    "box": {
+      "x": 91,
+      "y": 16,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 91.13,
+        "y": 15.5,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4 flex-none text-faint transition-transform",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(161, 161, 170)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(161, 161, 170)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "0"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4 flex-none text-faint transition-transform"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4 flex-none text-faint transition-transform\"><path d=\"M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.group.flex.select-none.items-center.gap-1.5",
+      "text": "Newt",
+      "title": "File — new, recent, import",
+      "box": {
+        "x": 12,
+        "y": 8,
+        "w": 101,
+        "h": 32,
+        "exact": {
+          "x": 12,
+          "y": 7.5,
+          "w": 101.13,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "8px",
+      "padding": "4px 6px 4px 4px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "File — new, recent, import"
+  },
+  {
+    "index": 3,
+    "box": {
+      "x": 125,
+      "y": 14,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 125.13,
+        "y": 13.5,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M40,88H73a32,32,0,0,0,62,0h81a8,8,0,0,0,0-16H135a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16Zm64-24A16,16,0,1,1,88,80,16,16,0,0,1,104,64ZM216,168H199a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16h97a32,32,0,0,0,62,0h17a8,8,0,0,0,0-16Zm-48,24a16,16,0,1,1,16-16A16,16,0,0,1,168,192Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M40,88H73a32,32,0,0,0,62,0h81a8,8,0,0,0,0-16H135a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16Zm64-24A16,16,0,1,1,88,80,16,16,0,0,1,104,64ZM216,168H199a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16h97a32,32,0,0,0,62,0h17a8,8,0,0,0,0-16Zm-48,24a16,16,0,1,1,16-16A16,16,0,0,1,168,192Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.flex-none.items-center.justify-center.rounded-full",
+      "text": "",
+      "title": "Settings",
+      "box": {
+        "x": 117,
+        "y": 6,
+        "w": 36,
+        "h": 36,
+        "exact": {
+          "x": 117.13,
+          "y": 5.5,
+          "w": 36,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Settings"
+  },
+  {
+    "index": 4,
+    "box": {
+      "x": 215,
+      "y": 16,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 215.13,
+        "y": 15.5,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(24, 24, 27)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(24, 24, 27)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-7.w-7.items-center.justify-center",
+      "text": "",
+      "title": "Smaller brush",
+      "box": {
+        "x": 209,
+        "y": 10,
+        "w": 28,
+        "h": 28,
+        "exact": {
+          "x": 209.13,
+          "y": 9.5,
+          "w": 28,
+          "h": 28
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Smaller brush"
+  },
+  {
+    "index": 5,
+    "box": {
+      "x": 283,
+      "y": 16,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 283.13,
+        "y": 15.5,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(24, 24, 27)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(24, 24, 27)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-7.w-7.items-center.justify-center",
+      "text": "",
+      "title": "Bigger brush",
+      "box": {
+        "x": 277,
+        "y": 10,
+        "w": 28,
+        "h": 28,
+        "exact": {
+          "x": 277.13,
+          "y": 9.5,
+          "w": 28,
+          "h": 28
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Bigger brush"
+  },
+  {
+    "index": 6,
+    "box": {
+      "x": 324,
+      "y": 16,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 324.13,
+        "y": 15.5,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(24, 24, 27)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(24, 24, 27)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M200,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V40A16,16,0,0,0,200,24Zm-40,80h40v24H160Zm-48,40h88v24H112Zm88,72H56V184H200v32Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M200,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V40A16,16,0,0,0,200,24Zm-40,80h40v24H160Zm-48,40h88v24H112Zm88,72H56V184H200v32Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-7.w-7.items-center.justify-center",
+      "text": "",
+      "title": "Pixel-perfect — remove doubled corners on diagonals",
+      "box": {
+        "x": 318,
+        "y": 10,
+        "w": 28,
+        "h": 28,
+        "exact": {
+          "x": 318.13,
+          "y": 9.5,
+          "w": 28,
+          "h": 28
+        }
+      },
+      "background": "rgb(255, 255, 255)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+      "cursor": "default"
+    },
+    "nearestLabel": "Pixel-perfect — remove doubled corners on diagonals"
+  },
+  {
+    "index": 7,
+    "box": {
+      "x": 555,
+      "y": 18,
+      "w": 12,
+      "h": 12,
+      "exact": {
+        "x": 555.09,
+        "y": 17.5,
+        "w": 12,
+        "h": 12
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-3 w-3 text-muted",
+    "computed": {
+      "width": "12px",
+      "height": "12px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-3 w-3 text-muted"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-3 w-3 text-muted\"><path d=\"M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.items-center.gap-1.5.rounded-full.bg-panel2",
+      "text": "Solid",
+      "title": "Dither: Solid",
+      "box": {
+        "x": 489,
+        "y": 10,
+        "w": 87,
+        "h": 28,
+        "exact": {
+          "x": 488.56,
+          "y": 9.5,
+          "w": 86.53,
+          "h": 28
+        }
+      },
+      "background": "rgb(241, 241, 244)",
+      "color": "rgb(24, 24, 27)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "6px 8px 6px 10px",
+      "border": "none",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+      "cursor": "default"
+    },
+    "nearestLabel": "Dither: Solid"
+  },
+  {
+    "index": 8,
+    "box": {
+      "x": 1130,
+      "y": 14,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 1129.81,
+        "y": 13.5,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M216,112v96a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V112A16,16,0,0,1,56,96H80a8,8,0,0,1,0,16H56v96H200V112H176a8,8,0,0,1,0-16h24A16,16,0,0,1,216,112ZM93.66,69.66,120,43.31V136a8,8,0,0,0,16,0V43.31l26.34,26.35a8,8,0,0,0,11.32-11.32l-40-40a8,8,0,0,0-11.32,0l-40,40A8,8,0,0,0,93.66,69.66Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-9.select-none.items-center.gap-1.5",
+      "text": "Share",
+      "title": "Share — post to community, export PNG",
+      "box": {
+        "x": 1118,
+        "y": 6,
+        "w": 108,
+        "h": 36,
+        "exact": {
+          "x": 1117.81,
+          "y": 5.5,
+          "w": 108.31,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px 10px 0px 12px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Share — post to community, export PNG"
+  },
+  {
+    "index": 9,
+    "box": {
+      "x": 1200,
+      "y": 16,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 1200.13,
+        "y": 15.5,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4 flex-none text-faint transition-transform",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(161, 161, 170)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(161, 161, 170)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "0"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4 flex-none text-faint transition-transform"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4 flex-none text-faint transition-transform\"><path d=\"M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-9.select-none.items-center.gap-1.5",
+      "text": "Share",
+      "title": "Share — post to community, export PNG",
+      "box": {
+        "x": 1118,
+        "y": 6,
+        "w": 108,
+        "h": 36,
+        "exact": {
+          "x": 1117.81,
+          "y": 5.5,
+          "w": 108.31,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px 10px 0px 12px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Share — post to community, export PNG"
+  },
+  {
+    "index": 10,
+    "box": {
+      "x": 1238,
+      "y": 14,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 1238.13,
+        "y": 13.5,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M69.12,94.15,28.5,128l40.62,33.85a8,8,0,1,1-10.24,12.29l-48-40a8,8,0,0,1,0-12.29l48-40a8,8,0,0,1,10.24,12.3Zm176,27.7-48-40a8,8,0,1,0-10.24,12.3L227.5,128l-40.62,33.85a8,8,0,1,0,10.24,12.29l48-40a8,8,0,0,0,0-12.29ZM162.73,32.48a8,8,0,0,0-10.25,4.79l-64,176a8,8,0,0,0,4.79,10.26A8.14,8.14,0,0,0,96,224a8,8,0,0,0,7.52-5.27l64-176A8,8,0,0,0,162.73,32.48Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.flex-none.items-center.justify-center.rounded-full",
+      "text": "",
+      "title": "Code & Export",
+      "box": {
+        "x": 1230,
+        "y": 6,
+        "w": 36,
+        "h": 36,
+        "exact": {
+          "x": 1230.13,
+          "y": 5.5,
+          "w": 36,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Code & Export"
+  },
+  {
+    "index": 11,
+    "box": {
+      "x": 1278,
+      "y": 14,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 1278.13,
+        "y": 13.5,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,88h80v80H40Zm96-16V56h32V72Zm-16,0H88V56h32Zm0,112v16H88V184Zm16,0h32v16H136Zm0-16V88h80v80Zm80-96H184V56h32ZM72,56V72H40V56ZM40,184H72v16H40Zm176,16H184V184h32v16Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,88h80v80H40Zm96-16V56h32V72Zm-16,0H88V56h32Zm0,112v16H88V184Zm16,0h32v16H136Zm0-16V88h80v80Zm80-96H184V56h32ZM72,56V72H40V56ZM40,184H72v16H40Zm176,16H184V184h32v16Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.flex-none.items-center.justify-center.rounded-full",
+      "text": "",
+      "title": "Animation timeline",
+      "box": {
+        "x": 1270,
+        "y": 6,
+        "w": 36,
+        "h": 36,
+        "exact": {
+          "x": 1270.13,
+          "y": 5.5,
+          "w": 36,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Animation timeline"
+  },
+  {
+    "index": 12,
+    "box": {
+      "x": 1318,
+      "y": 14,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 1318.13,
+        "y": 13.5,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M12,111l112,64a8,8,0,0,0,7.94,0l112-64a8,8,0,0,0,0-13.9l-112-64a8,8,0,0,0-7.94,0l-112,64A8,8,0,0,0,12,111ZM128,49.21,223.87,104,128,158.79,32.13,104ZM246.94,140A8,8,0,0,1,244,151L132,215a8,8,0,0,1-7.94,0L12,151A8,8,0,0,1,20,137.05l108,61.74,108-61.74A8,8,0,0,1,246.94,140Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M12,111l112,64a8,8,0,0,0,7.94,0l112-64a8,8,0,0,0,0-13.9l-112-64a8,8,0,0,0-7.94,0l-112,64A8,8,0,0,0,12,111ZM128,49.21,223.87,104,128,158.79,32.13,104ZM246.94,140A8,8,0,0,1,244,151L132,215a8,8,0,0,1-7.94,0L12,151A8,8,0,0,1,20,137.05l108,61.74,108-61.74A8,8,0,0,1,246.94,140Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.flex-none.items-center.justify-center.rounded-full",
+      "text": "",
+      "title": "Layers",
+      "box": {
+        "x": 1310,
+        "y": 6,
+        "w": 36,
+        "h": 36,
+        "exact": {
+          "x": 1310.13,
+          "y": 5.5,
+          "w": 36,
+          "h": 36
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Layers"
+  },
+  {
+    "index": 13,
+    "box": {
+      "x": 28,
+      "y": 294,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 294,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M168,132.69,214.08,115l.33-.13A16,16,0,0,0,213,85.07L52.92,32.8A15.95,15.95,0,0,0,32.8,52.92L85.07,213a15.82,15.82,0,0,0,14.41,11l.78,0a15.84,15.84,0,0,0,14.61-9.59l.13-.33L132.69,168,184,219.31a16,16,0,0,0,22.63,0l12.68-12.68a16,16,0,0,0,0-22.63ZM195.31,208,144,156.69a16,16,0,0,0-26,4.93c0,.11-.09.22-.13.32l-17.65,46L48,48l159.85,52.2-45.95,17.64-.32.13a16,16,0,0,0-4.93,26h0L208,195.31Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M168,132.69,214.08,115l.33-.13A16,16,0,0,0,213,85.07L52.92,32.8A15.95,15.95,0,0,0,32.8,52.92L85.07,213a15.82,15.82,0,0,0,14.41,11l.78,0a15.84,15.84,0,0,0,14.61-9.59l.13-.33L132.69,168,184,219.31a16,16,0,0,0,22.63,0l12.68-12.68a16,16,0,0,0,0-22.63ZM195.31,208,144,156.69a16,16,0,0,0-26,4.93c0,.11-.09.22-.13.32l-17.65,46L48,48l159.85,52.2-45.95,17.64-.32.13a16,16,0,0,0-4.93,26h0L208,195.31Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Select / Move (V)",
+      "box": {
+        "x": 18,
+        "y": 284,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 284,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Select / Move (V)"
+  },
+  {
+    "index": 14,
+    "box": {
+      "x": 28,
+      "y": 342,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 342,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(255, 255, 255)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(255, 255, 255)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM124.42,113.55q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM124.42,113.55q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Brush (B)",
+      "box": {
+        "x": 18,
+        "y": 332,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 332,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgb(24, 24, 27)",
+      "color": "rgb(255, 255, 255)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Brush (B)"
+  },
+  {
+    "index": 15,
+    "box": {
+      "x": 28,
+      "y": 390,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 390,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M225,80.4,183.6,39a24,24,0,0,0-33.94,0L31,157.66a24,24,0,0,0,0,33.94l30.06,30.06A8,8,0,0,0,66.74,224H216a8,8,0,0,0,0-16h-84.7L225,114.34A24,24,0,0,0,225,80.4ZM108.68,208H70.05L42.33,180.28a8,8,0,0,1,0-11.31L96,115.31,148.69,168Zm105-105L160,156.69,107.31,104,161,50.34a8,8,0,0,1,11.32,0l41.38,41.38a8,8,0,0,1,0,11.31Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M225,80.4,183.6,39a24,24,0,0,0-33.94,0L31,157.66a24,24,0,0,0,0,33.94l30.06,30.06A8,8,0,0,0,66.74,224H216a8,8,0,0,0,0-16h-84.7L225,114.34A24,24,0,0,0,225,80.4ZM108.68,208H70.05L42.33,180.28a8,8,0,0,1,0-11.31L96,115.31,148.69,168Zm105-105L160,156.69,107.31,104,161,50.34a8,8,0,0,1,11.32,0l41.38,41.38a8,8,0,0,1,0,11.31Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Eraser (E)",
+      "box": {
+        "x": 18,
+        "y": 380,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 380,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Eraser (E)"
+  },
+  {
+    "index": 16,
+    "box": {
+      "x": 28,
+      "y": 438,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 438,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M234.53,139.07a8,8,0,0,0,3.13-13.24L122.17,10.34a8,8,0,0,0-11.31,0L70.25,51,45.65,26.34A8,8,0,0,0,34.34,37.66l24.6,24.6L15,106.17a24,24,0,0,0,0,33.94L99.89,225a24,24,0,0,0,33.94,0l78.49-78.49Zm-32.19-5.24-79.83,79.83a8,8,0,0,1-11.31,0L26.34,128.8a8,8,0,0,1,0-11.31L70.25,73.57l29.12,29.12a28,28,0,1,0,11.31-11.32L81.57,62.26l35-34.95L217.19,128l-11.72,3.9A8.09,8.09,0,0,0,202.34,133.83Zm-86.83-26.31,0,0a13.26,13.26,0,1,1-.05.06S115.51,107.53,115.51,107.52Zm123.15,56a8,8,0,0,0-13.32,0C223.57,166.23,208,190.09,208,208a24,24,0,0,0,48,0C256,190.09,240.43,166.23,238.66,163.56ZM232,216a8,8,0,0,1-8-8c0-6.8,4-16.32,8-24.08,4,7.76,8,17.34,8,24.08A8,8,0,0,1,232,216Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M234.53,139.07a8,8,0,0,0,3.13-13.24L122.17,10.34a8,8,0,0,0-11.31,0L70.25,51,45.65,26.34A8,8,0,0,0,34.34,37.66l24.6,24.6L15,106.17a24,24,0,0,0,0,33.94L99.89,225a24,24,0,0,0,33.94,0l78.49-78.49Zm-32.19-5.24-79.83,79.83a8,8,0,0,1-11.31,0L26.34,128.8a8,8,0,0,1,0-11.31L70.25,73.57l29.12,29.12a28,28,0,1,0,11.31-11.32L81.57,62.26l35-34.95L217.19,128l-11.72,3.9A8.09,8.09,0,0,0,202.34,133.83Zm-86.83-26.31,0,0a13.26,13.26,0,1,1-.05.06S115.51,107.53,115.51,107.52Zm123.15,56a8,8,0,0,0-13.32,0C223.57,166.23,208,190.09,208,208a24,24,0,0,0,48,0C256,190.09,240.43,166.23,238.66,163.56ZM232,216a8,8,0,0,1-8-8c0-6.8,4-16.32,8-24.08,4,7.76,8,17.34,8,24.08A8,8,0,0,1,232,216Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Fill (G)",
+      "box": {
+        "x": 18,
+        "y": 428,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 428,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Fill (G)"
+  },
+  {
+    "index": 17,
+    "box": {
+      "x": 28,
+      "y": 486,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 486,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Shapes (U)",
+      "box": {
+        "x": 18,
+        "y": 476,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 476,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Shapes (U)"
+  },
+  {
+    "index": 18,
+    "box": {
+      "x": 28,
+      "y": 534,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 534,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M152,40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,40Zm-8,168H112a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM208,32H184a8,8,0,0,0,0,16h24V72a8,8,0,0,0,16,0V48A16,16,0,0,0,208,32Zm8,72a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V112A8,8,0,0,0,216,104Zm0,72a8,8,0,0,0-8,8v24H184a8,8,0,0,0,0,16h24a16,16,0,0,0,16-16V184A8,8,0,0,0,216,176ZM40,152a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v32A8,8,0,0,0,40,152Zm32,56H48V184a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H72a8,8,0,0,0,0-16ZM72,32H48A16,16,0,0,0,32,48V72a8,8,0,0,0,16,0V48H72a8,8,0,0,0,0-16Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M152,40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,40Zm-8,168H112a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM208,32H184a8,8,0,0,0,0,16h24V72a8,8,0,0,0,16,0V48A16,16,0,0,0,208,32Zm8,72a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V112A8,8,0,0,0,216,104Zm0,72a8,8,0,0,0-8,8v24H184a8,8,0,0,0,0,16h24a16,16,0,0,0,16-16V184A8,8,0,0,0,216,176ZM40,152a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v32A8,8,0,0,0,40,152Zm32,56H48V184a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H72a8,8,0,0,0,0-16ZM72,32H48A16,16,0,0,0,32,48V72a8,8,0,0,0,16,0V48H72a8,8,0,0,0,0-16Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Select region (M)",
+      "box": {
+        "x": 18,
+        "y": 524,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 524,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Select region (M)"
+  },
+  {
+    "index": 19,
+    "box": {
+      "x": 28,
+      "y": 582,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 582,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,67.3a35.79,35.79,0,0,0-11.26-25.66c-14-13.28-36.72-12.78-50.62,1.13L142.8,62.2a24,24,0,0,0-33.14.77l-9,9a16,16,0,0,0,0,22.64l2,2.06-51,51a39.75,39.75,0,0,0-10.53,38l-8,18.41A13.68,13.68,0,0,0,36,219.3a15.92,15.92,0,0,0,17.71,3.35L71.23,215a39.89,39.89,0,0,0,37.06-10.75l51-51,2.06,2.06a16,16,0,0,0,22.62,0l9-9a24,24,0,0,0,.74-33.18l19.75-19.87A35.75,35.75,0,0,0,224,67.3ZM97,193a24,24,0,0,1-24,6,8,8,0,0,0-5.55.31l-18.1,7.91L57,189.41a8,8,0,0,0,.25-5.75A23.88,23.88,0,0,1,63,159l51-51,33.94,34ZM202.13,82l-25.37,25.52a8,8,0,0,0,0,11.3l4.89,4.89a8,8,0,0,1,0,11.32l-9,9L112,83.26l9-9a8,8,0,0,1,11.31,0l4.89,4.89a8,8,0,0,0,11.33,0l24.94-25.09c7.81-7.82,20.5-8.18,28.29-.81a20,20,0,0,1,.39,28.7Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M224,67.3a35.79,35.79,0,0,0-11.26-25.66c-14-13.28-36.72-12.78-50.62,1.13L142.8,62.2a24,24,0,0,0-33.14.77l-9,9a16,16,0,0,0,0,22.64l2,2.06-51,51a39.75,39.75,0,0,0-10.53,38l-8,18.41A13.68,13.68,0,0,0,36,219.3a15.92,15.92,0,0,0,17.71,3.35L71.23,215a39.89,39.89,0,0,0,37.06-10.75l51-51,2.06,2.06a16,16,0,0,0,22.62,0l9-9a24,24,0,0,0,.74-33.18l19.75-19.87A35.75,35.75,0,0,0,224,67.3ZM97,193a24,24,0,0,1-24,6,8,8,0,0,0-5.55.31l-18.1,7.91L57,189.41a8,8,0,0,0,.25-5.75A23.88,23.88,0,0,1,63,159l51-51,33.94,34ZM202.13,82l-25.37,25.52a8,8,0,0,0,0,11.3l4.89,4.89a8,8,0,0,1,0,11.32l-9,9L112,83.26l9-9a8,8,0,0,1,11.31,0l4.89,4.89a8,8,0,0,0,11.33,0l24.94-25.09c7.81-7.82,20.5-8.18,28.29-.81a20,20,0,0,1,.39,28.7Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Eyedropper (I)",
+      "box": {
+        "x": 18,
+        "y": 572,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 572,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Eyedropper (I)"
+  },
+  {
+    "index": 20,
+    "box": {
+      "x": 28,
+      "y": 630,
+      "w": 24,
+      "h": 24,
+      "exact": {
+        "x": 28,
+        "y": 630,
+        "w": 24,
+        "h": 24
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-6 w-6",
+    "computed": {
+      "width": "24px",
+      "height": "24px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-6 w-6"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M200,40H56A16,16,0,0,0,40,56V200a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm-64,80h64v16H136Zm0-16V88h64v16Zm0,48h64v16H136Zm64-80H136V56h64ZM56,56h64V200H56ZM200,200H136V184h64v16Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M200,40H56A16,16,0,0,0,40,56V200a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm-64,80h64v16H136Zm0-16V88h64v16Zm0,48h64v16H136Zm64-80H136V56h64ZM56,56h64V200H56ZM200,200H136V184h64v16Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-11.w-11.items-center.justify-center",
+      "text": "",
+      "title": "Gradient (H)",
+      "box": {
+        "x": 18,
+        "y": 620,
+        "w": 44,
+        "h": 44,
+        "exact": {
+          "x": 18,
+          "y": 620,
+          "w": 44,
+          "h": 44
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "12px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Gradient (H)"
+  },
+  {
+    "index": 21,
+    "box": {
+      "x": 26,
+      "y": 852,
+      "w": 20,
+      "h": 20,
+      "exact": {
+        "x": 26,
+        "y": 852,
+        "w": 20,
+        "h": 20
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-5 w-5",
+    "computed": {
+      "width": "20px",
+      "height": "20px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-5 w-5"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-8.w-8.items-center.justify-center",
+      "text": "",
+      "title": "AI options",
+      "box": {
+        "x": 20,
+        "y": 846,
+        "w": 32,
+        "h": 32,
+        "exact": {
+          "x": 20,
+          "y": 846,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "AI options"
+  },
+  {
+    "index": 22,
+    "box": {
+      "x": 300,
+      "y": 854,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 300,
+        "y": 854,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(161, 161, 170)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(161, 161, 170)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-8.w-8.flex-none.items-center",
+      "text": "",
+      "title": "Send",
+      "box": {
+        "x": 292,
+        "y": 846,
+        "w": 32,
+        "h": 32,
+        "exact": {
+          "x": 292,
+          "y": 846,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "background": "rgb(241, 241, 244)",
+      "color": "rgb(161, 161, 170)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default",
+      "disabled": true
+    },
+    "nearestLabel": "Send"
+  },
+  {
+    "index": 23,
+    "box": {
+      "x": 1316,
+      "y": 860,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 1316,
+        "y": 860,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-8.w-8.items-center.justify-center",
+      "text": "",
+      "title": "Zoom out (⌘−)",
+      "box": {
+        "x": 1308,
+        "y": 852,
+        "w": 32,
+        "h": 32,
+        "exact": {
+          "x": 1308,
+          "y": 852,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Zoom out (⌘−)"
+  },
+  {
+    "index": 24,
+    "box": {
+      "x": 1400,
+      "y": 860,
+      "w": 16,
+      "h": 16,
+      "exact": {
+        "x": 1400,
+        "y": 860,
+        "w": 16,
+        "h": 16
+      }
+    },
+    "viewBox": "0 0 256 256",
+    "widthAttr": "1em",
+    "heightAttr": "1em",
+    "classes": "h-4 w-4",
+    "computed": {
+      "width": "16px",
+      "height": "16px",
+      "fill": "rgb(113, 113, 122)",
+      "stroke": "none",
+      "strokeWidth": "1px",
+      "color": "rgb(113, 113, 122)",
+      "opacity": "1",
+      "strokeLinecap": "butt",
+      "strokeLinejoin": "miter",
+      "overflow": "hidden",
+      "display": "block",
+      "flexShrink": "1"
+    },
+    "attrs": {
+      "xmlns": "http://www.w3.org/2000/svg",
+      "width": "1em",
+      "height": "1em",
+      "fill": "currentColor",
+      "viewBox": "0 0 256 256",
+      "class": "h-4 w-4"
+    },
+    "shapes": [
+      {
+        "tag": "path",
+        "d": "M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"
+      }
+    ],
+    "outerHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"></path></svg>",
+    "host": {
+      "tag": "button",
+      "sel": "button.flex.h-8.w-8.items-center.justify-center",
+      "text": "",
+      "title": "Zoom in (⌘+)",
+      "box": {
+        "x": 1392,
+        "y": 852,
+        "w": 32,
+        "h": 32,
+        "exact": {
+          "x": 1392,
+          "y": 852,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "background": "rgba(0, 0, 0, 0)",
+      "color": "rgb(113, 113, 122)",
+      "borderRadius": "3.35544e+07px",
+      "padding": "0px",
+      "border": "none",
+      "boxShadow": "none",
+      "cursor": "default"
+    },
+    "nearestLabel": "Zoom in (⌘+)"
+  }
+]

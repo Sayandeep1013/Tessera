@@ -1,0 +1,3056 @@
+{
+  "tree": {
+    "seq": 0,
+    "tag": "html",
+    "classes": "geist_a71539c9-module__T19VSG__variable geist_mono_8d43a2aa-module__8Li5zG__variable h-full antialiased light",
+    "attrs": {
+      "lang": "en"
+    },
+    "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "exact": {
+        "x": 0,
+        "y": 0,
+        "w": 390,
+        "h": 844
+      }
+    },
+    "style": {
+      "display": "block",
+      "position": "static",
+      "width": "390px",
+      "height": "844px",
+      "fontFamily": "Geist, \"Geist Fallback\"",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "color": "rgb(0, 0, 0)",
+      "fill": "rgb(0, 0, 0)"
+    },
+    "children": [
+      {
+        "seq": 1,
+        "tag": "body",
+        "classes": "h-full overflow-hidden overscroll-none font-sans",
+        "box": {
+          "x": 0,
+          "y": 0,
+          "w": 390,
+          "h": 844,
+          "exact": {
+            "x": 0,
+            "y": 0,
+            "w": 390,
+            "h": 844
+          }
+        },
+        "style": {
+          "display": "block",
+          "position": "static",
+          "width": "390px",
+          "height": "844px",
+          "fontFamily": "Geist, \"Geist Fallback\"",
+          "fontSize": "16px",
+          "fontWeight": "400",
+          "lineHeight": "24px",
+          "color": "rgb(24, 24, 27)",
+          "backgroundColor": "rgb(244, 244, 245)",
+          "borderTop": "0px solid rgb(24, 24, 27)",
+          "borderBottom": "0px solid rgb(24, 24, 27)",
+          "overflow": "hidden",
+          "overflowX": "hidden",
+          "fill": "rgb(0, 0, 0)"
+        },
+        "children": [
+          {
+            "seq": 2,
+            "tag": "div",
+            "classes": "flex h-[100dvh] flex-col overflow-hidden bg-surface text-fg",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "w": 390,
+              "h": 844,
+              "exact": {
+                "x": 0,
+                "y": 0,
+                "w": 390,
+                "h": 844
+              }
+            },
+            "style": {
+              "display": "flex",
+              "position": "static",
+              "width": "390px",
+              "height": "844px",
+              "flexDirection": "column",
+              "fontFamily": "Geist, \"Geist Fallback\"",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "24px",
+              "color": "rgb(24, 24, 27)",
+              "backgroundColor": "rgb(244, 244, 245)",
+              "borderTop": "0px solid rgb(24, 24, 27)",
+              "borderBottom": "0px solid rgb(24, 24, 27)",
+              "overflow": "hidden",
+              "overflowX": "hidden",
+              "fill": "rgb(0, 0, 0)"
+            },
+            "children": [
+              {
+                "seq": 3,
+                "tag": "header",
+                "classes": "relative z-30 flex h-12 flex-none items-center gap-0.5 border-b border-line bg-panel px-2",
+                "box": {
+                  "x": 0,
+                  "y": 0,
+                  "w": 390,
+                  "h": 48,
+                  "exact": {
+                    "x": 0,
+                    "y": 0,
+                    "w": 390,
+                    "h": 48
+                  }
+                },
+                "scroll": {
+                  "w": 390,
+                  "h": 47
+                },
+                "style": {
+                  "display": "flex",
+                  "position": "relative",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "width": "390px",
+                  "height": "48px",
+                  "minWidth": "auto",
+                  "minHeight": "auto",
+                  "padding": "0px 8px",
+                  "gap": "2px",
+                  "alignItems": "center",
+                  "flex": "0 0 auto",
+                  "fontFamily": "Geist, \"Geist Fallback\"",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "lineHeight": "24px",
+                  "color": "rgb(24, 24, 27)",
+                  "backgroundColor": "rgb(255, 255, 255)",
+                  "borderTop": "0px solid rgba(0, 0, 0, 0.1)",
+                  "borderBottom": "1px solid rgba(0, 0, 0, 0.1)",
+                  "zIndex": "30",
+                  "fill": "rgb(0, 0, 0)"
+                },
+                "children": [
+                  {
+                    "seq": 4,
+                    "tag": "button",
+                    "classes": "flex h-10 flex-none items-center gap-0.5 rounded-full pl-2 pr-1.5 text-fg hover:bg-hover",
+                    "attrs": {
+                      "type": "button",
+                      "aria-label": "File — new, recent, import",
+                      "aria-haspopup": "menu",
+                      "aria-pressed": "false"
+                    },
+                    "box": {
+                      "x": 8,
+                      "y": 4,
+                      "w": 56,
+                      "h": 40,
+                      "exact": {
+                        "x": 8,
+                        "y": 3.5,
+                        "w": 56,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "56px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "padding": "0px 6px 0px 8px",
+                      "gap": "2px",
+                      "alignItems": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(24, 24, 27)",
+                      "borderTop": "0px solid rgb(24, 24, 27)",
+                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                      "borderRadius": "3.35544e+07px",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 5,
+                        "tag": "svg",
+                        "classes": "h-6 w-6",
+                        "attrs": {
+                          "width": "16",
+                          "height": "16",
+                          "viewBox": "0 0 16 16",
+                          "shape-rendering": "crispEdges",
+                          "fill": "currentColor",
+                          "aria-hidden": "true"
+                        },
+                        "box": {
+                          "x": 16,
+                          "y": 12,
+                          "w": 24,
+                          "h": 24,
+                          "exact": {
+                            "x": 16,
+                            "y": 11.5,
+                            "w": 24,
+                            "h": 24
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "24px",
+                          "height": "24px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(24, 24, 27)",
+                          "borderTop": "0px solid rgb(24, 24, 27)",
+                          "borderBottom": "0px solid rgb(24, 24, 27)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(24, 24, 27)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" shape-rendering=\"crispEdges\" fill=\"currentColor\" aria-hidden=\"true\" class=\"h-6 w-6\"><rect x=\"3\" y=\"1\" width=\"3\" height=\"1\"></rect><rect x=\"10\" y=\"1\" width=\"3\" height=\"1\"></rect><rect x=\"2\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"2\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"11\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"3\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"9\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"11\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"4\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"4\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"6\" y=\"5\" width=\"4\" height=\"1\"></rect><rect x=\"11\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"14\" y=\"5\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"6\" width=\"1\" height=\"1\"></rect><rect x=\"7\" y=\"6\" width=\"2\" height=\"1\"></rect><rect x=\"15\" y=\"6\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"7\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"7\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"2\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"13\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"8\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"9\" width=\"1\" height=\"1\"></rect><rect x=\"3\" y=\"9\" width=\"10\" height=\"1\"></rect><rect x=\"15\" y=\"9\" width=\"1\" height=\"1\"></rect><rect x=\"0\" y=\"10\" width=\"1\" height=\"1\"></rect><rect x=\"15\" y=\"10\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"11\" width=\"1\" height=\"1\"></rect><rect x=\"14\" y=\"11\" width=\"1\" height=\"1\"></rect><rect x=\"1\" y=\"12\" width=\"3\" height=\"1\"></rect><rect x=\"12\" y=\"12\" width=\"3\" height=\"1\"></rect><rect x=\"3\" y=\"13\" width=\"2\" height=\"1\"></rect><rect x=\"11\" y=\"13\" width=\"2\" height=\"1\"></rect><rect x=\"4\" y=\"14\" width=\"8\" height=\"1\"></rect></svg>"
+                      },
+                      {
+                        "seq": 6,
+                        "tag": "svg",
+                        "classes": "h-4 w-4 flex-none text-faint transition-transform",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 42,
+                          "y": 16,
+                          "w": 16,
+                          "h": 16,
+                          "exact": {
+                            "x": 42,
+                            "y": 15.5,
+                            "w": 16,
+                            "h": 16
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "16px",
+                          "height": "16px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "flex": "0 0 auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(161, 161, 170)",
+                          "borderTop": "0px solid rgb(161, 161, 170)",
+                          "borderBottom": "0px solid rgb(161, 161, 170)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(161, 161, 170)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4 flex-none text-faint transition-transform\"><path d=\"M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 7,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-muted hover:bg-hover",
+                    "attrs": {
+                      "type": "button",
+                      "aria-label": "Settings",
+                      "aria-pressed": "false",
+                      "title": "Settings"
+                    },
+                    "box": {
+                      "x": 66,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 66,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(113, 113, 122)",
+                      "borderTop": "0px solid rgb(113, 113, 122)",
+                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                      "borderRadius": "3.35544e+07px",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 8,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 76,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 76,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(113, 113, 122)",
+                          "borderTop": "0px solid rgb(113, 113, 122)",
+                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(113, 113, 122)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M40,88H73a32,32,0,0,0,62,0h81a8,8,0,0,0,0-16H135a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16Zm64-24A16,16,0,1,1,88,80,16,16,0,0,1,104,64ZM216,168H199a32,32,0,0,0-62,0H40a8,8,0,0,0,0,16h97a32,32,0,0,0,62,0h17a8,8,0,0,0,0-16Zm-48,24a16,16,0,1,1,16-16A16,16,0,0,1,168,192Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 9,
+                    "tag": "input",
+                    "classes": "min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1 text-center text-sm font-medium text-fg focus:bg-hover focus:outline-none",
+                    "attrs": {
+                      "spellcheck": "false",
+                      "aria-label": "Filename",
+                      "value": "untitled"
+                    },
+                    "box": {
+                      "x": 108,
+                      "y": 10,
+                      "w": 64,
+                      "h": 28,
+                      "exact": {
+                        "x": 108,
+                        "y": 9.5,
+                        "w": 64,
+                        "h": 28
+                      }
+                    },
+                    "scroll": {
+                      "w": 67,
+                      "h": 28
+                    },
+                    "style": {
+                      "display": "block",
+                      "position": "static",
+                      "width": "64px",
+                      "height": "28px",
+                      "minHeight": "auto",
+                      "padding": "4px 8px",
+                      "flex": "1 1 0%",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "14px",
+                      "fontWeight": "500",
+                      "lineHeight": "20px",
+                      "color": "rgb(24, 24, 27)",
+                      "borderTop": "0px solid rgb(24, 24, 27)",
+                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                      "borderRadius": "8px",
+                      "overflow": "clip",
+                      "overflowX": "clip",
+                      "cursor": "text",
+                      "fill": "rgb(0, 0, 0)"
+                    }
+                  },
+                  {
+                    "seq": 10,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-faint opacity-40",
+                    "attrs": {
+                      "type": "button",
+                      "disabled": "",
+                      "aria-label": "Undo",
+                      "title": "Undo"
+                    },
+                    "box": {
+                      "x": 174,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 174,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(161, 161, 170)",
+                      "borderTop": "0px solid rgb(161, 161, 170)",
+                      "borderBottom": "0px solid rgb(161, 161, 170)",
+                      "borderRadius": "3.35544e+07px",
+                      "opacity": "0.4",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 11,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 184,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 184,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(161, 161, 170)",
+                          "borderTop": "0px solid rgb(161, 161, 170)",
+                          "borderBottom": "0px solid rgb(161, 161, 170)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(161, 161, 170)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M232,144a64.07,64.07,0,0,1-64,64H80a8,8,0,0,1,0-16h88a48,48,0,0,0,0-96H51.31l34.35,34.34a8,8,0,0,1-11.32,11.32l-48-48a8,8,0,0,1,0-11.32l48-48A8,8,0,0,1,85.66,45.66L51.31,80H168A64.07,64.07,0,0,1,232,144Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 12,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-faint opacity-40",
+                    "attrs": {
+                      "type": "button",
+                      "disabled": "",
+                      "aria-label": "Redo",
+                      "title": "Redo"
+                    },
+                    "box": {
+                      "x": 216,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 216,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(161, 161, 170)",
+                      "borderTop": "0px solid rgb(161, 161, 170)",
+                      "borderBottom": "0px solid rgb(161, 161, 170)",
+                      "borderRadius": "3.35544e+07px",
+                      "opacity": "0.4",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 13,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 226,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 226,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(161, 161, 170)",
+                          "borderTop": "0px solid rgb(161, 161, 170)",
+                          "borderBottom": "0px solid rgb(161, 161, 170)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(161, 161, 170)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M170.34,130.34,204.69,96H88a48,48,0,0,0,0,96h88a8,8,0,0,1,0,16H88A64,64,0,0,1,88,80H204.69L170.34,45.66a8,8,0,0,1,11.32-11.32l48,48a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32-11.32Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 14,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-muted hover:bg-hover",
+                    "attrs": {
+                      "type": "button",
+                      "aria-label": "Layers",
+                      "aria-pressed": "false",
+                      "title": "Layers"
+                    },
+                    "box": {
+                      "x": 258,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 258,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(113, 113, 122)",
+                      "borderTop": "0px solid rgb(113, 113, 122)",
+                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                      "borderRadius": "3.35544e+07px",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 15,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 268,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 268,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(113, 113, 122)",
+                          "borderTop": "0px solid rgb(113, 113, 122)",
+                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(113, 113, 122)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M12,111l112,64a8,8,0,0,0,7.94,0l112-64a8,8,0,0,0,0-13.9l-112-64a8,8,0,0,0-7.94,0l-112,64A8,8,0,0,0,12,111ZM128,49.21,223.87,104,128,158.79,32.13,104ZM246.94,140A8,8,0,0,1,244,151L132,215a8,8,0,0,1-7.94,0L12,151A8,8,0,0,1,20,137.05l108,61.74,108-61.74A8,8,0,0,1,246.94,140Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 16,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-muted hover:bg-hover",
+                    "attrs": {
+                      "type": "button",
+                      "aria-label": "Animation timeline",
+                      "aria-pressed": "false",
+                      "title": "Animation timeline"
+                    },
+                    "box": {
+                      "x": 300,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 300,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(113, 113, 122)",
+                      "borderTop": "0px solid rgb(113, 113, 122)",
+                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                      "borderRadius": "3.35544e+07px",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 17,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 310,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 310,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(113, 113, 122)",
+                          "borderTop": "0px solid rgb(113, 113, 122)",
+                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(113, 113, 122)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,88h80v80H40Zm96-16V56h32V72Zm-16,0H88V56h32Zm0,112v16H88V184Zm16,0h32v16H136Zm0-16V88h80v80Zm80-96H184V56h32ZM72,56V72H40V56ZM40,184H72v16H40Zm176,16H184V184h32v16Z\"></path></svg>"
+                      }
+                    ]
+                  },
+                  {
+                    "seq": 18,
+                    "tag": "button",
+                    "classes": "flex flex-none items-center justify-center rounded-full transition-colors h-10 w-10 text-muted hover:bg-hover",
+                    "attrs": {
+                      "type": "button",
+                      "aria-label": "More",
+                      "aria-pressed": "false",
+                      "title": "More"
+                    },
+                    "box": {
+                      "x": 342,
+                      "y": 4,
+                      "w": 40,
+                      "h": 40,
+                      "exact": {
+                        "x": 342,
+                        "y": 3.5,
+                        "w": 40,
+                        "h": 40
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "40px",
+                      "height": "40px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "flex": "0 0 auto",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(113, 113, 122)",
+                      "borderTop": "0px solid rgb(113, 113, 122)",
+                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                      "borderRadius": "3.35544e+07px",
+                      "cursor": "default",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 19,
+                        "tag": "svg",
+                        "classes": "h-5 w-5",
+                        "attrs": {
+                          "xmlns": "http://www.w3.org/2000/svg",
+                          "width": "1em",
+                          "height": "1em",
+                          "fill": "currentColor",
+                          "viewBox": "0 0 256 256"
+                        },
+                        "box": {
+                          "x": 352,
+                          "y": 14,
+                          "w": 20,
+                          "h": 20,
+                          "exact": {
+                            "x": 352,
+                            "y": 13.5,
+                            "w": 20,
+                            "h": 20
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "20px",
+                          "height": "20px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(113, 113, 122)",
+                          "borderTop": "0px solid rgb(113, 113, 122)",
+                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                          "overflow": "hidden",
+                          "overflowX": "hidden",
+                          "cursor": "default",
+                          "fill": "rgb(113, 113, 122)"
+                        },
+                        "children": [],
+                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-5 w-5\"><path d=\"M144,128a16,16,0,1,1-16-16A16,16,0,0,1,144,128ZM60,112a16,16,0,1,0,16,16A16,16,0,0,0,60,112Zm136,0a16,16,0,1,0,16,16A16,16,0,0,0,196,112Z\"></path></svg>"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "seq": 20,
+                "tag": "main",
+                "classes": "relative min-h-0 flex-1 overflow-hidden",
+                "box": {
+                  "x": 0,
+                  "y": 48,
+                  "w": 390,
+                  "h": 687,
+                  "exact": {
+                    "x": 0,
+                    "y": 48,
+                    "w": 390,
+                    "h": 687
+                  }
+                },
+                "style": {
+                  "display": "block",
+                  "position": "relative",
+                  "top": "0px",
+                  "right": "0px",
+                  "bottom": "0px",
+                  "left": "0px",
+                  "width": "390px",
+                  "height": "687px",
+                  "minWidth": "auto",
+                  "flex": "1 1 0%",
+                  "fontFamily": "Geist, \"Geist Fallback\"",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "lineHeight": "24px",
+                  "color": "rgb(24, 24, 27)",
+                  "borderTop": "0px solid rgb(24, 24, 27)",
+                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                  "overflow": "hidden",
+                  "overflowX": "hidden",
+                  "fill": "rgb(0, 0, 0)"
+                },
+                "children": [
+                  {
+                    "seq": 21,
+                    "tag": "div",
+                    "classes": "relative h-full w-full overflow-hidden",
+                    "box": {
+                      "x": 0,
+                      "y": 48,
+                      "w": 390,
+                      "h": 687,
+                      "exact": {
+                        "x": 0,
+                        "y": 48,
+                        "w": 390,
+                        "h": 687
+                      }
+                    },
+                    "style": {
+                      "display": "block",
+                      "position": "relative",
+                      "top": "0px",
+                      "right": "0px",
+                      "bottom": "0px",
+                      "left": "0px",
+                      "width": "390px",
+                      "height": "687px",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(24, 24, 27)",
+                      "borderTop": "0px solid rgb(24, 24, 27)",
+                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                      "overflow": "hidden",
+                      "overflowX": "hidden",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 22,
+                        "tag": "canvas",
+                        "classes": "h-full w-full touch-none select-none",
+                        "attrs": {
+                          "width": "1170",
+                          "height": "2061"
+                        },
+                        "box": {
+                          "x": 0,
+                          "y": 48,
+                          "w": 390,
+                          "h": 687,
+                          "exact": {
+                            "x": 0,
+                            "y": 48,
+                            "w": 390,
+                            "h": 687
+                          }
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "390px",
+                          "height": "687px",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(24, 24, 27)",
+                          "borderTop": "0px solid rgb(24, 24, 27)",
+                          "borderBottom": "0px solid rgb(24, 24, 27)",
+                          "overflow": "clip",
+                          "overflowX": "clip",
+                          "cursor": "crosshair",
+                          "fill": "rgb(0, 0, 0)"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "seq": 23,
+                "tag": "div",
+                "classes": "flex h-12 flex-none items-center overflow-x-auto",
+                "box": {
+                  "x": 0,
+                  "y": 735,
+                  "w": 390,
+                  "h": 48,
+                  "exact": {
+                    "x": 0,
+                    "y": 735,
+                    "w": 390,
+                    "h": 48
+                  }
+                },
+                "scroll": {
+                  "w": 396,
+                  "h": 48
+                },
+                "style": {
+                  "display": "flex",
+                  "position": "static",
+                  "width": "390px",
+                  "height": "48px",
+                  "minWidth": "auto",
+                  "minHeight": "auto",
+                  "alignItems": "center",
+                  "flex": "0 0 auto",
+                  "fontFamily": "Geist, \"Geist Fallback\"",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "lineHeight": "24px",
+                  "color": "rgb(24, 24, 27)",
+                  "borderTop": "0px solid rgb(24, 24, 27)",
+                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                  "overflow": "auto",
+                  "overflowX": "auto",
+                  "fill": "rgb(0, 0, 0)"
+                },
+                "children": [
+                  {
+                    "seq": 24,
+                    "tag": "div",
+                    "classes": "mx-auto flex w-max items-center px-3",
+                    "box": {
+                      "x": 0,
+                      "y": 741,
+                      "w": 396,
+                      "h": 36,
+                      "exact": {
+                        "x": 0,
+                        "y": 741,
+                        "w": 395.97,
+                        "h": 36
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "395.969px",
+                      "height": "36px",
+                      "minWidth": "auto",
+                      "minHeight": "auto",
+                      "padding": "0px 12px",
+                      "alignItems": "center",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(24, 24, 27)",
+                      "borderTop": "0px solid rgb(24, 24, 27)",
+                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 25,
+                        "tag": "div",
+                        "classes": "flex items-center gap-2",
+                        "box": {
+                          "x": 12,
+                          "y": 741,
+                          "w": 372,
+                          "h": 36,
+                          "exact": {
+                            "x": 12,
+                            "y": 741,
+                            "w": 371.97,
+                            "h": 36
+                          }
+                        },
+                        "style": {
+                          "display": "flex",
+                          "position": "static",
+                          "width": "371.969px",
+                          "height": "36px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "gap": "8px",
+                          "alignItems": "center",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(24, 24, 27)",
+                          "borderTop": "0px solid rgb(24, 24, 27)",
+                          "borderBottom": "0px solid rgb(24, 24, 27)",
+                          "fill": "rgb(0, 0, 0)"
+                        },
+                        "children": [
+                          {
+                            "seq": 26,
+                            "tag": "div",
+                            "classes": "flex items-center gap-1 rounded-full bg-panel2 px-1.5 py-1 text-sm text-fg shadow-md md:shadow-none",
+                            "box": {
+                              "x": 12,
+                              "y": 741,
+                              "w": 149,
+                              "h": 36,
+                              "exact": {
+                                "x": 12,
+                                "y": 741,
+                                "w": 149,
+                                "h": 36
+                              }
+                            },
+                            "style": {
+                              "display": "flex",
+                              "position": "static",
+                              "width": "149px",
+                              "height": "36px",
+                              "minWidth": "auto",
+                              "minHeight": "auto",
+                              "padding": "4px 6px",
+                              "gap": "4px",
+                              "alignItems": "center",
+                              "fontFamily": "Geist, \"Geist Fallback\"",
+                              "fontSize": "14px",
+                              "fontWeight": "400",
+                              "lineHeight": "20px",
+                              "color": "rgb(24, 24, 27)",
+                              "backgroundColor": "rgb(241, 241, 244)",
+                              "borderTop": "0px solid rgb(24, 24, 27)",
+                              "borderBottom": "0px solid rgb(24, 24, 27)",
+                              "borderRadius": "3.35544e+07px",
+                              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+                              "fill": "rgb(0, 0, 0)"
+                            },
+                            "children": [
+                              {
+                                "seq": 27,
+                                "tag": "button",
+                                "classes": "flex h-7 w-7 items-center justify-center rounded-full hover:bg-panel",
+                                "attrs": {
+                                  "type": "button",
+                                  "aria-label": "Smaller brush"
+                                },
+                                "box": {
+                                  "x": 18,
+                                  "y": 745,
+                                  "w": 28,
+                                  "h": 28,
+                                  "exact": {
+                                    "x": 18,
+                                    "y": 745,
+                                    "w": 28,
+                                    "h": 28
+                                  }
+                                },
+                                "style": {
+                                  "display": "flex",
+                                  "position": "static",
+                                  "width": "28px",
+                                  "height": "28px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "alignItems": "center",
+                                  "justifyContent": "center",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "14px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "20px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "borderRadius": "3.35544e+07px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 28,
+                                    "tag": "svg",
+                                    "classes": "h-4 w-4",
+                                    "attrs": {
+                                      "xmlns": "http://www.w3.org/2000/svg",
+                                      "width": "1em",
+                                      "height": "1em",
+                                      "fill": "currentColor",
+                                      "viewBox": "0 0 256 256"
+                                    },
+                                    "box": {
+                                      "x": 24,
+                                      "y": 751,
+                                      "w": 16,
+                                      "h": 16,
+                                      "exact": {
+                                        "x": 24,
+                                        "y": 751,
+                                        "w": 16,
+                                        "h": 16
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "block",
+                                      "position": "static",
+                                      "width": "16px",
+                                      "height": "16px",
+                                      "minWidth": "auto",
+                                      "minHeight": "auto",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "14px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "20px",
+                                      "color": "rgb(24, 24, 27)",
+                                      "borderTop": "0px solid rgb(24, 24, 27)",
+                                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                                      "overflow": "hidden",
+                                      "overflowX": "hidden",
+                                      "cursor": "default",
+                                      "fill": "rgb(24, 24, 27)"
+                                    },
+                                    "children": [],
+                                    "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128Z\"></path></svg>"
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 29,
+                                "tag": "span",
+                                "classes": "w-8 text-center font-medium tabular-nums",
+                                "text": "1px",
+                                "box": {
+                                  "x": 50,
+                                  "y": 749,
+                                  "w": 32,
+                                  "h": 20,
+                                  "exact": {
+                                    "x": 50,
+                                    "y": 749,
+                                    "w": 32,
+                                    "h": 20
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "32px",
+                                  "height": "20px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "14px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "20px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              },
+                              {
+                                "seq": 30,
+                                "tag": "button",
+                                "classes": "flex h-7 w-7 items-center justify-center rounded-full hover:bg-panel",
+                                "attrs": {
+                                  "type": "button",
+                                  "aria-label": "Bigger brush"
+                                },
+                                "box": {
+                                  "x": 86,
+                                  "y": 745,
+                                  "w": 28,
+                                  "h": 28,
+                                  "exact": {
+                                    "x": 86,
+                                    "y": 745,
+                                    "w": 28,
+                                    "h": 28
+                                  }
+                                },
+                                "style": {
+                                  "display": "flex",
+                                  "position": "static",
+                                  "width": "28px",
+                                  "height": "28px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "alignItems": "center",
+                                  "justifyContent": "center",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "14px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "20px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "borderRadius": "3.35544e+07px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 31,
+                                    "tag": "svg",
+                                    "classes": "h-4 w-4",
+                                    "attrs": {
+                                      "xmlns": "http://www.w3.org/2000/svg",
+                                      "width": "1em",
+                                      "height": "1em",
+                                      "fill": "currentColor",
+                                      "viewBox": "0 0 256 256"
+                                    },
+                                    "box": {
+                                      "x": 92,
+                                      "y": 751,
+                                      "w": 16,
+                                      "h": 16,
+                                      "exact": {
+                                        "x": 92,
+                                        "y": 751,
+                                        "w": 16,
+                                        "h": 16
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "block",
+                                      "position": "static",
+                                      "width": "16px",
+                                      "height": "16px",
+                                      "minWidth": "auto",
+                                      "minHeight": "auto",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "14px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "20px",
+                                      "color": "rgb(24, 24, 27)",
+                                      "borderTop": "0px solid rgb(24, 24, 27)",
+                                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                                      "overflow": "hidden",
+                                      "overflowX": "hidden",
+                                      "cursor": "default",
+                                      "fill": "rgb(24, 24, 27)"
+                                    },
+                                    "children": [],
+                                    "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z\"></path></svg>"
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 32,
+                                "tag": "span",
+                                "classes": "mx-0.5 h-5 w-px bg-line",
+                                "attrs": {
+                                  "aria-hidden": "true"
+                                },
+                                "box": {
+                                  "x": 120,
+                                  "y": 749,
+                                  "w": 1,
+                                  "h": 20,
+                                  "exact": {
+                                    "x": 120,
+                                    "y": 749,
+                                    "w": 1,
+                                    "h": 20
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "1px",
+                                  "height": "20px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "margin": "0px 2px",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "14px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "20px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "backgroundColor": "rgba(0, 0, 0, 0.1)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              },
+                              {
+                                "seq": 33,
+                                "tag": "button",
+                                "classes": "flex h-7 w-7 items-center justify-center rounded-full transition-colors bg-panel text-fg shadow-sm",
+                                "attrs": {
+                                  "type": "button",
+                                  "role": "switch",
+                                  "aria-checked": "true",
+                                  "aria-label": "Pixel-perfect strokes",
+                                  "title": "Pixel-perfect — remove doubled corners on diagonals"
+                                },
+                                "box": {
+                                  "x": 127,
+                                  "y": 745,
+                                  "w": 28,
+                                  "h": 28,
+                                  "exact": {
+                                    "x": 127,
+                                    "y": 745,
+                                    "w": 28,
+                                    "h": 28
+                                  }
+                                },
+                                "style": {
+                                  "display": "flex",
+                                  "position": "static",
+                                  "width": "28px",
+                                  "height": "28px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "alignItems": "center",
+                                  "justifyContent": "center",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "14px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "20px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "backgroundColor": "rgb(255, 255, 255)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "borderRadius": "3.35544e+07px",
+                                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 34,
+                                    "tag": "svg",
+                                    "classes": "h-4 w-4",
+                                    "attrs": {
+                                      "xmlns": "http://www.w3.org/2000/svg",
+                                      "width": "1em",
+                                      "height": "1em",
+                                      "fill": "currentColor",
+                                      "viewBox": "0 0 256 256"
+                                    },
+                                    "box": {
+                                      "x": 133,
+                                      "y": 751,
+                                      "w": 16,
+                                      "h": 16,
+                                      "exact": {
+                                        "x": 133,
+                                        "y": 751,
+                                        "w": 16,
+                                        "h": 16
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "block",
+                                      "position": "static",
+                                      "width": "16px",
+                                      "height": "16px",
+                                      "minWidth": "auto",
+                                      "minHeight": "auto",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "14px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "20px",
+                                      "color": "rgb(24, 24, 27)",
+                                      "borderTop": "0px solid rgb(24, 24, 27)",
+                                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                                      "overflow": "hidden",
+                                      "overflowX": "hidden",
+                                      "cursor": "default",
+                                      "fill": "rgb(24, 24, 27)"
+                                    },
+                                    "children": [],
+                                    "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-4 w-4\"><path d=\"M200,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V40A16,16,0,0,0,200,24Zm-40,80h40v24H160Zm-48,40h88v24H112Zm88,72H56V184H200v32Z\"></path></svg>"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "seq": 35,
+                            "tag": "div",
+                            "classes": "flex items-center rounded-full bg-panel2 p-0.5 shadow-md md:shadow-none",
+                            "box": {
+                              "x": 169,
+                              "y": 745,
+                              "w": 120,
+                              "h": 28,
+                              "exact": {
+                                "x": 169,
+                                "y": 745,
+                                "w": 120.44,
+                                "h": 28
+                              }
+                            },
+                            "style": {
+                              "display": "flex",
+                              "position": "static",
+                              "width": "120.438px",
+                              "height": "28px",
+                              "minWidth": "auto",
+                              "minHeight": "auto",
+                              "padding": "2px",
+                              "alignItems": "center",
+                              "fontFamily": "Geist, \"Geist Fallback\"",
+                              "fontSize": "16px",
+                              "fontWeight": "400",
+                              "lineHeight": "24px",
+                              "color": "rgb(24, 24, 27)",
+                              "backgroundColor": "rgb(241, 241, 244)",
+                              "borderTop": "0px solid rgb(24, 24, 27)",
+                              "borderBottom": "0px solid rgb(24, 24, 27)",
+                              "borderRadius": "3.35544e+07px",
+                              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+                              "fill": "rgb(0, 0, 0)"
+                            },
+                            "children": [
+                              {
+                                "seq": 36,
+                                "tag": "button",
+                                "classes": "rounded-full px-2.5 py-1 text-xs font-medium transition-colors bg-panel text-fg shadow-sm",
+                                "attrs": {
+                                  "type": "button"
+                                },
+                                "text": "Square",
+                                "box": {
+                                  "x": 171,
+                                  "y": 747,
+                                  "w": 60,
+                                  "h": 24,
+                                  "exact": {
+                                    "x": 171,
+                                    "y": 747,
+                                    "w": 60.23,
+                                    "h": 24
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "60.2344px",
+                                  "height": "24px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "padding": "4px 10px",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "12px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "16px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "backgroundColor": "rgb(255, 255, 255)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "borderRadius": "3.35544e+07px",
+                                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              },
+                              {
+                                "seq": 37,
+                                "tag": "button",
+                                "classes": "rounded-full px-2.5 py-1 text-xs font-medium transition-colors text-muted hover:text-fg",
+                                "attrs": {
+                                  "type": "button"
+                                },
+                                "text": "Round",
+                                "box": {
+                                  "x": 231,
+                                  "y": 747,
+                                  "w": 56,
+                                  "h": 24,
+                                  "exact": {
+                                    "x": 231.23,
+                                    "y": 747,
+                                    "w": 56.2,
+                                    "h": 24
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "56.2031px",
+                                  "height": "24px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "padding": "4px 10px",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "12px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "16px",
+                                  "color": "rgb(113, 113, 122)",
+                                  "borderTop": "0px solid rgb(113, 113, 122)",
+                                  "borderBottom": "0px solid rgb(113, 113, 122)",
+                                  "borderRadius": "3.35544e+07px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "seq": 38,
+                            "tag": "button",
+                            "classes": "flex items-center gap-1.5 rounded-full bg-panel2 py-1.5 pl-2.5 pr-2 text-xs font-medium text-fg transition-colors hover:bg-hover shadow-md md:shadow-none",
+                            "attrs": {
+                              "type": "button",
+                              "aria-haspopup": "listbox",
+                              "aria-expanded": "false",
+                              "aria-label": "Dither: Solid"
+                            },
+                            "box": {
+                              "x": 297,
+                              "y": 745,
+                              "w": 87,
+                              "h": 28,
+                              "exact": {
+                                "x": 297.44,
+                                "y": 745,
+                                "w": 86.53,
+                                "h": 28
+                              }
+                            },
+                            "style": {
+                              "display": "flex",
+                              "position": "static",
+                              "width": "86.5312px",
+                              "height": "28px",
+                              "minWidth": "auto",
+                              "minHeight": "auto",
+                              "padding": "6px 8px 6px 10px",
+                              "gap": "6px",
+                              "alignItems": "center",
+                              "fontFamily": "Geist, \"Geist Fallback\"",
+                              "fontSize": "12px",
+                              "fontWeight": "500",
+                              "lineHeight": "16px",
+                              "color": "rgb(24, 24, 27)",
+                              "backgroundColor": "rgb(241, 241, 244)",
+                              "borderTop": "0px solid rgb(24, 24, 27)",
+                              "borderBottom": "0px solid rgb(24, 24, 27)",
+                              "borderRadius": "3.35544e+07px",
+                              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 4px 6px -1px, rgba(0, 0, 0, 0.1) 0px 2px 4px -2px",
+                              "cursor": "default",
+                              "fill": "rgb(0, 0, 0)"
+                            },
+                            "children": [
+                              {
+                                "seq": 39,
+                                "tag": "span",
+                                "classes": "block h-4 w-4 flex-none rounded bg-fg ring-1 ring-line",
+                                "attrs": {
+                                  "aria-hidden": "true"
+                                },
+                                "box": {
+                                  "x": 307,
+                                  "y": 751,
+                                  "w": 16,
+                                  "h": 16,
+                                  "exact": {
+                                    "x": 307.44,
+                                    "y": 751,
+                                    "w": 16,
+                                    "h": 16
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "16px",
+                                  "height": "16px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "flex": "0 0 auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "12px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "16px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "backgroundColor": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "borderRadius": "4px",
+                                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              },
+                              {
+                                "seq": 40,
+                                "tag": "span",
+                                "text": "Solid",
+                                "box": {
+                                  "x": 329,
+                                  "y": 751,
+                                  "w": 29,
+                                  "h": 16,
+                                  "exact": {
+                                    "x": 329.44,
+                                    "y": 751,
+                                    "w": 28.53,
+                                    "h": 16
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "28.5312px",
+                                  "height": "16px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "12px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "16px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "cursor": "default",
+                                  "fill": "rgb(0, 0, 0)"
+                                }
+                              },
+                              {
+                                "seq": 41,
+                                "tag": "svg",
+                                "classes": "h-3 w-3 text-muted",
+                                "attrs": {
+                                  "xmlns": "http://www.w3.org/2000/svg",
+                                  "width": "1em",
+                                  "height": "1em",
+                                  "fill": "currentColor",
+                                  "viewBox": "0 0 256 256"
+                                },
+                                "box": {
+                                  "x": 364,
+                                  "y": 753,
+                                  "w": 12,
+                                  "h": 12,
+                                  "exact": {
+                                    "x": 363.97,
+                                    "y": 753,
+                                    "w": 12,
+                                    "h": 12
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "12px",
+                                  "height": "12px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "12px",
+                                  "fontWeight": "500",
+                                  "lineHeight": "16px",
+                                  "color": "rgb(113, 113, 122)",
+                                  "borderTop": "0px solid rgb(113, 113, 122)",
+                                  "borderBottom": "0px solid rgb(113, 113, 122)",
+                                  "overflow": "hidden",
+                                  "overflowX": "hidden",
+                                  "cursor": "default",
+                                  "fill": "rgb(113, 113, 122)"
+                                },
+                                "children": [],
+                                "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-3 w-3 text-muted\"><path d=\"M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z\"></path></svg>"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "seq": 42,
+                "tag": "div",
+                "classes": "flex-none border-t border-line bg-panel px-2 pt-2",
+                "box": {
+                  "x": 0,
+                  "y": 783,
+                  "w": 390,
+                  "h": 61,
+                  "exact": {
+                    "x": 0,
+                    "y": 783,
+                    "w": 390,
+                    "h": 61
+                  }
+                },
+                "scroll": {
+                  "w": 390,
+                  "h": 60
+                },
+                "style": {
+                  "display": "block",
+                  "position": "static",
+                  "width": "390px",
+                  "height": "61px",
+                  "minWidth": "auto",
+                  "minHeight": "auto",
+                  "padding": "8px",
+                  "flex": "0 0 auto",
+                  "fontFamily": "Geist, \"Geist Fallback\"",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "lineHeight": "24px",
+                  "color": "rgb(24, 24, 27)",
+                  "backgroundColor": "rgb(255, 255, 255)",
+                  "borderTop": "1px solid rgba(0, 0, 0, 0.1)",
+                  "borderBottom": "0px solid rgba(0, 0, 0, 0.1)",
+                  "fill": "rgb(0, 0, 0)"
+                },
+                "children": [
+                  {
+                    "seq": 43,
+                    "tag": "div",
+                    "classes": "flex items-center gap-1.5",
+                    "box": {
+                      "x": 8,
+                      "y": 792,
+                      "w": 374,
+                      "h": 44,
+                      "exact": {
+                        "x": 8,
+                        "y": 792,
+                        "w": 374,
+                        "h": 44
+                      }
+                    },
+                    "style": {
+                      "display": "flex",
+                      "position": "static",
+                      "width": "374px",
+                      "height": "44px",
+                      "gap": "6px",
+                      "alignItems": "center",
+                      "fontFamily": "Geist, \"Geist Fallback\"",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "lineHeight": "24px",
+                      "color": "rgb(24, 24, 27)",
+                      "borderTop": "0px solid rgb(24, 24, 27)",
+                      "borderBottom": "0px solid rgb(24, 24, 27)",
+                      "fill": "rgb(0, 0, 0)"
+                    },
+                    "children": [
+                      {
+                        "seq": 44,
+                        "tag": "button",
+                        "classes": "flex h-11 w-11 flex-none items-center justify-center rounded-xl transition ring-1 ring-line",
+                        "attrs": {
+                          "type": "button",
+                          "aria-label": "Color",
+                          "aria-pressed": "false"
+                        },
+                        "box": {
+                          "x": 8,
+                          "y": 792,
+                          "w": 44,
+                          "h": 44,
+                          "exact": {
+                            "x": 8,
+                            "y": 792,
+                            "w": 44,
+                            "h": 44
+                          }
+                        },
+                        "style": {
+                          "display": "flex",
+                          "position": "static",
+                          "width": "44px",
+                          "height": "44px",
+                          "minWidth": "auto",
+                          "minHeight": "auto",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "flex": "0 0 auto",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(24, 24, 27)",
+                          "borderTop": "0px solid rgb(24, 24, 27)",
+                          "borderBottom": "0px solid rgb(24, 24, 27)",
+                          "borderRadius": "12px",
+                          "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+                          "cursor": "default",
+                          "fill": "rgb(0, 0, 0)"
+                        },
+                        "children": [
+                          {
+                            "seq": 45,
+                            "tag": "span",
+                            "classes": "h-7 w-7 rounded-lg ring-1 ring-inset ring-line",
+                            "box": {
+                              "x": 16,
+                              "y": 800,
+                              "w": 28,
+                              "h": 28,
+                              "exact": {
+                                "x": 16,
+                                "y": 800,
+                                "w": 28,
+                                "h": 28
+                              }
+                            },
+                            "style": {
+                              "display": "block",
+                              "position": "static",
+                              "width": "28px",
+                              "height": "28px",
+                              "minWidth": "auto",
+                              "minHeight": "auto",
+                              "fontFamily": "Geist, \"Geist Fallback\"",
+                              "fontSize": "16px",
+                              "fontWeight": "400",
+                              "lineHeight": "24px",
+                              "color": "rgb(24, 24, 27)",
+                              "backgroundColor": "rgb(26, 28, 44)",
+                              "borderTop": "0px solid rgb(24, 24, 27)",
+                              "borderBottom": "0px solid rgb(24, 24, 27)",
+                              "borderRadius": "8px",
+                              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+                              "cursor": "default",
+                              "fill": "rgb(0, 0, 0)"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "seq": 46,
+                        "tag": "div",
+                        "classes": "min-w-0 flex-1 overflow-x-auto [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                        "box": {
+                          "x": 58,
+                          "y": 792,
+                          "w": 324,
+                          "h": 44,
+                          "exact": {
+                            "x": 58,
+                            "y": 792,
+                            "w": 324,
+                            "h": 44
+                          }
+                        },
+                        "scroll": {
+                          "w": 380,
+                          "h": 44
+                        },
+                        "style": {
+                          "display": "block",
+                          "position": "static",
+                          "width": "324px",
+                          "height": "44px",
+                          "minHeight": "auto",
+                          "flex": "1 1 0%",
+                          "fontFamily": "Geist, \"Geist Fallback\"",
+                          "fontSize": "16px",
+                          "fontWeight": "400",
+                          "lineHeight": "24px",
+                          "color": "rgb(24, 24, 27)",
+                          "borderTop": "0px solid rgb(24, 24, 27)",
+                          "borderBottom": "0px solid rgb(24, 24, 27)",
+                          "overflow": "auto",
+                          "overflowX": "auto",
+                          "fill": "rgb(0, 0, 0)",
+                          "scrollbarWidth": "none"
+                        },
+                        "children": [
+                          {
+                            "seq": 47,
+                            "tag": "div",
+                            "classes": "pointer-events-auto flex gap-1 w-max flex-row",
+                            "box": {
+                              "x": 58,
+                              "y": 792,
+                              "w": 380,
+                              "h": 44,
+                              "exact": {
+                                "x": 58,
+                                "y": 792,
+                                "w": 380,
+                                "h": 44
+                              }
+                            },
+                            "style": {
+                              "display": "flex",
+                              "position": "static",
+                              "width": "380px",
+                              "height": "44px",
+                              "gap": "4px",
+                              "fontFamily": "Geist, \"Geist Fallback\"",
+                              "fontSize": "16px",
+                              "fontWeight": "400",
+                              "lineHeight": "24px",
+                              "color": "rgb(24, 24, 27)",
+                              "borderTop": "0px solid rgb(24, 24, 27)",
+                              "borderBottom": "0px solid rgb(24, 24, 27)",
+                              "fill": "rgb(0, 0, 0)"
+                            },
+                            "children": [
+                              {
+                                "seq": 48,
+                                "tag": "div",
+                                "box": {
+                                  "x": 58,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 58,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 49,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Select / Move (V)",
+                                      "aria-label": "Select / Move",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 58,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 58,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 50,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 68,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 68,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M168,132.69,214.08,115l.33-.13A16,16,0,0,0,213,85.07L52.92,32.8A15.95,15.95,0,0,0,32.8,52.92L85.07,213a15.82,15.82,0,0,0,14.41,11l.78,0a15.84,15.84,0,0,0,14.61-9.59l.13-.33L132.69,168,184,219.31a16,16,0,0,0,22.63,0l12.68-12.68a16,16,0,0,0,0-22.63ZM195.31,208,144,156.69a16,16,0,0,0-26,4.93c0,.11-.09.22-.13.32l-17.65,46L48,48l159.85,52.2-45.95,17.64-.32.13a16,16,0,0,0-4.93,26h0L208,195.31Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 51,
+                                "tag": "div",
+                                "box": {
+                                  "x": 106,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 106,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 52,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors bg-accent text-onaccent",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Brush (B)",
+                                      "aria-label": "Brush",
+                                      "aria-pressed": "true"
+                                    },
+                                    "box": {
+                                      "x": 106,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 106,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(255, 255, 255)",
+                                      "backgroundColor": "rgb(24, 24, 27)",
+                                      "borderTop": "0px solid rgb(255, 255, 255)",
+                                      "borderBottom": "0px solid rgb(255, 255, 255)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 53,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 116,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 116,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(255, 255, 255)",
+                                          "borderTop": "0px solid rgb(255, 255, 255)",
+                                          "borderBottom": "0px solid rgb(255, 255, 255)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(255, 255, 255)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M232,32a8,8,0,0,0-8-8c-44.08,0-89.31,49.71-114.43,82.63A60,60,0,0,0,32,164c0,30.88-19.54,44.73-20.47,45.37A8,8,0,0,0,16,224H92a60,60,0,0,0,57.37-77.57C182.3,121.31,232,76.08,232,32ZM124.42,113.55q5.14-6.66,10.09-12.55A76.23,76.23,0,0,1,155,121.49q-5.9,4.94-12.55,10.09A60.54,60.54,0,0,0,124.42,113.55Zm42.7-2.68a92.57,92.57,0,0,0-22-22c31.78-34.53,55.75-45,69.9-47.91C212.17,55.12,201.65,79.09,167.12,110.87Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 54,
+                                "tag": "div",
+                                "box": {
+                                  "x": 154,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 154,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 55,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Eraser (E)",
+                                      "aria-label": "Eraser",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 154,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 154,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 56,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 164,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 164,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M225,80.4,183.6,39a24,24,0,0,0-33.94,0L31,157.66a24,24,0,0,0,0,33.94l30.06,30.06A8,8,0,0,0,66.74,224H216a8,8,0,0,0,0-16h-84.7L225,114.34A24,24,0,0,0,225,80.4ZM108.68,208H70.05L42.33,180.28a8,8,0,0,1,0-11.31L96,115.31,148.69,168Zm105-105L160,156.69,107.31,104,161,50.34a8,8,0,0,1,11.32,0l41.38,41.38a8,8,0,0,1,0,11.31Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 57,
+                                "tag": "div",
+                                "box": {
+                                  "x": 202,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 202,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 58,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Fill (G)",
+                                      "aria-label": "Fill",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 202,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 202,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 59,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 212,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 212,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M234.53,139.07a8,8,0,0,0,3.13-13.24L122.17,10.34a8,8,0,0,0-11.31,0L70.25,51,45.65,26.34A8,8,0,0,0,34.34,37.66l24.6,24.6L15,106.17a24,24,0,0,0,0,33.94L99.89,225a24,24,0,0,0,33.94,0l78.49-78.49Zm-32.19-5.24-79.83,79.83a8,8,0,0,1-11.31,0L26.34,128.8a8,8,0,0,1,0-11.31L70.25,73.57l29.12,29.12a28,28,0,1,0,11.31-11.32L81.57,62.26l35-34.95L217.19,128l-11.72,3.9A8.09,8.09,0,0,0,202.34,133.83Zm-86.83-26.31,0,0a13.26,13.26,0,1,1-.05.06S115.51,107.53,115.51,107.52Zm123.15,56a8,8,0,0,0-13.32,0C223.57,166.23,208,190.09,208,208a24,24,0,0,0,48,0C256,190.09,240.43,166.23,238.66,163.56ZM232,216a8,8,0,0,1-8-8c0-6.8,4-16.32,8-24.08,4,7.76,8,17.34,8,24.08A8,8,0,0,1,232,216Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 60,
+                                "tag": "div",
+                                "classes": "relative",
+                                "box": {
+                                  "x": 250,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 250,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "relative",
+                                  "top": "0px",
+                                  "right": "0px",
+                                  "bottom": "0px",
+                                  "left": "0px",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 61,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Shapes (U)",
+                                      "aria-label": "Shapes",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 250,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 250,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 62,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 260,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 260,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,176H48V48H208V208Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 63,
+                                "tag": "div",
+                                "box": {
+                                  "x": 298,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 298,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 64,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Select region (M)",
+                                      "aria-label": "Select region",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 298,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 298,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 65,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 308,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 308,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M152,40a8,8,0,0,1-8,8H112a8,8,0,0,1,0-16h32A8,8,0,0,1,152,40Zm-8,168H112a8,8,0,0,0,0,16h32a8,8,0,0,0,0-16ZM208,32H184a8,8,0,0,0,0,16h24V72a8,8,0,0,0,16,0V48A16,16,0,0,0,208,32Zm8,72a8,8,0,0,0-8,8v32a8,8,0,0,0,16,0V112A8,8,0,0,0,216,104Zm0,72a8,8,0,0,0-8,8v24H184a8,8,0,0,0,0,16h24a16,16,0,0,0,16-16V184A8,8,0,0,0,216,176ZM40,152a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v32A8,8,0,0,0,40,152Zm32,56H48V184a8,8,0,0,0-16,0v24a16,16,0,0,0,16,16H72a8,8,0,0,0,0-16ZM72,32H48A16,16,0,0,0,32,48V72a8,8,0,0,0,16,0V48H72a8,8,0,0,0,0-16Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 66,
+                                "tag": "div",
+                                "box": {
+                                  "x": 346,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 346,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 67,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Eyedropper (I)",
+                                      "aria-label": "Eyedropper",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 346,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 346,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 68,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 356,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 356,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M224,67.3a35.79,35.79,0,0,0-11.26-25.66c-14-13.28-36.72-12.78-50.62,1.13L142.8,62.2a24,24,0,0,0-33.14.77l-9,9a16,16,0,0,0,0,22.64l2,2.06-51,51a39.75,39.75,0,0,0-10.53,38l-8,18.41A13.68,13.68,0,0,0,36,219.3a15.92,15.92,0,0,0,17.71,3.35L71.23,215a39.89,39.89,0,0,0,37.06-10.75l51-51,2.06,2.06a16,16,0,0,0,22.62,0l9-9a24,24,0,0,0,.74-33.18l19.75-19.87A35.75,35.75,0,0,0,224,67.3ZM97,193a24,24,0,0,1-24,6,8,8,0,0,0-5.55.31l-18.1,7.91L57,189.41a8,8,0,0,0,.25-5.75A23.88,23.88,0,0,1,63,159l51-51,33.94,34ZM202.13,82l-25.37,25.52a8,8,0,0,0,0,11.3l4.89,4.89a8,8,0,0,1,0,11.32l-9,9L112,83.26l9-9a8,8,0,0,1,11.31,0l4.89,4.89a8,8,0,0,0,11.33,0l24.94-25.09c7.81-7.82,20.5-8.18,28.29-.81a20,20,0,0,1,.39,28.7Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "seq": 69,
+                                "tag": "div",
+                                "box": {
+                                  "x": 394,
+                                  "y": 792,
+                                  "w": 44,
+                                  "h": 44,
+                                  "exact": {
+                                    "x": 394,
+                                    "y": 792,
+                                    "w": 44,
+                                    "h": 44
+                                  }
+                                },
+                                "style": {
+                                  "display": "block",
+                                  "position": "static",
+                                  "width": "44px",
+                                  "height": "44px",
+                                  "minWidth": "auto",
+                                  "minHeight": "auto",
+                                  "fontFamily": "Geist, \"Geist Fallback\"",
+                                  "fontSize": "16px",
+                                  "fontWeight": "400",
+                                  "lineHeight": "24px",
+                                  "color": "rgb(24, 24, 27)",
+                                  "borderTop": "0px solid rgb(24, 24, 27)",
+                                  "borderBottom": "0px solid rgb(24, 24, 27)",
+                                  "fill": "rgb(0, 0, 0)"
+                                },
+                                "children": [
+                                  {
+                                    "seq": 70,
+                                    "tag": "button",
+                                    "classes": "flex h-11 w-11 items-center justify-center rounded-xl transition-colors text-muted hover:bg-hover",
+                                    "attrs": {
+                                      "type": "button",
+                                      "title": "Gradient (H)",
+                                      "aria-label": "Gradient",
+                                      "aria-pressed": "false"
+                                    },
+                                    "box": {
+                                      "x": 394,
+                                      "y": 792,
+                                      "w": 44,
+                                      "h": 44,
+                                      "exact": {
+                                        "x": 394,
+                                        "y": 792,
+                                        "w": 44,
+                                        "h": 44
+                                      }
+                                    },
+                                    "style": {
+                                      "display": "flex",
+                                      "position": "static",
+                                      "width": "44px",
+                                      "height": "44px",
+                                      "alignItems": "center",
+                                      "justifyContent": "center",
+                                      "fontFamily": "Geist, \"Geist Fallback\"",
+                                      "fontSize": "16px",
+                                      "fontWeight": "400",
+                                      "lineHeight": "24px",
+                                      "color": "rgb(113, 113, 122)",
+                                      "borderTop": "0px solid rgb(113, 113, 122)",
+                                      "borderBottom": "0px solid rgb(113, 113, 122)",
+                                      "borderRadius": "12px",
+                                      "cursor": "default",
+                                      "fill": "rgb(0, 0, 0)"
+                                    },
+                                    "children": [
+                                      {
+                                        "seq": 71,
+                                        "tag": "svg",
+                                        "classes": "h-6 w-6",
+                                        "attrs": {
+                                          "xmlns": "http://www.w3.org/2000/svg",
+                                          "width": "1em",
+                                          "height": "1em",
+                                          "fill": "currentColor",
+                                          "viewBox": "0 0 256 256"
+                                        },
+                                        "box": {
+                                          "x": 404,
+                                          "y": 802,
+                                          "w": 24,
+                                          "h": 24,
+                                          "exact": {
+                                            "x": 404,
+                                            "y": 802,
+                                            "w": 24,
+                                            "h": 24
+                                          }
+                                        },
+                                        "style": {
+                                          "display": "block",
+                                          "position": "static",
+                                          "width": "24px",
+                                          "height": "24px",
+                                          "minWidth": "auto",
+                                          "minHeight": "auto",
+                                          "fontFamily": "Geist, \"Geist Fallback\"",
+                                          "fontSize": "16px",
+                                          "fontWeight": "400",
+                                          "lineHeight": "24px",
+                                          "color": "rgb(113, 113, 122)",
+                                          "borderTop": "0px solid rgb(113, 113, 122)",
+                                          "borderBottom": "0px solid rgb(113, 113, 122)",
+                                          "overflow": "hidden",
+                                          "overflowX": "hidden",
+                                          "cursor": "default",
+                                          "fill": "rgb(113, 113, 122)"
+                                        },
+                                        "children": [],
+                                        "svgOuterHTML": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1em\" height=\"1em\" fill=\"currentColor\" viewBox=\"0 0 256 256\" class=\"h-6 w-6\"><path d=\"M200,40H56A16,16,0,0,0,40,56V200a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V56A16,16,0,0,0,200,40Zm-64,80h64v16H136Zm0-16V88h64v16Zm0,48h64v16H136Zm64-80H136V56h64ZM56,56h64V200H56ZM200,200H136V184h64v16Z\"></path></svg>"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "seq": 72,
+            "tag": "next-route-announcer",
+            "box": {
+              "x": 0,
+              "y": 844,
+              "w": 0,
+              "h": 0,
+              "exact": {
+                "x": 0,
+                "y": 844,
+                "w": 0,
+                "h": 0
+              }
+            },
+            "style": {
+              "display": "block",
+              "position": "absolute",
+              "top": "844px",
+              "right": "390px",
+              "bottom": "0px",
+              "left": "0px",
+              "width": "0px",
+              "height": "0px",
+              "fontFamily": "Geist, \"Geist Fallback\"",
+              "fontSize": "16px",
+              "fontWeight": "400",
+              "lineHeight": "24px",
+              "color": "rgb(24, 24, 27)",
+              "borderTop": "0px solid rgb(24, 24, 27)",
+              "borderBottom": "0px solid rgb(24, 24, 27)",
+              "fill": "rgb(0, 0, 0)"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "viewport": {
+    "w": 390,
+    "h": 844,
+    "dpr": 3
+  }
+}

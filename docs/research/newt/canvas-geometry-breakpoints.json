@@ -1,0 +1,206 @@
+{
+  "1440x900": {
+    "viewport": {
+      "w": 1440,
+      "h": 900
+    },
+    "dpr": 2,
+    "canvasAttr": {
+      "w": 2880,
+      "h": 1704
+    },
+    "canvasCss": {
+      "x": 0,
+      "y": 48,
+      "w": 1440,
+      "h": 852
+    },
+    "outerCssPage": {
+      "x": 359,
+      "y": 107,
+      "w": 722,
+      "h": 722
+    },
+    "contentCssPage": {
+      "x": 360,
+      "y": 108,
+      "w": 720,
+      "h": 720
+    },
+    "canvasCentre": {
+      "x": 720,
+      "y": 426
+    },
+    "artworkCentreInCanvas": {
+      "x": 720,
+      "y": 420
+    },
+    "gridPitchDev": {
+      "90": 15,
+      "92": 1
+    },
+    "gridLineCount": 17,
+    "cellCssPx": 45,
+    "zoomLabel": "45×",
+    "distinctColours": [
+      "#00000000",
+      "#ffffff",
+      "#ededed",
+      "#0000002e",
+      "#0000003c"
+    ]
+  },
+  "1280x800": {
+    "viewport": {
+      "w": 1280,
+      "h": 800
+    },
+    "dpr": 2,
+    "canvasAttr": {
+      "w": 2560,
+      "h": 1504
+    },
+    "canvasCss": {
+      "x": 0,
+      "y": 48,
+      "w": 1280,
+      "h": 752
+    },
+    "outerCssPage": {
+      "x": 327,
+      "y": 105,
+      "w": 626,
+      "h": 626
+    },
+    "contentCssPage": {
+      "x": 328,
+      "y": 106,
+      "w": 624,
+      "h": 624
+    },
+    "canvasCentre": {
+      "x": 640,
+      "y": 376
+    },
+    "artworkCentreInCanvas": {
+      "x": 640,
+      "y": 370
+    },
+    "gridPitchDev": {
+      "78": 15,
+      "80": 1
+    },
+    "gridLineCount": 17,
+    "cellCssPx": 39,
+    "zoomLabel": "39×",
+    "distinctColours": [
+      "#00000000",
+      "#ffffff",
+      "#ededed",
+      "#0000002e",
+      "#0000003c"
+    ]
+  },
+  "768x1024": {
+    "viewport": {
+      "w": 768,
+      "h": 1024
+    },
+    "dpr": 2,
+    "canvasAttr": {
+      "w": 1536,
+      "h": 1952
+    },
+    "canvasCss": {
+      "x": 0,
+      "y": 48,
+      "w": 768,
+      "h": 976
+    },
+    "outerCssPage": {
+      "x": 119,
+      "y": 265,
+      "w": 530,
+      "h": 530
+    },
+    "contentCssPage": {
+      "x": 120,
+      "y": 266,
+      "w": 528,
+      "h": 528
+    },
+    "canvasCentre": {
+      "x": 384,
+      "y": 488
+    },
+    "artworkCentreInCanvas": {
+      "x": 384,
+      "y": 482
+    },
+    "gridPitchDev": {
+      "66": 15,
+      "68": 1
+    },
+    "gridLineCount": 17,
+    "cellCssPx": 33,
+    "zoomLabel": "33×",
+    "distinctColours": [
+      "#00000000",
+      "#ffffff",
+      "#ededed",
+      "#0000002e",
+      "#0000003c"
+    ]
+  },
+  "390x844": {
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "dpr": 2,
+    "canvasAttr": {
+      "w": 780,
+      "h": 1374
+    },
+    "canvasCss": {
+      "x": 0,
+      "y": 48,
+      "w": 390,
+      "h": 687
+    },
+    "outerCssPage": {
+      "x": 26,
+      "y": 223,
+      "w": 338,
+      "h": 338
+    },
+    "contentCssPage": {
+      "x": 27,
+      "y": 224,
+      "w": 336,
+      "h": 336
+    },
+    "canvasCentre": {
+      "x": 195,
+      "y": 343.5
+    },
+    "artworkCentreInCanvas": {
+      "x": 195,
+      "y": 344
+    },
+    "gridPitchDev": {
+      "42": 15,
+      "44": 1
+    },
+    "gridLineCount": 17,
+    "cellCssPx": 21,
+    "zoomLabel": null,
+    "distinctColours": [
+      "#00000000",
+      "#ffffff",
+      "#ededed",
+      "#0000002e",
+      "#0000003c"
+    ]
+  }
+}
