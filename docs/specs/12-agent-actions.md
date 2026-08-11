@@ -362,7 +362,68 @@ agent edits.
 
 ---
 
-## 9. Test requirements
+## 9. Free tries and bring-your-own-key
+
+The deployed app shares **one** free-tier project across every visitor, and the
+binding limit is 5 requests per minute for the whole project. Without a gate, three
+people trying it at once all get rate-limit errors and conclude it is broken.
+
+**Two free sessions per browser, then bring your own key.**
+
+Measured, 11 Aug 2026, `gemini-3.1-flash-lite`, "make the eyebrows angry" on the
+16×16 face: **5 model turns, 7.6s end to end** — `get_state`, `get_grid`,
+`set_color`, `set_pixels`, `finish`. So one session is roughly one *minute* of the
+project's 5-requests-per-minute budget, and two free sessions is about ten requests.
+That is the real reason the free allowance is this small: it is not stinginess, it
+is that a single visitor's session already saturates the shared per-minute limit.
+
+Two, not more, is deliberate: the free tries exist to demonstrate that the mechanism
+works, not to be a usable allowance. Edit *quality* is luck (see
+[PHASE-0-FINDINGS](../PHASE-0-FINDINGS.md)); anyone who wants to actually use it
+brings a key. Fewer free sessions also means collisions against the shared 5/min are
+rare rather than routine.
+
+### The counter is a courtesy, not a lock
+
+Stored in `localStorage` under `tessera-free-sessions`. Clearing storage or opening a
+private window resets it. **This is intended and must not be hardened** — anything
+stronger means fingerprinting or accounts, and there are no accounts. The barrier
+exists to set an expectation at the door, not to enforce one.
+
+### Key handling
+
+The key lives in `localStorage` under `tessera-api-key` and is sent as an
+`x-api-key` header on each agent request. The route uses it for that request and
+discards it.
+
+**The key is never logged, never persisted server-side, and never leaves the
+request.** The settings UI must state this plainly next to the input, alongside a
+link to `aistudio.google.com/apikey`. A promise about someone's credentials that is
+not visible in the UI is not a promise.
+
+Precedence in the route:
+
+```
+x-api-key header (user's own)  →  process.env.GEMINI_API_KEY (ours, free tries)
+```
+
+When the user supplies a key, the free-session counter is not consulted or
+incremented — it is their quota being spent.
+
+### The busy state still matters
+
+Even at two tries each, concurrent visitors can exhaust the shared 5/min. A 429 from
+our own key must read as an invitation rather than a failure:
+
+> Lots of people are trying this right now. Wait a moment, or add your own key for
+> unlimited edits.
+
+Distinguish this from a 429 against a *user-supplied* key, which is their own quota
+and needs a different message.
+
+---
+
+## 10. Test requirements
 
 Every test uses `AI_PROVIDER=mock` with scripted function-call sequences. No network.
 

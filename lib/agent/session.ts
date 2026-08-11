@@ -14,7 +14,7 @@
  */
 
 import { cloneDoc } from '../artwork-core/codec'
-import { applyCommand, type EditorCommand } from '../artwork-core/commands'
+import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
 import { diff, isEmpty, type PixelDiff } from '../artwork-core/diff'
 import type { Doc, PaletteEntry } from '../artwork-core/schema'
 import type { ActionBudget, ActionResult } from '../actions/types'
@@ -77,6 +77,46 @@ export class AgentSession {
 
   record(name: string, args: unknown, result: ActionResult): void {
     this.steps.push({ name, args, result, at: Date.now() })
+  }
+
+  // ─── session-scoped undo ───────────────────────────────────────────────────
+  //
+  // Found by probing the live model: given a step budget it had not used up, it
+  // called undo to second-guess an edit. Nothing in the session's own work is on
+  // the history stack — commits are applied without being pushed — so a plain
+  // undo would have popped the USER'S last manual edit instead. The agent would
+  // have silently reverted work it was never asked to touch.
+  //
+  // So the session keeps its own stack. While one is open the store routes undo
+  // and redo here, and the agent can only ever reach its own changes.
+
+  private readonly applied: EditorCommand[] = []
+  private readonly undone: EditorCommand[] = []
+
+  /** Called by the store for every command committed while this session is open. */
+  noteApplied(cmd: EditorCommand): void {
+    this.applied.push(cmd)
+    this.undone.length = 0
+  }
+
+  /** What the model should see, so its view of the stack matches reality. */
+  depth(): { undo: number; redo: number } {
+    return { undo: this.applied.length, redo: this.undone.length }
+  }
+
+  /** The command to apply to reverse the session's most recent change. */
+  takeUndo(): EditorCommand | null {
+    const last = this.applied.pop()
+    if (!last) return null
+    this.undone.push(last)
+    return invertCommand(last)
+  }
+
+  takeRedo(): EditorCommand | null {
+    const last = this.undone.pop()
+    if (!last) return null
+    this.applied.push(last)
+    return last
   }
 
   /**

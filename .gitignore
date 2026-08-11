@@ -12,6 +12,7 @@ next-env.d.ts
 .env*.local
 
 # Generated artifacts
+.probe-*.json
 spike/out/
 test-results/
 playwright-report/

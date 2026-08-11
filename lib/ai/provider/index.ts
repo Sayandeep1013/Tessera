@@ -11,13 +11,18 @@ import type { AiProvider } from './types'
 
 export type ProviderId = 'gemini' | 'mock'
 
-export function getProvider(id?: string): AiProvider {
+/**
+ * `apiKey` is the bring-your-own-key path (docs/specs/12-agent-actions.md §9). It
+ * is used for this one call and then discarded with the provider instance — never
+ * logged, never persisted. When absent, the deployment's own key is used.
+ */
+export function getProvider(id?: string, apiKey?: string): AiProvider {
   const which = (id ?? process.env.AI_PROVIDER ?? 'gemini').toLowerCase()
   switch (which) {
     case 'mock':
       return createMockProvider()
     case 'gemini':
-      return createGeminiProvider(process.env.GEMINI_API_KEY)
+      return createGeminiProvider(apiKey || process.env.GEMINI_API_KEY)
     case 'anthropic':
     case 'openrouter':
       // Declared in the spec, deliberately not installed. Returning a config
