@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Canvas } from '@/components/Canvas'
 import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
 import { AgentPanel } from '@/components/AgentPanel'
+import { MosaicLoader } from '@/components/Loaders'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { loadStarter } from '@/lib/artwork-core/create'
 import { loadLatestDraft } from '@/lib/persist/idb'
@@ -124,13 +125,24 @@ export default function EditorPage() {
     >
       <TopBar />
       <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
-        {doc && (
+        {doc ? (
           <>
             <Canvas />
             <ToolRail />
             <ZoomBar />
             <AgentPanel />
           </>
+        ) : (
+          // Boot previously rendered an empty <main> — a blank rectangle that is
+          // indistinguishable from a broken app. The loader gates itself, so a
+          // document that resolves quickly still shows nothing at all.
+          <div
+            style={{
+              position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
+            }}
+          >
+            <MosaicLoader />
+          </div>
         )}
       </main>
       {notice && (

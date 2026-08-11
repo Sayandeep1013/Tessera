@@ -154,9 +154,7 @@ export function TopBar() {
         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
       >
         <Logo />
-        <span style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.4px', lineHeight: '24px' }}>
-          Tessera
-        </span>
+        <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
         <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
       </button>
 
@@ -199,9 +197,7 @@ export function TopBar() {
         >
           <GlyphBtn title="Smaller brush" Icon={Minus} size={28} icon={16} muted={false} lift
             onClick={() => setBrushSize(brushSize - 1)} />
-          <span className="tabular" style={{ width: 32, textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
-            {brushSize}px
-          </span>
+          <span className="tabular" style={{ width: 32, textAlign: 'center' }}>{brushSize}px</span>
           <GlyphBtn title="Bigger brush" Icon={Plus} size={28} icon={16} muted={false} lift
             onClick={() => setBrushSize(brushSize + 1)} />
           <span style={{ width: 1, height: 20, background: 'var(--line)', margin: '0 2px' }} />
@@ -234,7 +230,7 @@ export function TopBar() {
               onClick={() => setShape(s)}
               style={{
                 height: 24, padding: '4px 10px', borderRadius: 'var(--r-pill)',
-                fontSize: 12, fontWeight: 500, lineHeight: '16px',
+                font: 'var(--t-label-sm)',
                 background: shape === s ? 'var(--panel)' : 'transparent',
                 boxShadow: shape === s ? 'var(--shadow-sm)' : 'none',
                 color: shape === s ? 'var(--fg)' : 'var(--muted)',
@@ -252,7 +248,7 @@ export function TopBar() {
           style={{
             height: 28, alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6,
             padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)', background: 'var(--panel2)',
-            fontSize: 12, fontWeight: 500, color: 'var(--fg)',
+            font: 'var(--t-label-sm)', color: 'var(--fg)',
           }}
         >
           <span style={{ width: 16, height: 16, borderRadius: 'var(--r-sm)', background: 'var(--fg)', boxShadow: '0 0 0 1px var(--line)' }} />
@@ -274,7 +270,7 @@ export function TopBar() {
           aria-label="Artwork name"
           style={{
             width: 192, height: 28, padding: '4px 8px', borderRadius: 'var(--r-md)',
-            fontSize: 14, fontWeight: 500, textAlign: 'center', color: 'var(--fg)',
+            font: 'var(--t-label-lg)', textAlign: 'center', color: 'var(--fg)',
             pointerEvents: 'auto',
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
@@ -284,7 +280,15 @@ export function TopBar() {
 
       {/* Right group */}
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
-        <span className="tabular" style={{ fontSize: 12, color: 'var(--faint)', marginRight: 4 }}>
+        {/* Fixed width: this text used to change length and shove the whole right
+            group sideways on every autosave. It is words, not numerals, so it is
+            not .tabular — and it is real text, so it cannot sit on --faint. */}
+        <span
+          style={{
+            width: 72, textAlign: 'right', font: 'var(--t-label-sm)',
+            color: 'var(--muted)', marginRight: 4,
+          }}
+        >
           {status === 'saving' ? 'Saving…' : status === 'error' ? 'Save failed' : status === 'saved' ? 'Saved' : ''}
         </span>
 
@@ -297,7 +301,7 @@ export function TopBar() {
           style={{
             height: 36, display: 'flex', alignItems: 'center', gap: 6,
             padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
-            fontSize: 14, fontWeight: 500, color: 'var(--faint)',
+            font: 'var(--t-label-lg)', color: 'var(--disabled)',
           }}
         >
           <Export size={20} />
@@ -407,8 +411,10 @@ export function ZoomBar() {
           className="tabular"
           onClick={fit}
           style={{
-            minWidth: 48, height: 16, padding: '0 8px', borderRadius: 'var(--r-pill)',
-            fontSize: 12, fontWeight: 500, lineHeight: '16px', color: 'var(--muted)',
+            // 16 tall was the one WCAG 2.5.8 target-size failure in the app, and it
+            // came straight from the reference. 24 is the floor.
+            minWidth: 48, height: 24, padding: '0 8px', borderRadius: 'var(--r-pill)',
+            color: 'var(--muted)',
           }}
         >
           {vp.scale}×

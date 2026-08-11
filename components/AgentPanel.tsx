@@ -8,9 +8,9 @@
  * and undo are the same gesture and a second control for it would be a lie about
  * how the thing works.
  *
- * Sizing and motion in this file are deliberately provisional — docs/specs/13
- * defines the real scale, the real loader and the motion system, and this gets
- * restyled from it rather than guessed at twice.
+ * Styled per docs/specs/13-visual-identity.md (direction 2.B, "Mosaic"): tokens
+ * for every size and colour, and all motion in globals.css so reduced-motion is
+ * a stylesheet decision rather than a branch in here.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -24,6 +24,7 @@ import {
   maskApiKey,
   setApiKey,
 } from '@/lib/agent/byok'
+import { Elapsed, TurnMark } from './Loaders'
 import { ArrowUp, Sliders } from './icons'
 
 const shell: React.CSSProperties = {
@@ -72,8 +73,6 @@ export function AgentPanel() {
 
   return (
     <div style={shell}>
-      <Motion />
-
       {status === 'confirm' && <ConfirmRow />}
       {busy && <StepLog />}
       {status === 'done' && <DoneRow />}
@@ -108,27 +107,31 @@ export function AgentPanel() {
           aria-label="Tell the agent what to do"
           style={{
             flex: '1 1 0', minWidth: 0, height: 40, padding: '8px 4px',
-            background: 'transparent', fontSize: 14, color: 'var(--fg)',
+            background: 'transparent', font: 'var(--t-copy)', color: 'var(--fg)',
           }}
         />
 
+        {/* The button keeps its identity while working — aria-busy rather than
+            swapping the child for a bare spinner node, so it stays the same
+            control to a screen reader and stays focusable. */}
         <button
           type="submit"
           disabled={!ready}
+          aria-busy={busy || undefined}
           aria-label={busy ? 'Working' : 'Send'}
           style={{
             width: 36, height: 36, flex: 'none', display: 'grid', placeItems: 'center',
             borderRadius: 'var(--r-pill)',
-            background: ready ? 'var(--accent)' : 'var(--panel2)',
-            color: ready ? 'var(--onaccent)' : 'var(--faint)',
+            background: ready || busy ? 'var(--accent)' : 'var(--panel2)',
+            color: ready || busy ? 'var(--onaccent)' : 'var(--disabled)',
           }}
         >
-          {busy ? <PixelLoader /> : <ArrowUp size={16} />}
+          {busy ? <TurnMark /> : <ArrowUp size={16} />}
         </button>
       </form>
 
       {!hasKey && status === 'idle' && (
-        <p style={{ margin: '6px 4px 0', fontSize: 11, color: 'var(--faint)' }}>
+        <p style={{ margin: '6px 4px 0', font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
           {freeLeft > 0
             ? `${freeLeft} of ${FREE_SESSIONS} free tries left — then bring your own key.`
             : 'Free tries used. Add your own API key to keep going.'}
@@ -156,6 +159,8 @@ function StepLog() {
   const ofSteps = useAgentStore((s) => s.ofSteps)
   const stop = useAgentStore((s) => s.stop)
   const endRef = useRef<HTMLDivElement>(null)
+  // Mount time, not render time — this must not reset on every step.
+  const startedAt = useRef(Date.now()).current
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' })
@@ -164,13 +169,16 @@ function StepLog() {
   return (
     <div style={{ padding: '2px 4px 10px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 11, color: 'var(--muted)' }} className="tabular">
+        <span className="tabular" style={{ color: 'var(--muted)' }}>
           Step {step} of {ofSteps}
         </span>
+        {/* An indeterminate mark alone leaves the user unable to tell slow from
+            hung, and these turns run 2–10s. */}
+        <Elapsed since={startedAt} />
         <div style={{ flex: 1 }} />
         <button
           onClick={stop}
-          style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}
+          style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}
         >
           Stop
         </button>
@@ -184,20 +192,18 @@ function StepLog() {
         {log.map((e) => (
           <div
             key={e.id}
-            style={{
-              display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 11,
-              animation: 'tessera-step-in .18s var(--ease) both',
-            }}
+            className="step-row"
+            style={{ display: 'flex', alignItems: 'baseline', gap: 8, font: 'var(--t-label-sm)' }}
           >
             <span
               aria-hidden
               style={{
-                width: 5, height: 5, flex: 'none', borderRadius: 1, marginTop: 1,
+                width: 5, height: 5, flex: 'none', borderRadius: 'var(--r-sm)', marginTop: 1,
                 background: e.ok ? 'var(--diff-add)' : 'var(--diff-remove)',
               }}
             />
-            <code style={{ color: 'var(--fg)' }}>{e.name}</code>
-            <span style={{ color: 'var(--faint)', flex: 1, minWidth: 0 }}>{e.detail}</span>
+            <code style={{ font: 'var(--t-mono)', color: 'var(--fg)' }}>{e.name}</code>
+            <span style={{ color: 'var(--muted)', flex: 1, minWidth: 0 }}>{e.detail}</span>
           </div>
         ))}
         <div ref={endRef} />
@@ -219,22 +225,21 @@ function ConfirmRow() {
         padding: 10, marginBottom: 8, borderRadius: 'var(--r-md)', background: 'var(--panel2)',
       }}
     >
-      <p style={{ margin: '0 0 8px', fontSize: 12, lineHeight: 1.45 }}>
+      <p style={{ margin: '0 0 8px', font: 'var(--t-copy-sm)' }}>
         The agent wants to run <code style={{ fontWeight: 600 }}>{confirm.name}</code>. This
         discards work and cannot be reversed from inside the session.
       </p>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button
           onClick={() => answer(false)}
-          style={{ height: 30, padding: '0 12px', fontSize: 12, color: 'var(--muted)' }}
+          style={{ height: 30, padding: '0 12px', font: 'var(--t-label-sm)', color: 'var(--muted)' }}
         >
           Don’t
         </button>
         <button
           onClick={() => answer(true)}
           style={{
-            height: 30, padding: '0 14px', borderRadius: 'var(--r-md)', fontSize: 12,
-            fontWeight: 500, background: 'var(--diff-remove)', color: 'var(--onaccent)',
+            height: 30, padding: '0 14px', borderRadius: 'var(--r-md)', font: 'var(--t-label-sm)', background: 'var(--diff-remove)', color: 'var(--onaccent)',
           }}
         >
           Allow
@@ -246,7 +251,7 @@ function ConfirmRow() {
 
 function Stat({ n, label, color }: { n: number; label: string; color: string }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
       <span className="tabular" style={{ color: 'var(--fg)' }}>{n}</span>
       {label}
@@ -263,13 +268,13 @@ function DoneRow() {
 
   return (
     <div style={{ padding: '2px 4px 10px' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 13, lineHeight: 1.45 }}>{summary}</p>
+      <p style={{ margin: '0 0 8px', font: 'var(--t-copy)' }}>{summary}</p>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Stat n={counts.added} label="added" color="var(--diff-add)" />
         <Stat n={counts.changed} label="changed" color="var(--diff-change)" />
         <Stat n={counts.removed} label="cleared" color="var(--diff-remove)" />
         {counts.palette > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+          <span style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
             +{counts.palette} colour{counts.palette === 1 ? '' : 's'}
           </span>
         )}
@@ -280,12 +285,12 @@ function DoneRow() {
               undo()
               dismiss()
             }}
-            style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)' }}
+            style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}
           >
             Undo all
           </button>
         )}
-        <button onClick={dismiss} style={{ fontSize: 11, fontWeight: 500, color: 'var(--fg)' }}>
+        <button onClick={dismiss} style={{ font: 'var(--t-label-sm)', color: 'var(--fg)' }}>
           Done
         </button>
       </div>
@@ -300,19 +305,19 @@ function ErrorRow({ onAddKey }: { onAddKey: () => void }) {
 
   return (
     <div role="alert" style={{ padding: '2px 4px 10px' }}>
-      <p style={{ margin: '0 0 8px', fontSize: 12, lineHeight: 1.45, color: 'var(--diff-remove)' }}>
+      <p style={{ margin: '0 0 8px', font: 'var(--t-copy-sm)', color: 'var(--diff-remove)' }}>
         {error}
       </p>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         {needsKey && (
           <button
             onClick={onAddKey}
-            style={{ fontSize: 11, fontWeight: 500, color: 'var(--fg)' }}
+            style={{ font: 'var(--t-label-sm)', color: 'var(--fg)' }}
           >
             Add your key
           </button>
         )}
-        <button onClick={dismiss} style={{ fontSize: 11, color: 'var(--muted)' }}>
+        <button onClick={dismiss} style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
           Dismiss
         </button>
       </div>
@@ -342,13 +347,13 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
         boxShadow: 'var(--shadow-lg)',
       }}
     >
-      <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 500 }}>Use your own API key</p>
+      <p style={{ margin: '0 0 10px', font: 'var(--t-label-lg)' }}>Use your own API key</p>
 
       {/*
         This is a promise about someone's credentials. It belongs in the interface
         where they can read it, not only in a spec they will never open.
       */}
-      <p style={{ margin: '0 0 12px', fontSize: 11, lineHeight: 1.5, color: 'var(--muted)' }}>
+      <p style={{ margin: '0 0 12px', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>
         Stored in this browser only. Sent with each request, used once, and discarded — never
         logged and never saved on our server. Remove it any time.{' '}
         <a
@@ -364,7 +369,7 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
 
       {existing ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <code style={{ flex: 1, fontSize: 12, color: 'var(--muted)' }}>
+          <code style={{ flex: 1, font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
             {maskApiKey(existing)}
           </code>
           <button
@@ -372,7 +377,7 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
               clearApiKey()
               onClose()
             }}
-            style={{ fontSize: 12, fontWeight: 500, color: 'var(--diff-remove)' }}
+            style={{ font: 'var(--t-label-sm)', color: 'var(--diff-remove)' }}
           >
             Remove
           </button>
@@ -394,7 +399,7 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
             placeholder="AIza…"
             aria-label="API key"
             style={{
-              flex: 1, height: 34, padding: '0 10px', fontSize: 12,
+              flex: 1, height: 34, padding: '0 10px', font: 'var(--t-mono)',
               background: 'var(--panel2)', borderRadius: 'var(--r-md)', color: 'var(--fg)',
             }}
           />
@@ -402,8 +407,8 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
             type="submit"
             disabled={!value.trim()}
             style={{
-              height: 34, padding: '0 14px', borderRadius: 'var(--r-md)', fontSize: 12,
-              fontWeight: 500, background: 'var(--accent)', color: 'var(--onaccent)',
+              height: 34, padding: '0 14px', borderRadius: 'var(--r-md)',
+              font: 'var(--t-label-sm)', background: 'var(--accent)', color: 'var(--onaccent)',
             }}
           >
             Save
@@ -412,56 +417,10 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-        <button onClick={onClose} style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <button onClick={onClose} style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
           Close
         </button>
       </div>
     </div>
-  )
-}
-
-// ─── motion ──────────────────────────────────────────────────────────────────
-
-/**
- * Provisional. A pixel-art editor deserves a loader made of pixels rather than a
- * rotating ring — docs/specs/13 designs the real one, and this is a placeholder
- * that is at least on-theme in the meantime.
- */
-function PixelLoader() {
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: 'grid', gridTemplateColumns: 'repeat(3, 3px)', gap: 1,
-      }}
-    >
-      {Array.from({ length: 9 }, (_, i) => (
-        <span
-          key={i}
-          style={{
-            width: 3, height: 3, background: 'currentColor',
-            animation: `tessera-pixel-pulse 1.05s var(--ease) ${(i % 3) * 0.12 + Math.floor(i / 3) * 0.12}s infinite`,
-          }}
-        />
-      ))}
-    </span>
-  )
-}
-
-function Motion() {
-  return (
-    <style>{`
-      @keyframes tessera-step-in {
-        from { opacity: 0; transform: translateY(3px) }
-        to   { opacity: 1; transform: none }
-      }
-      @keyframes tessera-pixel-pulse {
-        0%, 100% { opacity: .25 }
-        40%      { opacity: 1 }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        [style*="tessera-step-in"] { animation: none !important }
-      }
-    `}</style>
   )
 }

@@ -220,6 +220,21 @@ in the set — nothing structural moves.
 could not describe it back to you. It fixes D1, D6, and D4 only by borrowing. If the real complaint
 is "we look like everyone else", this does not answer it.
 
+> **Correction, applied in build (rule 10).** The `--art-bg: #1e1e22` above is **not built**, in
+> either theme. G1 asks the artwork to separate from the app and that gate is right, but this
+> optimises the wrong pair. Transparent pixels are the ground the user's *own* colours are judged
+> against, and those colours are arbitrary data — the shipped starter's outline is `#2d1b00`, which
+> lands at **1.005:1** on `#1e1e22` and disappears entirely. Verified in a screenshot, twice: the
+> defect was found, fixed, reintroduced by following this section, and found again the same way.
+>
+> Separation from the app is bought instead with the deeper `--surface` and the artwork's existing
+> 1px two-tone edge, neither of which costs the artwork anything. **`--art-bg` is `#ffffff` in both
+> themes**, as the reference paints it, and `--art-grid` is therefore `#00000014` in both — a white
+> grid on a white ground would have been invisible, which is the same failure one level down.
+>
+> G1 should be restated as *the artwork must separate from the app*, not *the artwork background
+> must sit on the surface ladder*.
+
 ### 2.B — "Mosaic"  ← **recommended**
 
 **One sentence:** *tessera* means tile, so the chrome is built from the same unit as the artwork —

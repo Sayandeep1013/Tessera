@@ -11,28 +11,48 @@
 
 :root,
 .dark {
-  --surface: #17171b;
-  --panel: #202024;
-  --panel2: #2c2c32;
+  /* Surface ladder. Elevation is expressed as steps of lightness rather than as
+     shadow — on a dark ground a shadow reads as haze, a ladder reads as structure. */
+  --surface: #0b0b0d;
+  --panel: #141417;
+  --panel2: #1c1c20;
+
   --fg: #f4f4f5;
-  --muted: #a1a1aa;
-  --faint: #71717a;
-  --line: #ffffff21;
-  --hover: #ffffff12;
-  --accent: #f4f4f5;
-  --onaccent: #18181b;
-  /* Disabled controls. Explicit, because the previous approach — --faint with
-     opacity:.5 stacked on top — measured 1.40:1 in light and 1.97:1 in dark, and
-     a control you cannot see reads as a broken page rather than a disabled one.
-     docs/research/ui-audit.md §2, defect 2. */
+  --muted: #9a9aa3;
+  /* Was #71717a at 3.70:1 — below AA while being used for real text. */
+  --faint: #8a8a93;
+  /* Explicit, because the previous approach — --faint with opacity:.5 stacked on
+     top — measured 1.40:1 light and 1.97:1 dark, and a control nobody can see
+     reads as a broken page rather than a disabled one. */
   --disabled: #6e6e77;
 
-  /* Canvas — measured: flat opaque artwork, 1px grid at cell pitch, no majors.
-     Deliberately NOT theme-dependent: artwork is content, and it has to be judged
-     against a constant ground. On the old dark backdrop the starter's darkest
-     palette colour sat at 1.005:1 and the outline simply vanished. */
+  --line: #ffffff1f;
+  --line-strong: #ffffff33;
+  --hover: #ffffff12;
+
+  /* The tile colour. Not invented: "sky", index 11 of the Sweetie 16 palette this
+     product already ships as its default document palette (artwork-core/create.ts).
+     The chrome and the artwork are drawn from the same box of colours.
+     Deliberately not green, amber or red — those are spoken for by the diff triad,
+     so colour in the chrome means Tessera and the triad means the AI touched it. */
+  --accent: #41a6f6;
+  --accent-soft: #41a6f626;
+  --onaccent: #0b0b0d;
+
+  /* Canvas — flat white in BOTH themes, and deliberately not on the surface
+     ladder.
+
+     Spec 13 §2.A puts --art-bg at #1e1e22 in dark to make the artwork separate
+     from the app, and that gate is real. But it optimises the wrong pair.
+     Transparent pixels are the ground the user's own colours are judged against,
+     and those colours are arbitrary data: the shipped starter's outline is
+     #2d1b00, which lands at 1.005:1 on #1e1e22 and simply disappears. Separation
+     from the app is better bought with the surface below and the artwork's own
+     1px edge — which cost the artwork nothing — than by tinting the one area
+     whose whole job is to be neutral. The reference paints flat white always.
+     Recorded against spec 13 §2.A. */
   --art-bg: #ffffff;
-  --art-grid: #ededed;
+  --art-grid: #00000014;
   --art-edge-tl: #0000002e;
   --art-edge-br: #0000003c;
 
@@ -43,21 +63,27 @@
 }
 
 .light {
-  --surface: #f4f4f5;
+  --surface: #e8e8ea;
   --panel: #ffffff;
   --panel2: #f1f1f4;
+
   --fg: #18181b;
-  --muted: #71717a;
-  --faint: #a1a1aa;
-  --line: #0000001a;
-  --hover: #0000000d;
-  --accent: #18181b;
-  --onaccent: #ffffff;
+  --muted: #5f5f68;
+  /* 3.95:1 — permitted for decorative and disabled use only, never body text. */
+  --faint: #71717a;
   --disabled: #8b8b94;
 
-  /* Same values as dark on purpose — see the note above. */
+  --line: #0000001a;
+  --line-strong: #00000029;
+  --hover: #0000000d;
+
+  --accent: #1565b0;
+  --accent-soft: #1565b01f;
+  --onaccent: #ffffff;
+
+  /* Identical to dark on purpose — see the note above. */
   --art-bg: #ffffff;
-  --art-grid: #ededed;
+  --art-grid: #00000014;
   --art-edge-tl: #0000002e;
   --art-edge-br: #0000003c;
 
@@ -66,29 +92,56 @@
   --diff-remove: #e40014;
 }
 
-/* Shape + elevation, measured §5 */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Shape — the lattice.
+
+   Radii drop 16 → 8 so the tool rail and composer stop reading as soft app-store
+   cards and start reading as tiles. Pill survives only where the control is
+   genuinely a capsule: the zoom bar, the segmented track, the colour swatch.
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --r-sm: 4px;
-  --r-md: 8px;
-  --r-lg: 12px;
-  --r-xl: 16px;
+  --r-sm: 2px;
+  --r-md: 4px;
+  --r-lg: 6px;
+  --r-xl: 8px;
   --r-pill: 9999px;
 
-  /* S3 shadow-sm */
   --shadow-sm: 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
-  /* S4 ring-1 ring-line shadow-sm — tool rail, zoom pill */
   --shadow-card: 0 0 0 1px #0000001a, 0 1px 3px 0 #0000001a, 0 1px 2px -1px #0000001a;
-  /* S5 ring-1 ring-line shadow-lg — composer */
   --shadow-lg: 0 0 0 1px #0000001a, 0 10px 15px -3px #0000001a, 0 4px 6px -4px #0000001a;
 
+  /* ── Type. Three scales, because chrome labels, prose and headings are not the
+     same thing. Weights 400/500/600 only. ── */
+  --t-label-lg: 500 14px / 20px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --t-label: 500 13px / 18px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --t-label-sm: 500 12px / 16px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --t-copy: 400 14px / 20px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --t-copy-sm: 400 13px / 18px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --t-title: 600 17px / 24px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Every numeral in the chrome. Mono was already loaded and used by nothing. */
+  --t-mono: 500 13px / 18px var(--font-geist-mono), ui-monospace, monospace;
+
+  /* ── Motion. The governing rule is frequency, not taste: an interaction that
+     happens 100+ times an hour gets no animation at all, because animation on a
+     repeated action is a tax paid every repetition. Ceiling is 200ms — Nielsen's
+     0.1s direct-manipulation threshold is what actually governs a canvas tool,
+     where a stroke is a continuous gesture. ── */
+  --dur-0: 0ms;
+  --dur-1: 100ms;
+  --dur-2: 150ms;
+  --dur-3: 200ms;
+
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
-  --dur: 0.15s;
 }
 
 .dark {
-  --shadow-sm: 0 1px 3px 0 #00000059, 0 1px 2px -1px #00000059;
-  --shadow-card: 0 0 0 1px #ffffff21, 0 1px 3px 0 #00000059, 0 1px 2px -1px #00000059;
-  --shadow-lg: 0 0 0 1px #ffffff21, 0 10px 15px -3px #00000073, 0 4px 6px -4px #00000073;
+  /* A ladder, not haze. The ring carries the edge and the inset highlight carries
+     the lift; the blurred drop shadows are dropped entirely on dark. */
+  --shadow-sm: 0 0 0 1px var(--line);
+  --shadow-card: 0 0 0 1px var(--line), inset 0 1px 0 #ffffff0f;
+  --shadow-lg: 0 0 0 1px var(--line-strong), inset 0 1px 0 #ffffff0f;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -125,9 +178,19 @@ button {
   padding: 0;
   /* measured: every <button> on the reference computes cursor:default */
   cursor: default;
+  /* Listed properties, never `all` — and colour only, so nothing here can cause
+     layout or a composited surprise. */
   transition:
-    color var(--dur) var(--ease),
-    background-color var(--dur) var(--ease);
+    color var(--dur-1) var(--ease),
+    background-color var(--dur-1) var(--ease);
+}
+
+/* Press feedback. There was none anywhere, which is a large part of why the
+   chrome felt inert. 0.97 is the ceiling: scaling is a named vestibular trigger,
+   so this is a proportional nudge, never 1 → 0.8. */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform var(--dur-1) var(--ease-out);
 }
 
 input {
@@ -153,23 +216,236 @@ canvas {
   cursor: crosshair;
 }
 
-/* Numeric readouts must not jitter as their value changes width. */
+/* Every numeral in the chrome. Mono and tabular so a readout never jitters as its
+   value changes width, and so numbers read as instrument output rather than prose. */
 .tabular {
+  font: var(--t-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* Unlike the reference, which falls back to the UA ring, we ship a real one. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Focus.
+
+   A double ring — a ground-coloured buffer inside the accent ring — because in a
+   pixel editor the ring can land on a palette swatch that is exactly the accent
+   colour, and a single ring would vanish against it. --focus-ground is overridden
+   inline on children of a panel card so the buffer matches what is behind it.
+
+   Not `outline` with `border-radius: inherit`: that mutated the focused element's
+   own geometry, so focusing a control visibly changed its shape.
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --focus-ground: var(--surface);
+}
+
+:focus {
+  outline: none;
+}
+
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  border-radius: inherit;
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--focus-ground),
+    0 0 0 4px var(--accent);
+}
+
+/* box-shadow is not painted in forced-colors mode — fall back to a real outline. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}
+
+/* Hover is gated so touch devices do not leave stuck hover states behind. */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover {
+    background-color: var(--hover);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reduced motion — reduce, don't remove.
+
+   Deliberately NOT a `*` rule. A blanket `animation-duration: 0.01ms !important`
+   froze the loader, which is the one animation on screen that carries information
+   rather than decoration. Only the five known vestibular triggers need to go:
+   scaling, spinning, parallax, plane-shifting, peripheral looping motion. Colour
+   transitions stay — colour is not motion, and it aids comprehension.
+
+   0.01ms rather than `none` wherever JS might await `animationend`: `none` never
+   fires the event, and the listener would hang forever.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  /* Scaling is a vestibular trigger; the press still needs to be felt, so it
+     becomes a background flash instead of a transform. */
+  button:active:not(:disabled) {
+    transform: none;
+    background-color: var(--hover);
+  }
+
+  /* Entrances keep their opacity fade and drop the movement. */
+  .anim-enter {
+    animation-name: tessera-fade-in;
+  }
+
+  /* The loaders stop animating and show their static state instead — see the
+     `.loader-static` label each one renders alongside. */
+  .anim-loop {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
+
+@keyframes tessera-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Loaders. Both are made of pixels, because a rotating ring in a pixel-art
+   editor is a wasted opportunity and says nothing about the product.
+
+   `step-end` in both is what makes them read as pixel art rather than as a
+   fade: each value holds for a whole frame and then snaps, exactly like a
+   sprite sheet. No interpolation, ever.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Boot: "the mosaic". A tessera being set — a ripple expanding from the
+   centre of a 5x5 canvas. The gaps ARE gridlines, so this is literally a 5x5
+   document at 10x zoom: a miniature of the thing the app renders. ── */
+@keyframes tessera-ripple {
+  0% {
+    opacity: 1;
+  }
+  12.5% {
+    opacity: 0.45;
+  }
+  25% {
+    opacity: 0.18;
+  }
+  37.5% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* `both` with a 200ms delay means nothing paints for the first 200ms. If the
+   document resolves before then the user sees no loader at all — which is the
+   correct outcome, not a missed opportunity. */
+@keyframes tessera-loader-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.tessera-loader {
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell, 10px));
+  grid-auto-rows: var(--cell, 10px);
+  gap: 1px;
+  padding: 1px;
+  background: var(--art-grid);
+  color: var(--accent);
+  animation: tessera-loader-in 120ms 200ms var(--ease-out) both;
+}
+
+.tessera-loader i {
+  position: relative;
+  background: var(--art-bg);
+}
+
+.tessera-loader i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  /* The resting state, held during the delay. The positive delay against this
+     means the outer rings stay dark for the first 360ms of loop one, which
+     reads as a wind-up; from loop two the rings are in phase. */
+  opacity: 0;
+  animation: tessera-ripple 720ms step-end infinite;
+  animation-delay: calc(var(--d) * 90ms);
+}
+
+/* ── Inline: "the turn". The logo itself, with the lifted tile travelling
+   clockwise. 16px total, so it exactly replaces the send glyph. ── */
+@keyframes tessera-turn {
+  0% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.3;
+  }
+}
+
+.tessera-turn {
+  display: grid;
+  grid-template-columns: repeat(2, 7px);
+  grid-auto-rows: 7px;
+  gap: 2px;
+}
+
+.tessera-turn i {
+  background: currentColor;
+  opacity: 0.3;
+  animation: tessera-turn 600ms step-end infinite;
+  animation-delay: calc(var(--i) * 150ms);
+}
+
+/* Step-log rows arrive rather than having always been there. */
+@keyframes tessera-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.step-row {
+  animation: tessera-step-in var(--dur-3) var(--ease-out) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+  /* The affordance survives; only the movement is removed. Each loader renders
+     its static state — the mosaic as a five-cell plus, the turn with its
+     top-left tile lit — and both are labelled, so nothing silently loses its
+     "we are working" signal. */
+  .tessera-loader i::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  .tessera-loader i[style*='--d: 0']::after,
+  .tessera-loader i[style*='--d: 1']::after {
+    opacity: 1;
+  }
+
+  .tessera-turn i {
+    animation: none;
+  }
+
+  .tessera-turn i[style*='--i: 0'] {
+    opacity: 1;
+  }
+
+  .step-row {
+    animation-name: tessera-fade-in;
   }
 }

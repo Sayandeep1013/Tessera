@@ -19,9 +19,18 @@ const CSS = readFileSync(join(ROOT, 'app', 'globals.css'), 'utf8')
 /** Supplied by next/font on the <html> element, not declared in globals.css. */
 const EXTERNAL = new Set(['--font-geist-sans', '--font-geist-mono'])
 
-function definedTokens(): Set<string> {
+function definedTokens(files: string[]): Set<string> {
   const out = new Set<string>(EXTERNAL)
   for (const m of CSS.matchAll(/^\s*(--[a-z0-9-]+)\s*:/gm)) out.add(m[1]!)
+
+  // Per-element custom properties set inline in JSX — `['--d' as string]: n` —
+  // are genuinely defined, just not in the stylesheet. The loaders use them to
+  // give each cell its own animation delay, which is the whole mechanism. Not an
+  // allowlist: it reads the actual assignments, so a typo still fails.
+  for (const file of files.filter((f) => f.endsWith('.tsx'))) {
+    const text = readFileSync(file, 'utf8')
+    for (const m of text.matchAll(/\[\s*'(--[a-z0-9-]+)'\s+as\s+string\s*\]\s*:/g)) out.add(m[1]!)
+  }
   return out
 }
 
@@ -56,12 +65,14 @@ function exemptLines(lines: string[]): Set<number> {
 
 describe('design tokens', () => {
   it('every var(--token) reference resolves to a declared token', () => {
-    const defined = definedTokens()
+    const defined = definedTokens(FILES)
     const dangling: string[] = []
 
     for (const file of FILES) {
       const text = readFileSync(file, 'utf8')
-      for (const m of text.matchAll(/var\(\s*(--[a-z0-9-]+)/g)) {
+      // `var(--x, fallback)` cannot fail — the fallback IS the definition.
+      for (const m of text.matchAll(/var\(\s*(--[a-z0-9-]+)\s*(,?)/g)) {
+        if (m[2] === ',') continue
         if (defined.has(m[1]!)) continue
         const line = text.slice(0, m.index).split('\n').length
         dangling.push(`${file.slice(ROOT.length + 1)}:${line} → ${m[1]}`)
