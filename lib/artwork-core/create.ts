@@ -8,6 +8,7 @@
 import { parseDoc } from './codec'
 import { FORMAT_VERSION, type Doc, type PaletteEntry } from './schema'
 import faceJson from './fixtures/starters/face.tessera.json'
+import logoJson from './fixtures/logo.tessera.json'
 
 /** Transparent plus a compact ramp that is immediately usable for drawing. */
 export const DEFAULT_PALETTE: PaletteEntry[] = [
@@ -72,4 +73,21 @@ export function loadStarter(name: StarterName): Doc {
 
 export function listStarters(): StarterName[] {
   return Object.keys(STARTERS) as StarterName[]
+}
+
+/**
+ * The Tessera mark, as a real document in our own format.
+ *
+ * Four tesserae, one lifted — the name means tile. It is deliberately not an SVG
+ * of hand-placed rects: the logo is drawn in the editor's format, from the
+ * editor's own default palette, so it can be opened and edited like any other
+ * artwork and so the favicon and the header mark can never drift apart.
+ * `tools/gen-icon.ts` renders app/icon.svg from this same file.
+ */
+export function loadLogo(): Doc {
+  const r = parseDoc(logoJson)
+  if (!r.ok) {
+    throw new Error(`logo fixture is invalid: ${r.error.code} ${r.error.message}`)
+  }
+  return r.value
 }

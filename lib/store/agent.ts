@@ -19,7 +19,8 @@ import { buildContext } from '../ai/context'
 import { checkAccess, recordFreeSession } from '../agent/byok'
 import type { ActionCtx } from '../actions/types'
 import type { EditorCommand } from '../artwork-core/commands'
-import { useDocStore, useEditorStore } from './editor'
+import { useDocStore } from './editor'
+import { buildCtx } from './ctx'
 
 export type AgentStatus = 'idle' | 'running' | 'confirm' | 'done' | 'error'
 
@@ -136,40 +137,12 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     // watch the work land and still reverse the whole session with one undo.
     docStore.beginAgentSession()
 
-    const ctx: ActionCtx = {
-      doc: () => useDocStore.getState().doc,
-      frame: () => useDocStore.getState().frame,
-      commit: (cmd) => useDocStore.getState().commit(cmd),
-      editor: {
-        setTool: (t) => useEditorStore.getState().setTool(t),
-        setColorIndex: (i) => useEditorStore.getState().setColorIndex(i),
-        setBrushSize: (n) => useEditorStore.getState().setBrushSize(n),
-        setBrushShape: (s) => useEditorStore.getState().setBrushShape(s),
-        setViewport: (vp) => useEditorStore.getState().setViewport(vp),
-        toggleGrid: (on) => {
-          const e = useEditorStore.getState()
-          if (on === undefined || on !== e.showGrid) e.toggleGrid()
-        },
-        state: () => {
-          const e = useEditorStore.getState()
-          return {
-            tool: e.tool,
-            colorIndex: e.colorIndex,
-            brushSize: e.brushSize,
-            brushShape: e.brushShape,
-            viewport: e.viewport,
-            showGrid: e.showGrid,
-          }
-        },
-      },
-      // runAgent replaces these with session-scoped versions, so the agent can
-      // never reach past its own work into the user's history.
-      undo: () => {},
-      redo: () => {},
-      historyDepth: () => ({ undo: 0, redo: 0 }),
-      confirmed: false,
-      budget: null,
-    }
+    // The same bridge the toolbar uses — see lib/store/ctx.ts. Only the two
+    // things that genuinely differ for an agent are overridden: a human clicking
+    // a button is its own confirmation, and no budget applies to human effort.
+    // runAgent replaces undo/redo/historyDepth with session-scoped versions, so
+    // the agent can never reach past its own work into the user's history.
+    const ctx: ActionCtx = buildCtx({ confirmed: false, budget: null })
 
     let outcome
     try {

@@ -12,6 +12,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, nextScale } from '@/lib/editor/viewport'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
+import { loadLogo } from '@/lib/artwork-core/create'
+import { runUi } from '@/lib/store/ctx'
+import { spriteRects } from '@/lib/renderer/sprite-svg'
+import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
 import {
   ArrowUturnLeft, ArrowUturnRight, CaretDown, CaretDownSmall, Code, Cursor,
   DotsThree, Eraser, Export, Eyedropper, FilmStrip, Gradient, Minus, PaintBrush,
@@ -108,19 +112,15 @@ export function TopBar() {
   const doc = useDocStore((s) => s.doc)
   const past = useDocStore((s) => s.past)
   const future = useDocStore((s) => s.future)
-  const undo = useDocStore((s) => s.undo)
-  const redo = useDocStore((s) => s.redo)
   const status = useDocStore((s) => s.saveStatus)
 
   const colorIndex = useEditorStore((s) => s.colorIndex)
   const brushSize = useEditorStore((s) => s.brushSize)
-  const setBrushSize = useEditorStore((s) => s.setBrushSize)
   const shape = useEditorStore((s) => s.brushShape)
-  const setShape = useEditorStore((s) => s.setBrushShape)
   const showGrid = useEditorStore((s) => s.showGrid)
-  const toggleGrid = useEditorStore((s) => s.toggleGrid)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [fileOpen, setFileOpen] = useState(false)
   const [dark, setDark] = useState(false)
   const c = chromeFor(useTier())
 
@@ -155,19 +155,25 @@ export function TopBar() {
       }}
     >
       {/* File / logo — 101x32 @ (12,8), r8 */}
-      <button
-        title="File — new, recent, import"
-        style={{
-          height: 32, display: 'flex', alignItems: 'center', gap: 6,
-          padding: '4px 6px 4px 4px', borderRadius: 'var(--r-md)', color: 'var(--fg)',
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-      >
-        <Logo />
-        <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
-        <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
-      </button>
+      <div style={{ position: 'relative' }}>
+        <button
+          title="File — new, open, export"
+          aria-haspopup="menu"
+          aria-expanded={fileOpen}
+          onClick={() => setFileOpen((v) => !v)}
+          style={{
+            height: 32, display: 'flex', alignItems: 'center', gap: 6,
+            padding: '4px 6px 4px 4px', borderRadius: 'var(--r-md)', color: 'var(--fg)',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <Logo />
+          <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
+          <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
+        </button>
+        {fileOpen && <FileMenu onClose={() => setFileOpen(false)} />}
+      </div>
 
       <GlyphBtn title="Settings" Icon={Sliders} icon={20} onClick={toggleTheme} />
 
@@ -209,10 +215,10 @@ export function TopBar() {
           }}
         >
           <GlyphBtn title="Smaller brush" Icon={Minus} size={32} icon={18} muted={false} lift
-            onClick={() => setBrushSize(brushSize - 1)} />
+            onClick={() => runUi('set_brush', { size: brushSize - 1 })} />
           <span className="tabular" style={{ width: 32, textAlign: 'center' }}>{brushSize}px</span>
           <GlyphBtn title="Bigger brush" Icon={Plus} size={32} icon={18} muted={false} lift
-            onClick={() => setBrushSize(brushSize + 1)} />
+            onClick={() => runUi('set_brush', { size: brushSize + 1 })} />
           <span style={{ width: 1, height: 20, background: 'var(--line)', margin: '0 2px' }} />
           <GlyphBtn
             title="Show grid"
@@ -221,7 +227,7 @@ export function TopBar() {
             icon={16}
             muted={false}
             active={false}
-            onClick={toggleGrid}
+            onClick={() => runUi('toggle_grid', {})}
           />
           {showGrid && null}
         </div>
@@ -240,7 +246,7 @@ export function TopBar() {
               key={s}
               role="radio"
               aria-checked={shape === s}
-              onClick={() => setShape(s)}
+              onClick={() => runUi('set_brush', { shape: s })}
               style={{
                 height: 26, padding: '4px 10px', borderRadius: 'var(--r-pill)',
                 font: 'var(--t-label-sm)',
@@ -312,8 +318,8 @@ export function TopBar() {
         </span>
         )}
 
-        <GlyphBtn title="Undo (Ctrl+Z)" Icon={ArrowUturnLeft} onClick={undo} disabled={!past.length} />
-        <GlyphBtn title="Redo (Ctrl+Shift+Z)" Icon={ArrowUturnRight} onClick={redo} disabled={!future.length} />
+        <GlyphBtn title="Undo (Ctrl+Z)" Icon={ArrowUturnLeft} onClick={() => runUi('undo', {})} disabled={!past.length} />
+        <GlyphBtn title="Redo (Ctrl+Shift+Z)" Icon={ArrowUturnRight} onClick={() => runUi('redo', {})} disabled={!future.length} />
 
         {c.showUnbuilt && (
         <button
@@ -345,28 +351,171 @@ export function TopBar() {
   )
 }
 
-/** Our own 16x16 pixel-art mark, drawn in our own format. Not theirs. */
-function Logo() {
-  // A tessera: four tiles, one lifted.
-  const cells: Array<[number, number, number, number]> = [
-    [1, 1, 6, 6], [9, 1, 6, 6], [1, 9, 6, 6], [9, 9, 6, 6],
-  ]
+/**
+ * Our own mark, drawn in our own format. Not theirs.
+ *
+ * The geometry is not written here — it is read from
+ * lib/artwork-core/fixtures/logo.tessera.json, a real 16x16 document using the
+ * editor's own default palette. Same file feeds app/icon.svg, so the tab icon
+ * and the header mark cannot drift, and the logo can be opened and edited in the
+ * editor like any other artwork.
+ */
+const LOGO_RECTS = spriteRects(loadLogo())
+
+function Logo({ size = 24 }: { size?: number }) {
   return (
-    <span style={{ width: 24, height: 24, display: 'grid', placeItems: 'center' }}>
-      <svg width="24" height="24" viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden="true">
-        {cells.map(([x, y, w, h], i) => (
-          <rect key={i} x={x} y={y} width={w} height={h} fill="currentColor" opacity={i === 0 ? 1 : 0.45} />
+    <span style={{ width: size, height: size, display: 'grid', placeItems: 'center' }}>
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 16 16"
+        shapeRendering="crispEdges"
+        aria-hidden="true"
+      >
+        {LOGO_RECTS.map((r, i) => (
+          <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} />
         ))}
       </svg>
     </span>
   )
 }
 
+/**
+ * File menu.
+ *
+ * New / Open / Export were all already implemented — download lives in the page's
+ * Ctrl+S handler, parseDoc reads a file, new_document is a registry action — but
+ * nothing on screen reached any of them. A control that looks like a menu and does
+ * nothing is worse than no control.
+ *
+ * "New" goes through the registry so it inherits the destructive-action rule the
+ * agent is held to: it asks first.
+ */
+function FileMenu({ onClose }: { onClose: () => void }) {
+  const doc = useDocStore((s) => s.doc)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const away = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) onClose()
+    }
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    // `click`, not `mousedown` — mousedown fires before the opening button's own
+    // click handler and the menu would close and reopen in the same gesture.
+    window.addEventListener('click', away)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('click', away)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [onClose])
+
+  const item = (label: string, hint: string, run: () => void) => (
+    <button
+      role="menuitem"
+      onClick={() => {
+        run()
+        onClose()
+      }}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+        padding: '7px 10px', borderRadius: 'var(--r-md)', font: 'var(--t-label)',
+        color: 'var(--fg)', textAlign: 'left',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      <span style={{ flex: 1 }}>{label}</span>
+      <span className="tabular" style={{ color: 'var(--faint)' }}>{hint}</span>
+    </button>
+  )
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label="File"
+      style={{
+        position: 'absolute', left: 0, top: 'calc(100% + 6px)', width: 232, padding: 4,
+        background: 'var(--panel)', borderRadius: 'var(--r-lg)',
+        boxShadow: 'var(--shadow-lg)', zIndex: 60,
+      }}
+    >
+      {item('New', '', () => {
+        const r = runUi('new_document', { width: doc?.w ?? 16, height: doc?.h ?? 16 })
+        if (!r.ok) window.alert(r.error)
+      })}
+      {item('Open…', '', () => openFile())}
+      {item('Export .tessera.json', 'Ctrl S', () => {
+        const d = useDocStore.getState().doc
+        if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
+      })}
+      {item('Export PNG', '', () => {
+        const d = useDocStore.getState().doc
+        if (d) downloadPng(d)
+      })}
+    </div>
+  )
+}
+
+/** Reads a .tessera.json from disk. A failed parse surfaces — never silently discarded. */
+function openFile() {
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json,application/json'
+  input.onchange = async () => {
+    const file = input.files?.[0]
+    if (!file) return
+    try {
+      const parsed = parseDoc(JSON.parse(await file.text()))
+      if (!parsed.ok) {
+        window.alert(`That file could not be read: ${parsed.error.message}`)
+        return
+      }
+      useDocStore.getState().setDoc(parsed.value)
+    } catch {
+      window.alert('That file is not valid JSON.')
+    }
+  }
+  input.click()
+}
+
+function download(filename: string, text: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** One document pixel per image pixel — the export is the artwork, not a screenshot. */
+function downloadPng(doc: ReturnType<typeof useDocStore.getState>['doc']) {
+  if (!doc) return
+  const c = document.createElement('canvas')
+  c.width = doc.w
+  c.height = doc.h
+  const ctx = c.getContext('2d')
+  if (!ctx) return
+  for (const r of spriteRects(doc)) {
+    ctx.fillStyle = r.fill
+    ctx.fillRect(r.x, r.y, r.w, r.h)
+  }
+  c.toBlob((blob) => {
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${doc.name || 'artwork'}.png`
+    a.click()
+    URL.revokeObjectURL(url)
+  })
+}
+
 // ─── tool rail ───────────────────────────────────────────────────────────────
 
 export function ToolRail() {
   const tool = useEditorStore((s) => s.tool)
-  const setTool = useEditorStore((s) => s.setTool)
   const c = chromeFor(useTier())
 
   // On a phone a vertical rail sits on top of the artwork — there is no column
@@ -416,7 +565,9 @@ export function ToolRail() {
             pad={2}
             active={tool === id}
             disabled={!enabled}
-            onClick={() => enabled && setTool(id)}
+            // Through the registry, not the store — one definition per
+            // capability, so a toolbar bug and an agent bug are the same bug.
+            onClick={() => enabled && runUi('select_tool', { tool: id })}
           />
         ))}
       </div>
@@ -461,7 +612,7 @@ export function ZoomBar() {
         }}
       >
         <GlyphBtn title="Zoom out" Icon={Minus} size={36} icon={18}
-          onClick={() => setViewport({ ...vp, scale: nextScale(vp.scale, -1) })} />
+          onClick={() => runUi('set_zoom', { scale: nextScale(vp.scale, -1) })} />
         <button
           title="Fit to screen (1)"
           aria-label="Fit to screen"
@@ -477,7 +628,7 @@ export function ZoomBar() {
           {vp.scale}×
         </button>
         <GlyphBtn title="Zoom in" Icon={Plus} size={36} icon={18}
-          onClick={() => setViewport({ ...vp, scale: nextScale(vp.scale, 1) })} />
+          onClick={() => runUi('set_zoom', { scale: nextScale(vp.scale, 1) })} />
       </div>
     </div>
   )
