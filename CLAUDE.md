@@ -22,6 +22,11 @@ Repo: https://github.com/Sayandeep1013/Tessera
 9. **Tests ship in the same change as the code they cover.**
 10. **When a spec turns out to be wrong, say so and fix the spec** — do not route around it.
 
+## Start here
+
+**`docs/HANDOFF.md`** — current state, what is next, the traps that have already cost time in this
+repo, and the decisions that are settled. Read it before anything else.
+
 ## Working loop
 
 See `docs/WORKFLOW.md`. Every unit: scope → sub-spec → review → plan + task list → build →
@@ -58,8 +63,26 @@ npx tsx tools/shoot-ai.ts   # end-to-end AI proposal flow
 
 ## Current state
 
-- Phase 0 (AI spike) **failed its gate — 0/9**. Recorded in `docs/PHASE-0-FINDINGS.md` with
-  ranked hypotheses. Quality work is deferred, not forgotten.
-- Phase 1 (editor) and Phase 2 (AI composer, proposal, diff, accept/reject) are shipped.
-- **In progress:** matching newt.sh 1:1 visually before adding our own flavour.
-- Model: `gemini-3.1-flash-lite` via free tier. 5 req/min is the binding limit.
+See `docs/HANDOFF.md` for the full picture. In brief, as of 11 Aug 2026:
+
+- **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
+  tiers, the "Mosaic" visual identity, IndexedDB autosave, and the AI agent (21 actions, look-act-
+  verify loop, one-undo sessions, bring-your-own-key). The agent unit scored **9/10**.
+- **Next:** Phase 4 — layers (#46), animation timeline (#47), share via Supabase (#48). The Layers,
+  Timeline and Share buttons in the top bar are the only dead controls left, and each is a real
+  feature rather than a wiring job.
+- **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent
+  loop and at 32x32 produces recognisable, correctly-placed edits that damage nothing, but the
+  output is still not artist-grade. Recorded in `docs/PHASE-0-FINDINGS.md`. The remaining gap is
+  model capability rather than engineering, and the standing decision is not to spend time there.
+- **Model:** `gemini-3.1-flash-lite` on the free tier. 5 requests/minute is the binding limit, and
+  one agent session is about five requests.
+
+## Commands, beyond the basics
+
+```
+npx tsx tools/check-responsive.ts   # overflow + target size at 5 viewports; exits non-zero
+npx tsx tools/probe-tools-ui.ts     # drives every tool with real pointer events
+npx tsx tools/e2e-agent.ts          # agent flow end to end (wants AI_PROVIDER=mock)
+npx tsx tools/render-probe.ts       # render the last AI probe result and LOOK at it
+```
