@@ -41,10 +41,20 @@ type DocState = {
   saveStatus: SaveStatus
   saveError: string | null
 
+  /**
+   * Nesting depth of open agent sessions. While non-zero, commit() applies to the
+   * live document but does NOT push history — the user watches the work land, and
+   * the session collapses to one command at the end. Kept as a depth rather than a
+   * boolean so an inner session cannot close an outer one's interception.
+   */
+  agentDepth: number
+
   setDoc: (doc: Doc) => void
   commit: (cmd: EditorCommand | null) => void
   undo: () => void
   redo: () => void
+  beginAgentSession: () => void
+  endAgentSession: () => void
   flushSave: () => Promise<void>
 }
 
@@ -62,6 +72,7 @@ export const useDocStore = create<DocState>((set, get) => {
     frame: 0,
     past: [],
     future: [],
+    agentDepth: 0,
     saveStatus: 'idle',
     saveError: null,
 
@@ -72,9 +83,18 @@ export const useDocStore = create<DocState>((set, get) => {
 
     commit: (cmd) => {
       if (!cmd) return // an empty stroke must not consume an undo step
-      const { doc, past } = get()
+      const { doc, past, agentDepth } = get()
       if (!doc) return
       const next = applyCommand(doc, cmd)
+
+      // Still the only writer — an agent session changes what happens to history,
+      // not who writes the document.
+      if (agentDepth > 0) {
+        set({ doc: next })
+        scheduleSave()
+        return
+      }
+
       const trimmed = past.length >= HISTORY_CAP ? past.slice(past.length - HISTORY_CAP + 1) : past
       set({ doc: next, past: [...trimmed, cmd], future: [] })
       scheduleSave()
@@ -96,6 +116,9 @@ export const useDocStore = create<DocState>((set, get) => {
       set({ doc: applyCommand(doc, cmd), past: [...past, cmd], future: future.slice(1) })
       scheduleSave()
     },
+
+    beginAgentSession: () => set({ agentDepth: get().agentDepth + 1 }),
+    endAgentSession: () => set({ agentDepth: Math.max(0, get().agentDepth - 1) }),
 
     flushSave: async () => {
       const { doc } = get()

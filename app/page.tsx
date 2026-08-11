@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Canvas } from '@/components/Canvas'
 import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
-import { AiComposer } from '@/components/AiComposer'
+import { AgentPanel } from '@/components/AgentPanel'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { loadStarter } from '@/lib/artwork-core/create'
 import { loadLatestDraft } from '@/lib/persist/idb'
@@ -129,7 +129,7 @@ export default function EditorPage() {
             <Canvas />
             <ToolRail />
             <ZoomBar />
-            <AiComposer />
+            <AgentPanel />
           </>
         )}
       </main>

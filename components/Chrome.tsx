@@ -129,6 +129,7 @@ export function TopBar() {
     }
   }
 
+  // token-exempt: an artwork colour is document data, not a design token
   const swatch = doc?.palette[colorIndex]?.c ?? '#000000'
 
   return (

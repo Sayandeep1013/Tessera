@@ -132,7 +132,7 @@ function Spinner() {
       aria-hidden
       style={{
         width: 14, height: 14, borderRadius: '50%',
-        border: '2px solid var(--fg-faint)', borderTopColor: 'transparent',
+        border: '2px solid var(--faint)', borderTopColor: 'transparent',
         animation: 'tessera-spin .7s linear infinite',
       }}
     />
@@ -167,7 +167,7 @@ function ProposalBar() {
         <Stat n={c.changed} label="changed" color="var(--diff-change)" />
         <Stat n={c.removed} label="cleared" color="var(--diff-remove)" />
         {c.palette > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
             +{c.palette} colour{c.palette === 1 ? '' : 's'}
           </span>
         )}
@@ -175,7 +175,7 @@ function ProposalBar() {
         <div
           role="radiogroup"
           aria-label="Compare"
-          style={{ display: 'flex', background: 'var(--surface-2)', borderRadius: 'var(--r-pill)', padding: 2 }}
+          style={{ display: 'flex', background: 'var(--panel2)', borderRadius: 'var(--r-pill)', padding: 2 }}
         >
           {(['before', 'after'] as const).map((v) => (
             <button
@@ -186,8 +186,8 @@ function ProposalBar() {
               style={{
                 fontSize: 11, padding: '3px 10px', borderRadius: 'var(--r-pill)',
                 background: view === v ? 'var(--surface)' : 'transparent',
-                boxShadow: view === v ? 'var(--shadow-1)' : 'none',
-                color: view === v ? 'var(--fg)' : 'var(--fg-muted)',
+                boxShadow: view === v ? 'var(--shadow-sm)' : 'none',
+                color: view === v ? 'var(--fg)' : 'var(--muted)',
                 textTransform: 'capitalize',
               }}
             >
@@ -202,7 +202,7 @@ function ProposalBar() {
           onClick={reject}
           style={{
             height: 32, padding: '0 14px', borderRadius: 'var(--r-md)',
-            color: 'var(--fg-muted)', fontSize: 13, fontWeight: 500,
+            color: 'var(--muted)', fontSize: 13, fontWeight: 500,
           }}
         >
           Reject
@@ -211,7 +211,7 @@ function ProposalBar() {
           onClick={accept}
           style={{
             height: 32, padding: '0 16px', borderRadius: 'var(--r-md)',
-            background: 'var(--accent)', color: 'var(--accent-fg)', fontSize: 13, fontWeight: 500,
+            background: 'var(--accent)', color: 'var(--onaccent)', fontSize: 13, fontWeight: 500,
           }}
         >
           Accept
@@ -223,7 +223,7 @@ function ProposalBar() {
 
 function Stat({ n, label, color }: { n: number; label: string; color: string }) {
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--fg-muted)' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--muted)' }}>
       <span style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
       <span className="tabular" style={{ color: 'var(--fg)' }}>{n}</span>
       {label}

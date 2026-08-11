@@ -15,6 +15,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: [
+    // token-exempt: the OS reads these from a meta tag before any stylesheet
+    // loads, so they cannot be var(). Keep in step with --surface in globals.css.
     { media: '(prefers-color-scheme: light)', color: '#f4f4f5' },
     { media: '(prefers-color-scheme: dark)', color: '#17171b' },
   ],
