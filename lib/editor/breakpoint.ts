@@ -60,7 +60,14 @@ export function chromeFor(tier: Tier) {
     /** Secondary header controls are dropped before essential ones. */
     showBrushOptions: tier === 'wide' || tier === 'compact',
     showDither: tier === 'wide',
-    showFilename: tier !== 'mobile',
+    /**
+     * The filename is absolutely centred across the whole header, so it can
+     * collide with whatever the left group grows into. `compact` is exactly the
+     * tier where the brush group is still shown but the header is narrow enough
+     * for the two to overlap — measured at 900px. Below that the brush group is
+     * gone and the centre is free again.
+     */
+    showFilename: tier === 'wide' || tier === 'tablet',
     showSaveStatus: tier === 'wide' || tier === 'compact',
     showUnbuilt: tier === 'wide',
   }

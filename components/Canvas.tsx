@@ -9,7 +9,8 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import {
-  renderCursor, renderDiffOverlay, renderDoc, readTheme, resizeCanvas, type ThemeColors,
+  renderCursor, renderDiffOverlay, renderDoc, renderSelection, readTheme, resizeCanvas,
+  type ThemeColors,
 } from '@/lib/renderer/canvas'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { useAiStore } from '@/lib/store/ai'
@@ -17,7 +18,8 @@ import {
   MAX_SCALE, MIN_SCALE, clampScale, fitViewport, isInside, screenToDoc, zoomAt,
 } from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
-import { floodFillPoints, linePoints } from '@/lib/artwork-core/ops'
+import { floodFillPoints, linePoints, rectPoints } from '@/lib/artwork-core/ops'
+import { densityFor, ditherPasses, gradientCells } from '@/lib/editor/dither'
 import { paintCommand, type PaintCell } from '@/lib/artwork-core/commands'
 
 /**
@@ -33,6 +35,10 @@ export function Canvas() {
   const themeRef = useRef<ThemeColors | null>(null)
   /** Fractional scale between wheel events — see the wheel handler. */
   const zoomAccum = useRef(0)
+  /** Drag origin for the shape tools (rect, gradient, marquee, move). */
+  const dragFrom = useRef<{ x: number; y: number } | null>(null)
+  /** The pixels a move drag lifted, and where they came from. */
+  const moving = useRef<{ cells: Array<[number, number, number]>; from: { x: number; y: number } } | null>(null)
   const dirty = useRef(true)
 
   /** key = y*w+x, so re-crossing a cell in one stroke updates rather than duplicates */
@@ -110,6 +116,9 @@ export function Canvas() {
       } else if (cursor && isInside(cursor.x, cursor.y, doc) && tool !== 'eyedropper') {
         renderCursor(ctx, cursor.x, cursor.y, brushSize, viewport, theme)
       }
+
+      const sel = useEditorStore.getState().selection
+      if (sel) renderSelection(ctx, sel, viewport)
     }
     raf = requestAnimationFrame(tick)
 
@@ -133,10 +142,15 @@ export function Canvas() {
     const value = tool === 'eraser' ? 0 : colorIndex
     const px = doc.frames[frame]!.layers[0]!.px
 
+    const density = densityFor(useEditorStore.getState().dither)
+
     for (const [dx, dy] of brushMask(brushShape, brushSize)) {
       const cx = x + dx
       const cy = y + dy
       if (!isInside(cx, cy, doc)) continue // ignore, never clamp — clamping smears along the edge
+      // Ordered dither: the pattern is anchored to document coordinates, so two
+      // strokes over the same area interlock instead of showing a seam.
+      if (!ditherPasses(cx, cy, density)) continue
       const key = cy * doc.w + cx
       const existing = buf.get(key)
       const before = existing ? existing[2] : px[key]!
@@ -145,6 +159,55 @@ export function Canvas() {
     }
     dirty.current = true
   }, [])
+
+  /**
+   * Redraw a shape preview into the stroke buffer.
+   *
+   * Every move reverts the previous preview to its `before` value and recomputes
+   * from scratch, so the buffer always holds exactly one shape and its `before`
+   * values stay the true pre-stroke document. Accumulating instead would make
+   * undo restore an intermediate frame of the drag.
+   */
+  const previewShape = useCallback((cells: Array<[number, number]>, value: number) => {
+    const { doc, frame } = useDocStore.getState()
+    const buf = stroke.current
+    if (!doc || !buf) return
+    const px = doc.frames[frame]!.layers[0]!.px
+
+    for (const [bx, by, before] of buf.values()) px[by * doc.w + bx] = before
+    buf.clear()
+
+    for (const [cx, cy] of cells) {
+      if (cx < 0 || cy < 0 || cx >= doc.w || cy >= doc.h) continue
+      const key = cy * doc.w + cx
+      buf.set(key, [cx, cy, px[key]!, value])
+      px[key] = value
+    }
+    dirty.current = true
+  }, [])
+
+  /** Like previewShape, but each cell carries its own value (used by move). */
+  const previewMoved = useCallback(
+    (cells: Array<[number, number]>, values: Map<string, number>) => {
+      const { doc, frame } = useDocStore.getState()
+      const buf = stroke.current
+      if (!doc || !buf) return
+      const px = doc.frames[frame]!.layers[0]!.px
+
+      for (const [bx, by, before] of buf.values()) px[by * doc.w + bx] = before
+      buf.clear()
+
+      for (const [cx, cy] of cells) {
+        if (cx < 0 || cy < 0 || cx >= doc.w || cy >= doc.h) continue
+        const key = cy * doc.w + cx
+        const value = values.get(`${cx},${cy}`) ?? 0
+        buf.set(key, [cx, cy, px[key]!, value])
+        px[key] = value
+      }
+      dirty.current = true
+    },
+    [],
+  )
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -182,6 +245,42 @@ export function Canvas() {
         return
       }
 
+      // ── marquee: drag a selection rectangle ──
+      if (ed.tool === 'marquee') {
+        dragFrom.current = { x, y }
+        ed.setSelection({ x, y, w: 1, h: 1 })
+        return
+      }
+
+      // ── select: drag the contents of the selection ──
+      if (ed.tool === 'select') {
+        const sel = ed.selection
+        if (!sel || x < sel.x || y < sel.y || x >= sel.x + sel.w || y >= sel.y + sel.h) {
+          // Clicking outside drops the selection, which is what every editor does
+          // and is the only discoverable way to get rid of one.
+          ed.setSelection(null)
+          return
+        }
+        const lifted: Array<[number, number, number]> = []
+        for (let sy = sel.y; sy < sel.y + sel.h; sy++) {
+          for (let sx = sel.x; sx < sel.x + sel.w; sx++) {
+            lifted.push([sx - sel.x, sy - sel.y, px[sy * doc.w + sx]!])
+          }
+        }
+        moving.current = { cells: lifted, from: { x, y } }
+        dragFrom.current = { x, y }
+        stroke.current = new Map()
+        return
+      }
+
+      // ── rect and gradient: drag out a shape, previewed live ──
+      if (ed.tool === 'rect' || ed.tool === 'gradient') {
+        dragFrom.current = { x, y }
+        stroke.current = new Map()
+        previewShape([[x, y]], ed.colorIndex)
+        return
+      }
+
       if (ed.tool === 'fill') {
         const target = ed.colorIndex
         const cells: PaintCell[] = []
@@ -196,7 +295,7 @@ export function Canvas() {
       lastCell.current = { x, y }
       paintAt(x, y)
     },
-    [paintAt],
+    [paintAt, previewShape],
   )
 
   const onPointerMove = useCallback(
@@ -220,6 +319,58 @@ export function Canvas() {
       const { x, y } = screenToDoc(e.clientX, e.clientY, rect, ed.viewport)
       ed.setCursor({ x, y })
 
+      const start = dragFrom.current
+      if (start) {
+        if (ed.tool === 'marquee') {
+          ed.setSelection({
+            x: Math.max(0, Math.min(start.x, x)),
+            y: Math.max(0, Math.min(start.y, y)),
+            w: Math.min(doc.w, Math.abs(x - start.x) + 1),
+            h: Math.min(doc.h, Math.abs(y - start.y) + 1),
+          })
+          return
+        }
+
+        if (ed.tool === 'select' && moving.current) {
+          const sel = ed.selection
+          if (!sel) return
+          const dx = x - moving.current.from.x
+          const dy = y - moving.current.from.y
+          // Clear the source, then stamp the lifted pixels at the offset. Both go
+          // through one preview so the whole move is a single undo step.
+          const cells: Array<[number, number]> = []
+          const values = new Map<string, number>()
+          for (let sy = sel.y; sy < sel.y + sel.h; sy++) {
+            for (let sx = sel.x; sx < sel.x + sel.w; sx++) {
+              cells.push([sx, sy])
+              values.set(`${sx},${sy}`, 0)
+            }
+          }
+          for (const [ox, oy, value] of moving.current.cells) {
+            const tx = sel.x + ox + dx
+            const ty = sel.y + oy + dy
+            if (!values.has(`${tx},${ty}`)) cells.push([tx, ty])
+            values.set(`${tx},${ty}`, value)
+          }
+          previewMoved(cells, values)
+          return
+        }
+
+        if (ed.tool === 'rect') {
+          const w = Math.abs(x - start.x) + 1
+          const h = Math.abs(y - start.y) + 1
+          const rx = Math.min(start.x, x)
+          const ry = Math.min(start.y, y)
+          previewShape([...rectPoints(rx, ry, w, h, false)], ed.colorIndex)
+          return
+        }
+
+        if (ed.tool === 'gradient') {
+          previewShape(gradientCells(start.x, start.y, x, y, doc.w, doc.h), ed.colorIndex)
+          return
+        }
+      }
+
       if (!stroke.current) return
       const last = lastCell.current
       if (last && (last.x !== x || last.y !== y)) {
@@ -231,18 +382,51 @@ export function Canvas() {
       }
       lastCell.current = { x, y }
     },
-    [paintAt],
+    [paintAt, previewShape, previewMoved],
   )
 
   const endStroke = useCallback(() => {
     panFrom.current = null
+    const start = dragFrom.current
+    dragFrom.current = null
+    const wasMoving = moving.current
+    moving.current = null
+
+    const ed = useEditorStore.getState()
+    // The marquee never touches pixels — it only sets the selection.
+    if (ed.tool === 'marquee') {
+      const sel = ed.selection
+      if (sel && sel.w <= 1 && sel.h <= 1) ed.setSelection(null)
+      return
+    }
+
     const buf = stroke.current
     stroke.current = null
     lastCell.current = null
     if (!buf) return
+
     const { frame } = useDocStore.getState()
-    const label = useEditorStore.getState().tool === 'eraser' ? 'Erase' : 'Brush'
+    const label =
+      ed.tool === 'eraser' ? 'Erase'
+      : ed.tool === 'rect' ? 'Rectangle'
+      : ed.tool === 'gradient' ? 'Gradient'
+      : wasMoving ? 'Move'
+      : 'Brush'
+
     useDocStore.getState().commit(paintCommand(label, frame, buf.values()))
+
+    // A completed move leaves the selection over where the pixels landed, so a
+    // second drag continues from there rather than snapping back.
+    if (wasMoving && start && ed.selection) {
+      const cursor = ed.cursor
+      if (cursor) {
+        ed.setSelection({
+          ...ed.selection,
+          x: ed.selection.x + (cursor.x - start.x),
+          y: ed.selection.y + (cursor.y - start.y),
+        })
+      }
+    }
   }, [])
 
   const onPointerCancel = useCallback(() => {

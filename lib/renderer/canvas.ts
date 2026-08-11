@@ -257,3 +257,39 @@ export function renderCursor(
   ctx.strokeRect(ax - 1, ay - 1, size * vp.scale + 2, size * vp.scale + 2)
   ctx.restore()
 }
+
+/**
+ * Selection rectangle.
+ *
+ * Drawn as a two-tone dashed border — white under, dark dashes over — for the
+ * same reason the grid is composited rather than coloured: the selection can
+ * land on any artwork colour, and a single-tone outline disappears against one
+ * of them. This is the classic "marching ants" treatment minus the marching;
+ * looping motion in the periphery is a vestibular trigger and this is the one
+ * overlay that would run continuously.
+ */
+export function renderSelection(
+  ctx: CanvasRenderingContext2D,
+  sel: { x: number; y: number; w: number; h: number },
+  vp: Viewport,
+): void {
+  const ax = Math.round(vp.offsetX) + sel.x * vp.scale
+  const ay = Math.round(vp.offsetY) + sel.y * vp.scale
+  const w = sel.w * vp.scale
+  const h = sel.h * vp.scale
+
+  ctx.save()
+  ctx.lineWidth = 1
+  // Half-pixel offset so a 1px stroke lands on the pixel rather than straddling
+  // two and rendering as a 2px blur.
+  const r = [ax + 0.5, ay + 0.5, w - 1, h - 1] as const
+
+  ctx.setLineDash([])
+  ctx.strokeStyle = '#ffffff'
+  ctx.strokeRect(...r)
+
+  ctx.setLineDash([4, 4])
+  ctx.strokeStyle = '#000000'
+  ctx.strokeRect(...r)
+  ctx.restore()
+}

@@ -349,15 +349,28 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   return (
-    <div
-      role="dialog"
-      aria-label="Your API key"
-      style={{
-        position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', width: '100%',
-        padding: 14, background: 'var(--panel)', borderRadius: 'var(--r-xl)',
-        boxShadow: 'var(--shadow-lg)',
-      }}
-    >
+    <>
+      {/* A scrim, because this is a modal decision about a credential — and
+          because anchoring the card to the panel put it straight on top of the
+          tool rail, which sits at a higher z-index and painted over it. */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 90,
+          background: 'color-mix(in srgb, var(--surface) 70%, transparent)',
+        }}
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Your API key"
+        style={{
+          position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
+          width: 'min(420px, calc(100vw - 32px))', zIndex: 91,
+          padding: 16, background: 'var(--panel)', borderRadius: 'var(--r-xl)',
+          boxShadow: 'var(--shadow-lg)',
+        }}
+      >
       <p style={{ margin: '0 0 10px', font: 'var(--t-label-lg)' }}>Use your own API key</p>
 
       {/*
@@ -427,11 +440,12 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
         </form>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-        <button onClick={onClose} style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
-          Close
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+          <button onClick={onClose} style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
+            Close
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

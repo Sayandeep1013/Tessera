@@ -13,6 +13,7 @@ import type { Doc } from '../artwork-core/schema'
 import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
 import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
+import type { DitherMode } from '../editor/dither'
 import { saveDraft } from '../persist/idb'
 
 export type Tool =
@@ -148,6 +149,9 @@ type EditorState = {
   cursor: { x: number; y: number } | null
   showGrid: boolean
   panning: boolean
+  dither: DitherMode
+  /** Document-space rectangle, or null. Set by the marquee, moved by select. */
+  selection: { x: number; y: number; w: number; h: number } | null
 
   setTool: (t: Tool) => void
   setColorIndex: (i: number) => void
@@ -157,6 +161,8 @@ type EditorState = {
   setCursor: (c: { x: number; y: number } | null) => void
   toggleGrid: () => void
   setPanning: (p: boolean) => void
+  setDither: (d: DitherMode) => void
+  setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -169,6 +175,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   cursor: null,
   showGrid: true,
   panning: false,
+  dither: 'solid',
+  selection: null,
 
   setTool: (t) => set({ tool: t, prevTool: get().tool }),
   setColorIndex: (i) => set({ colorIndex: i }),
@@ -178,4 +186,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setCursor: (c) => set({ cursor: c }),
   toggleGrid: () => set({ showGrid: !get().showGrid }),
   setPanning: (p) => set({ panning: p }),
+  setDither: (d) => set({ dither: d }),
+  setSelection: (sel) => set({ selection: sel }),
 }))

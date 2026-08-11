@@ -14,6 +14,7 @@ import { fitViewport, nextScale } from '@/lib/editor/viewport'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { loadLogo } from '@/lib/artwork-core/create'
 import { runUi } from '@/lib/store/ctx'
+import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
 import { spriteRects } from '@/lib/renderer/sprite-svg'
 import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
 import {
@@ -25,14 +26,14 @@ import {
 type IconCmp = typeof PaintBrush
 
 const TOOLS: Array<{ id: Tool; title: string; Icon: IconCmp; enabled: boolean }> = [
-  { id: 'select', title: 'Select / Move (V)', Icon: Cursor, enabled: false },
+  { id: 'select', title: 'Select / Move (V)', Icon: Cursor, enabled: true },
   { id: 'brush', title: 'Brush (B)', Icon: PaintBrush, enabled: true },
   { id: 'eraser', title: 'Eraser (E)', Icon: Eraser, enabled: true },
   { id: 'fill', title: 'Fill (G)', Icon: PaintBucket, enabled: true },
   { id: 'rect', title: 'Shapes (U)', Icon: Square, enabled: true },
-  { id: 'marquee', title: 'Select region (M)', Icon: Selection, enabled: false },
+  { id: 'marquee', title: 'Select region (M)', Icon: Selection, enabled: true },
   { id: 'eyedropper', title: 'Eyedropper (I)', Icon: Eyedropper, enabled: true },
-  { id: 'gradient', title: 'Gradient (H)', Icon: Gradient, enabled: false },
+  { id: 'gradient', title: 'Gradient (H)', Icon: Gradient, enabled: true },
 ]
 
 // ─── primitives ──────────────────────────────────────────────────────────────
@@ -121,6 +122,8 @@ export function TopBar() {
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
+  const [ditherOpen, setDitherOpen] = useState(false)
+  const dither = useEditorStore((s) => s.dither)
   const [dark, setDark] = useState(false)
   const c = chromeFor(useTier())
 
@@ -261,20 +264,30 @@ export function TopBar() {
           ))}
         </div>
 
-        {/* Dither: Solid — 87x28 */}
+        {/* Dither — 87x28 */}
         {c.showDither && (
-        <button
-          title="Dither: Solid"
-          style={{
-            height: 32, alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 6,
-            padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)', background: 'var(--panel2)',
-            font: 'var(--t-label-sm)', color: 'var(--fg)',
-          }}
-        >
-          <span style={{ width: 16, height: 16, borderRadius: 'var(--r-sm)', background: 'var(--fg)', boxShadow: '0 0 0 1px var(--line)' }} />
-          <span style={{ lineHeight: '16px' }}>Solid</span>
-          <span style={{ color: 'var(--muted)' }}><CaretDownSmall size={12} /></span>
-        </button>
+          <div style={{ position: 'relative', alignSelf: 'center' }}>
+            <button
+              title="Dither pattern"
+              aria-haspopup="menu"
+              aria-expanded={ditherOpen}
+              onClick={() => setDitherOpen((v) => !v)}
+              style={{
+                height: 32, display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)',
+                background: 'var(--panel2)', font: 'var(--t-label-sm)', color: 'var(--fg)',
+              }}
+            >
+              <DitherSwatch mode={dither} />
+              <span style={{ lineHeight: '16px' }}>
+                {DITHER_MODES.find((m) => m.id === dither)?.label ?? 'Solid'}
+              </span>
+              <span style={{ color: 'var(--muted)' }}><CaretDownSmall size={12} /></span>
+            </button>
+            {ditherOpen && (
+              <DitherMenu current={dither} onClose={() => setDitherOpen(false)} />
+            )}
+          </div>
         )}
       </div>
       )}
@@ -513,6 +526,86 @@ function downloadPng(doc: ReturnType<typeof useDocStore.getState>['doc']) {
     a.click()
     URL.revokeObjectURL(url)
   })
+}
+
+/**
+ * A live 16x16 preview of the pattern, drawn from the same `ditherPasses` the
+ * brush uses. Not an approximation of it — if the matrix changes, this changes.
+ */
+function DitherSwatch({ mode, size = 16 }: { mode: DitherMode; size?: number }) {
+  const density = DITHER_MODES.find((m) => m.id === mode)?.density ?? 1
+  const cells: React.ReactNode[] = []
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) {
+      if (!ditherPasses(x, y, density)) continue
+      cells.push(<rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill="currentColor" />)
+    }
+  }
+  return (
+    <span
+      style={{
+        width: size, height: size, display: 'grid', placeItems: 'center',
+        borderRadius: 'var(--r-sm)', color: 'var(--fg)',
+        boxShadow: '0 0 0 1px var(--line)', overflow: 'hidden',
+      }}
+    >
+      <svg width={size} height={size} viewBox="0 0 4 4" shapeRendering="crispEdges" aria-hidden="true">
+        {cells}
+      </svg>
+    </span>
+  )
+}
+
+function DitherMenu({ current, onClose }: { current: DitherMode; onClose: () => void }) {
+  const setDither = useEditorStore((s) => s.setDither)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const away = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      role="menu"
+      aria-label="Dither pattern"
+      style={{
+        position: 'absolute', left: 0, top: 'calc(100% + 6px)', width: 148, padding: 4,
+        background: 'var(--panel)', borderRadius: 'var(--r-lg)',
+        boxShadow: 'var(--shadow-lg)', zIndex: 60,
+      }}
+    >
+      {DITHER_MODES.map((m) => (
+        <button
+          key={m.id}
+          role="menuitemradio"
+          aria-checked={current === m.id}
+          onClick={() => {
+            setDither(m.id)
+            onClose()
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+            padding: '6px 8px', borderRadius: 'var(--r-md)', font: 'var(--t-label)',
+            color: 'var(--fg)', textAlign: 'left',
+            background: current === m.id ? 'var(--accent-soft)' : 'transparent',
+          }}
+        >
+          <DitherSwatch mode={m.id} size={20} />
+          <span style={{ flex: 1 }}>{m.label}</span>
+        </button>
+      ))}
+    </div>
+  )
 }
 
 // ─── tool rail ───────────────────────────────────────────────────────────────
