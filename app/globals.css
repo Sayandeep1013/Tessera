@@ -59,7 +59,13 @@
      whose whole job is to be neutral. The reference paints flat white always.
      Recorded against spec 13 §2.A. */
   --art-bg: #ffffff;
-  --art-grid: #00000014;
+  /* A backdrop colour — used by the boot loader's own gridlines. */
+  --art-grid: #ededed;
+  /* The canvas grid is composited with `difference`, so this is a MAGNITUDE of
+     inversion rather than a colour, and it is identical in both themes. It has
+     to be: the artwork it sits on is arbitrary user data, not a theme surface.
+     Near-black would be a no-op — difference with #000000 changes nothing. */
+  --grid-ink: #262626;
   --art-edge-tl: #0000002e;
   --art-edge-br: #0000003c;
 
@@ -93,7 +99,8 @@
 
   /* Identical to dark on purpose — see the note above. */
   --art-bg: #ffffff;
-  --art-grid: #00000014;
+  --art-grid: #ededed;
+  --grid-ink: #262626;
   --art-edge-tl: #0000002e;
   --art-edge-br: #0000003c;
 

@@ -13,15 +13,26 @@ import {
 } from '@/lib/renderer/canvas'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { useAiStore } from '@/lib/store/ai'
-import { fitViewport, isInside, nextScale, screenToDoc, snapScale, zoomAt } from '@/lib/editor/viewport'
+import {
+  MAX_SCALE, MIN_SCALE, clampScale, fitViewport, isInside, screenToDoc, zoomAt,
+} from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
 import { floodFillPoints, linePoints } from '@/lib/artwork-core/ops'
 import { paintCommand, type PaintCell } from '@/lib/artwork-core/commands'
+
+/**
+ * Radians-free feel constant: 0.0015 makes a typical trackpad flick move about
+ * half an octave, and a mouse notch (deltaY 100) about 14%. Tuned by hand — the
+ * only honest way to set a feel constant.
+ */
+const ZOOM_SENSITIVITY = 0.0015
 
 export function Canvas() {
   const ref = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   const themeRef = useRef<ThemeColors | null>(null)
+  /** Fractional scale between wheel events — see the wheel handler. */
+  const zoomAccum = useRef(0)
   const dirty = useRef(true)
 
   /** key = y*w+x, so re-crossing a cell in one stroke updates rather than duplicates */
@@ -248,15 +259,61 @@ export function Canvas() {
     dirty.current = true
   }, [])
 
-  const onWheel = useCallback((e: React.WheelEvent<HTMLCanvasElement>) => {
+  /**
+   * Wheel: scroll pans, pinch zooms.
+   *
+   * This used to zoom on every wheel event, a whole ladder rung at a time. A
+   * trackpad fires dozens of events per two-finger gesture, so one flick went
+   * 32x -> 48x -> 64x and pinned at maximum. Two separate faults: no
+   * scroll/zoom distinction, and a step sized for a mouse notch.
+   *
+   * ctrlKey is the discriminator, and it is not a heuristic — browsers
+   * synthesise a wheel event with ctrlKey set for a trackpad pinch, and it is
+   * also what a mouse user holds to zoom. Everything else is a scroll, and a
+   * scroll pans. Same model as Figma and tldraw.
+   *
+   * Zoom is continuous rather than laddered: the ladder is for the +/- buttons
+   * and the keyboard, where landing on recognisable factors matters. Scale must
+   * still be a whole number so cells tile exactly, so the fractional value is
+   * accumulated here and only the rounded one reaches the viewport — otherwise
+   * small deltas round back to the current scale and the gesture does nothing.
+   *
+   * Attached natively with passive: false. React registers wheel listeners as
+   * passive, so preventDefault from an onWheel prop is ignored and the browser
+   * page-zooms on top of us.
+   */
+  useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const ed = useEditorStore.getState()
-    const rect = canvas.getBoundingClientRect()
-    const target = e.deltaY < 0 ? nextScale(ed.viewport.scale, 1) : nextScale(ed.viewport.scale, -1)
-    ed.setViewport(
-      zoomAt(ed.viewport, snapScale(target), e.clientX - rect.left, e.clientY - rect.top),
-    )
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const ed = useEditorStore.getState()
+      const vp = ed.viewport
+
+      if (e.ctrlKey || e.metaKey) {
+        // Re-sync if anything else moved the scale since the last wheel event.
+        if (Math.round(zoomAccum.current) !== vp.scale) zoomAccum.current = vp.scale
+
+        // Exponential so each notch is a constant proportion — a linear step
+        // feels violent at 4x and imperceptible at 48x.
+        zoomAccum.current = Math.max(
+          MIN_SCALE,
+          Math.min(MAX_SCALE, zoomAccum.current * Math.exp(-e.deltaY * ZOOM_SENSITIVITY)),
+        )
+        const next = clampScale(zoomAccum.current)
+        if (next === vp.scale) return
+
+        const rect = canvas.getBoundingClientRect()
+        ed.setViewport(zoomAt(vp, next, e.clientX - rect.left, e.clientY - rect.top))
+        return
+      }
+
+      ed.setViewport({ ...vp, offsetX: vp.offsetX - e.deltaX, offsetY: vp.offsetY - e.deltaY })
+    }
+
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', onWheel)
   }, [])
 
   return (
@@ -270,7 +327,6 @@ export function Canvas() {
         onPointerUp={endStroke}
         onPointerCancel={onPointerCancel}
         onPointerLeave={() => useEditorStore.getState().setCursor(null)}
-        onWheel={onWheel}
       />
     </div>
   )

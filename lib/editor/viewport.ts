@@ -8,6 +8,14 @@ import type { Doc } from '../artwork-core/schema'
 /** Integer scales only, so cells always tile exactly. */
 export const ZOOM_LADDER = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64] as const
 
+export const MIN_SCALE = 1
+export const MAX_SCALE = 64
+
+/** Integer, and inside the range. Continuous zoom lands here, stepped zoom does not need it. */
+export function clampScale(raw: number): number {
+  return Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(raw)))
+}
+
 export function nextScale(current: number, direction: 1 | -1): number {
   const i = ZOOM_LADDER.findIndex((s) => s >= current)
   const at = i < 0 ? ZOOM_LADDER.length - 1 : i

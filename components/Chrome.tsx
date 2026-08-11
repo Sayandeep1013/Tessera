@@ -397,16 +397,19 @@ function FileMenu({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose()
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    // `click`, not `mousedown` — mousedown fires before the opening button's own
-    // click handler and the menu would close and reopen in the same gesture.
-    window.addEventListener('click', away)
-    window.addEventListener('keydown', esc)
+    // `mousedown`, not `click`: the click that OPENS the menu is still
+    // propagating when this effect runs, so a click listener sees it, decides
+    // the target is outside the menu, and closes it in the same gesture — the
+    // menu never appears at all. mousedown has already fired by then. Same as
+    // PalettePopover below.
+    document.addEventListener('mousedown', away)
+    document.addEventListener('keydown', esc)
     return () => {
-      window.removeEventListener('click', away)
-      window.removeEventListener('keydown', esc)
+      document.removeEventListener('mousedown', away)
+      document.removeEventListener('keydown', esc)
     }
   }, [onClose])
 

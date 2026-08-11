@@ -42,14 +42,18 @@ export type RenderOptions = {
  * pitch on BOTH axes, with **no heavier line at any interval** — verified
  * exhaustively over the whole backing store. Do not reintroduce major lines.
  */
-export const GRID_MIN_SCALE = 6
+export const GRID_MIN_SCALE = 4
+/** Scale range over which the grid ramps from invisible to full. */
+export const GRID_FADE_RANGE = 4
 
 export function readTheme(el: HTMLElement): ThemeColors {
   const s = getComputedStyle(el)
   const v = (n: string) => s.getPropertyValue(n).trim()
   return {
     artBg: v('--art-bg'),
-    grid: v('--art-grid'),
+    // Not --art-grid: that one is a backdrop colour for the boot loader. This is
+    // an inversion magnitude, composited with `difference`.
+    grid: v('--grid-ink'),
     edgeTL: v('--art-edge-tl'),
     edgeBR: v('--art-edge-br'),
     diffAdd: v('--diff-add'),
@@ -179,12 +183,38 @@ function drawGrid(
   scale: number,
   theme: ThemeColors,
 ): void {
-  ctx.fillStyle = theme.grid
   const width = w * scale
   const height = h * scale
+
+  ctx.save()
+
+  /**
+   * `difference`, not a fixed colour.
+   *
+   * A grid drawn in a themed colour is only ever visible against half the
+   * artwork: 8% black vanished completely on the starter's dark outline while
+   * reading fine on its yellow. And the artwork is arbitrary user data, so no
+   * single colour can work — whatever is picked, someone paints that colour.
+   *
+   * Difference blending inverts by a fixed magnitude instead, so the line is
+   * always exactly as far from its backdrop as the magnitude, whatever the
+   * backdrop is. White becomes light grey, black becomes dark grey, and a
+   * saturated colour becomes a darker version of itself.
+   */
+  ctx.globalCompositeOperation = 'difference'
+  ctx.fillStyle = theme.grid
+
+  // Fade in rather than pop. Below GRID_MIN_SCALE the lines would be a larger
+  // share of the cell than the cell itself, so the artwork reads as mesh; a hard
+  // on/off at that boundary is jarring when zooming. Aseprite, Pixelorama and
+  // Piskel all ramp rather than switch.
+  ctx.globalAlpha = Math.min(1, Math.max(0, (scale - GRID_MIN_SCALE) / GRID_FADE_RANGE))
+
   // interior lines only — the outer edge is the border, drawn separately
   for (let cx = 1; cx < w; cx++) ctx.fillRect(ax + cx * scale, ay, 1, height)
   for (let cy = 1; cy < h; cy++) ctx.fillRect(ax, ay + cy * scale, width, 1)
+
+  ctx.restore()
 }
 
 /** Diff overlay, drawn above a preview document during an AI proposal. */

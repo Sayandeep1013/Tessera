@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { ZOOM_LADDER, fitViewport, nextScale, screenToDoc, snapScale, zoomAt } from '../viewport'
+import {
+  MAX_SCALE, MIN_SCALE, ZOOM_LADDER, clampScale, fitViewport, nextScale, screenToDoc,
+  snapScale, zoomAt,
+} from '../viewport'
 import { loadStarter } from '../../artwork-core/create'
 
 const doc = loadStarter('face') // 16x16
@@ -82,5 +85,32 @@ describe('zoom anchoring', () => {
   it('is a no-op at the same scale', () => {
     const vp = { scale: 16, offsetX: 10, offsetY: 20 }
     expect(zoomAt(vp, 16, 0, 0)).toBe(vp)
+  })
+})
+
+describe('continuous zoom, for the wheel', () => {
+  /**
+   * The wheel used to step a whole ladder rung per event. A trackpad fires
+   * dozens of events per two-finger flick, so one gesture went 32x -> 64x and
+   * pinned at maximum. Continuous zoom needs a clamp that keeps scale a whole
+   * number without ever returning 0.
+   */
+  it('rounds to an integer so cells still tile exactly', () => {
+    expect(clampScale(16.4)).toBe(16)
+    expect(clampScale(16.6)).toBe(17)
+  })
+
+  it('clamps to the range at both ends', () => {
+    expect(clampScale(0)).toBe(MIN_SCALE)
+    expect(clampScale(-40)).toBe(MIN_SCALE)
+    expect(clampScale(9999)).toBe(MAX_SCALE)
+  })
+
+  it('never returns a scale that would render the artwork to nothing', () => {
+    for (const n of [0, 0.0001, 0.4, -1]) expect(clampScale(n)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('every ladder rung survives a round trip', () => {
+    for (const s of ZOOM_LADDER) expect(clampScale(s)).toBe(s)
   })
 })
