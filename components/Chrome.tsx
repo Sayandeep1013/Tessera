@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, nextScale } from '@/lib/editor/viewport'
+import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import {
   ArrowUturnLeft, ArrowUturnRight, CaretDown, CaretDownSmall, Code, Cursor,
   DotsThree, Eraser, Export, Eyedropper, FilmStrip, Gradient, Minus, PaintBrush,
@@ -121,6 +122,7 @@ export function TopBar() {
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [dark, setDark] = useState(false)
+  const c = chromeFor(useTier())
 
   useEffect(() => setDark(document.documentElement.classList.contains('dark')), [])
 
@@ -142,8 +144,11 @@ export function TopBar() {
   return (
     <header
       style={{
-        position: 'relative', flex: 'none', height: 56, zIndex: 40,
+        position: 'relative', flex: 'none', height: c.headerHeight, zIndex: 40,
         display: 'flex', alignItems: 'center', gap: 6, padding: '0 12px',
+        // The header is the one row that must never overflow: at 768 the right
+        // group used to run 165px off-screen. minWidth 0 lets the centre shrink.
+        minWidth: 0,
         background: 'color-mix(in srgb, var(--panel) 80%, transparent)',
         backdropFilter: 'blur(8px)',
         borderBottom: '1px solid var(--line)',
@@ -192,8 +197,10 @@ export function TopBar() {
         {paletteOpen && <PalettePopover onClose={() => setPaletteOpen(false)} />}
       </div>
 
-      {/* Brush options group @ x203, gap 8 */}
-      <div style={{ marginLeft: 4, display: 'flex', gap: 8 }}>
+      {/* Brush options group @ x203, gap 8. Secondary controls are dropped
+          before essential ones as the viewport narrows — see breakpoint.ts. */}
+      {c.showBrushOptions && (
+      <div style={{ marginLeft: 4, display: 'flex', gap: 8, minWidth: 0 }}>
         {/* brush-size pill 149x36 */}
         <div
           style={{
@@ -249,6 +256,7 @@ export function TopBar() {
         </div>
 
         {/* Dither: Solid — 87x28 */}
+        {c.showDither && (
         <button
           title="Dither: Solid"
           style={{
@@ -261,9 +269,12 @@ export function TopBar() {
           <span style={{ lineHeight: '16px' }}>Solid</span>
           <span style={{ color: 'var(--muted)' }}><CaretDownSmall size={12} /></span>
         </button>
+        )}
       </div>
+      )}
 
       {/* Centred filename — absolutely positioned, 192x28 */}
+      {c.showFilename && (
       <div
         style={{
           position: 'absolute', left: 0, right: 0, display: 'flex', justifyContent: 'center',
@@ -283,12 +294,14 @@ export function TopBar() {
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
         />
       </div>
+      )}
 
       {/* Right group */}
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
         {/* Fixed width: this text used to change length and shove the whole right
             group sideways on every autosave. It is words, not numerals, so it is
             not .tabular — and it is real text, so it cannot sit on --faint. */}
+        {c.showSaveStatus && (
         <span
           style={{
             width: 72, textAlign: 'right', font: 'var(--t-label-sm)',
@@ -297,10 +310,12 @@ export function TopBar() {
         >
           {status === 'saving' ? 'Saving…' : status === 'error' ? 'Save failed' : status === 'saved' ? 'Saved' : ''}
         </span>
+        )}
 
         <GlyphBtn title="Undo (Ctrl+Z)" Icon={ArrowUturnLeft} onClick={undo} disabled={!past.length} />
         <GlyphBtn title="Redo (Ctrl+Shift+Z)" Icon={ArrowUturnRight} onClick={redo} disabled={!future.length} />
 
+        {c.showUnbuilt && (
         <button
           title="Share — export, publish"
           disabled
@@ -313,10 +328,18 @@ export function TopBar() {
           <Export size={20} />
           <span>Share</span>
         </button>
+        )}
 
-        <GlyphBtn title="Code & Export" Icon={Code} disabled />
-        <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />
-        <GlyphBtn title="Layers" Icon={Stack} disabled />
+        {/* Not built yet. They hold newt's layout on a wide screen, but they are
+            the first thing to go when space is short — a dead control must never
+            cost a live one its place. */}
+        {c.showUnbuilt && (
+          <>
+            <GlyphBtn title="Code & Export" Icon={Code} disabled />
+            <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />
+            <GlyphBtn title="Layers" Icon={Stack} disabled />
+          </>
+        )}
       </div>
     </header>
   )
@@ -344,23 +367,38 @@ function Logo() {
 export function ToolRail() {
   const tool = useEditorStore((s) => s.tool)
   const setTool = useEditorStore((s) => s.setTool)
+  const c = chromeFor(useTier())
+
+  // On a phone a vertical rail sits on top of the artwork — there is no column
+  // of empty space beside a canvas that fills the width. It lies down along the
+  // bottom edge instead, above the agent panel, which is also where a thumb is.
+  const outer: React.CSSProperties = c.railHorizontal
+    ? {
+        position: 'absolute', left: c.inset, right: c.inset, bottom: c.inset,
+        display: 'flex', justifyContent: 'center',
+        pointerEvents: 'none', zIndex: 10,
+      }
+    : {
+        position: 'absolute', left: c.inset, top: '50%', transform: 'translateY(-50%)',
+        pointerEvents: 'none', zIndex: 10,
+      }
 
   return (
-    <div
-      style={{
-        position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-        pointerEvents: 'none', zIndex: 10,
-      }}
-    >
+    <div style={outer}>
       <div
         role="toolbar"
         aria-label="Tools"
-        aria-orientation="vertical"
+        aria-orientation={c.railHorizontal ? 'horizontal' : 'vertical'}
         style={{
-          // gap 0, not 4: each button owns its own vertical padding instead, so
-          // the rhythm is identical but a pointer travelling down the rail is
-          // never over nothing. Dead zones between targets are a real miss source.
-          display: 'flex', flexDirection: 'column', gap: 0, padding: 6,
+          // gap 0, not 4: each button owns its own padding instead, so the rhythm
+          // is identical but a pointer travelling the rail is never over nothing.
+          // Dead zones between targets are a real miss source.
+          display: 'flex',
+          flexDirection: c.railHorizontal ? 'row' : 'column',
+          gap: 0,
+          padding: 6,
+          maxWidth: '100%',
+          overflowX: c.railHorizontal ? 'auto' : undefined,
           borderRadius: 'var(--r-xl)',
           background: 'color-mix(in srgb, var(--panel) 90%, transparent)',
           backdropFilter: 'blur(8px)',
@@ -373,8 +411,8 @@ export function ToolRail() {
             key={id}
             title={enabled ? title : `${title} — not built yet`}
             Icon={Icon}
-            size={52}
-            icon={28}
+            size={c.railButton}
+            icon={c.railIcon}
             pad={2}
             active={tool === id}
             disabled={!enabled}
@@ -392,6 +430,7 @@ export function ZoomBar() {
   const doc = useDocStore((s) => s.doc)
   const vp = useEditorStore((s) => s.viewport)
   const setViewport = useEditorStore((s) => s.setViewport)
+  const c = chromeFor(useTier())
 
   const fit = () => {
     const el = document.querySelector('canvas')
@@ -401,7 +440,15 @@ export function ZoomBar() {
   }
 
   return (
-    <div style={{ position: 'absolute', right: 16, bottom: 16, zIndex: 20, pointerEvents: 'none' }}>
+    <div
+      style={{
+        position: 'absolute', right: c.inset, zIndex: 20, pointerEvents: 'none',
+        // On a phone the bottom edge is fully spoken for — agent panel above the
+        // horizontal tool rail — and stacking a third thing there put the zoom
+        // readout on top of the panel's own text. The empty space is at the top.
+        ...(c.railHorizontal ? { top: c.inset } : { bottom: c.inset }),
+      }}
+    >
       <div
         style={{
           height: 44, display: 'flex', alignItems: 'center', gap: 0, padding: 4,

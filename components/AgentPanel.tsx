@@ -24,19 +24,29 @@ import {
   maskApiKey,
   setApiKey,
 } from '@/lib/agent/byok'
+import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { Elapsed, TurnMark } from './Loaders'
 import { ArrowUp, Sliders } from './icons'
 
-const shell: React.CSSProperties = {
-  position: 'absolute',
-  left: 16,
-  bottom: 16,
-  width: 400,
-  padding: 10,
-  background: 'var(--panel)',
-  borderRadius: 'var(--r-xl)',
-  boxShadow: 'var(--shadow-lg)',
-  zIndex: 6,
+/**
+ * 400 wide on a large viewport; full width less the insets below that. At 390 the
+ * fixed width was 2px wider than the viewport itself, which is how a panel ends
+ * up causing a horizontal scrollbar on a page that must never scroll.
+ */
+function shellFor(c: ReturnType<typeof chromeFor>): React.CSSProperties {
+  return {
+    position: 'absolute',
+    left: c.inset,
+    // On a phone the tool rail lies along the bottom edge, so the panel sits above it.
+    bottom: c.railHorizontal ? c.inset + c.railButton + 12 + 8 : c.inset,
+    width: c.railHorizontal ? `calc(100% - ${c.inset * 2}px)` : 400,
+    maxWidth: `calc(100% - ${c.inset * 2}px)`,
+    padding: 10,
+    background: 'var(--panel)',
+    borderRadius: 'var(--r-xl)',
+    boxShadow: 'var(--shadow-lg)',
+    zIndex: 6,
+  }
 }
 
 export function AgentPanel() {
@@ -48,6 +58,7 @@ export function AgentPanel() {
   const freeLeft = useAgentStore((s) => s.freeLeft)
   const [keyOpen, setKeyOpen] = useState(false)
   const [hasKey, setHasKey] = useState(false)
+  const shell = shellFor(chromeFor(useTier()))
   const inputRef = useRef<HTMLInputElement>(null)
 
   // localStorage is only readable after mount, so the first paint must not
