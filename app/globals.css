@@ -21,12 +21,20 @@
   --hover: #ffffff12;
   --accent: #f4f4f5;
   --onaccent: #18181b;
+  /* Disabled controls. Explicit, because the previous approach — --faint with
+     opacity:.5 stacked on top — measured 1.40:1 in light and 1.97:1 in dark, and
+     a control you cannot see reads as a broken page rather than a disabled one.
+     docs/research/ui-audit.md §2, defect 2. */
+  --disabled: #6e6e77;
 
-  /* canvas — measured: flat opaque artwork, 1px grid at cell pitch, no majors */
-  --art-bg: #1e1e22;
-  --art-grid: #2a2a30;
-  --art-edge-tl: #ffffff2e;
-  --art-edge-br: #ffffff3c;
+  /* Canvas — measured: flat opaque artwork, 1px grid at cell pitch, no majors.
+     Deliberately NOT theme-dependent: artwork is content, and it has to be judged
+     against a constant ground. On the old dark backdrop the starter's darkest
+     palette colour sat at 1.005:1 and the outline simply vanished. */
+  --art-bg: #ffffff;
+  --art-grid: #ededed;
+  --art-edge-tl: #0000002e;
+  --art-edge-br: #0000003c;
 
   /* ours, not theirs: the AI diff */
   --diff-add: #00bb7f;
@@ -45,7 +53,9 @@
   --hover: #0000000d;
   --accent: #18181b;
   --onaccent: #ffffff;
+  --disabled: #8b8b94;
 
+  /* Same values as dark on purpose — see the note above. */
   --art-bg: #ffffff;
   --art-grid: #ededed;
   --art-edge-tl: #0000002e;

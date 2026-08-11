@@ -82,11 +82,12 @@ function GlyphBtn({
         color: active
           ? 'var(--onaccent)'
           : disabled
-            ? 'var(--faint)'
+            ? 'var(--disabled)'
             : muted
               ? hot ? 'var(--fg)' : 'var(--muted)'
               : 'var(--fg)',
-        opacity: disabled ? 0.5 : 1,
+        // No opacity multiplier — --disabled already carries the whole signal, and
+        // stacking the two dropped nine controls to 1.4–2.0:1. See globals.css.
       }}
     >
       <Icon size={icon} />

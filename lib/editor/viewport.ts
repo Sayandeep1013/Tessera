@@ -51,11 +51,20 @@ export function isInside(x: number, y: number, doc: Doc): boolean {
   return x >= 0 && y >= 0 && x < doc.w && y < doc.h
 }
 
-/** Largest ladder scale that fits with a margin, centred. */
+/**
+ * Largest INTEGER scale that fits with a margin, centred.
+ *
+ * Not the largest ladder rung. The ladder exists so stepped zoom lands on
+ * recognisable factors, but it jumps 32 → 48, so a viewport with room for 47.25
+ * fell back to 32 — the artwork rendered at 514 px where 754 px fitted, which is
+ * less than half the area. Measured at 1440×900 in docs/research/ui-audit.md §2.
+ *
+ * Integer is the constraint that actually matters here: it is what makes cells
+ * tile exactly. Anything below 1 would round to nothing, hence the floor.
+ */
 export function fitViewport(doc: Doc, cssW: number, cssH: number, margin = 48): Viewport {
   const maxScale = Math.min((cssW - margin * 2) / doc.w, (cssH - margin * 2) / doc.h)
-  let scale: number = ZOOM_LADDER[0]!
-  for (const s of ZOOM_LADDER) if (s <= maxScale) scale = s
+  const scale = Math.max(1, Math.floor(maxScale))
   return {
     scale,
     offsetX: Math.round((cssW - doc.w * scale) / 2),
