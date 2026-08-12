@@ -28,7 +28,7 @@ works; it is done when the next agent can start without asking anything.
 1. **Verify.** All green, all four:
 
    ```bash
-   npm test          # 385 tests, no browser needed
+   npm test          # no browser needed; the count is in HANDOFF's header
    npm run typecheck
    npm run build     # rm -rf .next first if a dev server has been running
 
