@@ -189,12 +189,17 @@ exclusively on `Uint8Array`; the code panel, exporters, autosave, and AI context
 
 ## 6. Layers
 
-`frames[].layers` is an array from v1. **The v1 UI only edits `layers[0]`** — there is no layer
-panel, no add/delete/reorder controls, no visibility toggles.
+`frames[].layers` is an array from v1. The renderer has always composited all layers bottom-to-top.
 
-The renderer already composites all layers bottom-to-top, and the format already carries them. This
-costs one array index at each call site (`frame.layers[0].px` instead of `frame.px`) and makes
-shipping layers later a purely additive change rather than a breaking format revision.
+**Layers shipped in task #46 — see [14 — Layers](./14-layers.md), which owns the behaviour.** The
+forward-compatibility bet in this section paid off exactly as intended: adding a panel, an active
+layer and layer commands required **no format change at all**. `v` is still 1, `migrations` is still
+empty, and a draft saved before the panel existed still opens (pinned by
+`lib/persist/__tests__/legacy-draft.test.ts`).
+
+What it cost, for the record, was one array index at each call site and one genuinely hard decision
+— a `paint` command has to record *which* layer it touched, or undo writes the previous pixels into
+whichever layer happens to be active. That is 14 §2.
 
 **Do not "simplify" this away.** It is the one piece of forward-compatibility in the format, and it
 was a deliberate decision (see the design review).

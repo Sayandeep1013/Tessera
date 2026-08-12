@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, nextScale } from '@/lib/editor/viewport'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
-import { loadLogo } from '@/lib/artwork-core/create'
+import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/artwork-core/create'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
 import { spriteRects } from '@/lib/renderer/sprite-svg'
@@ -119,6 +119,8 @@ export function TopBar() {
   const brushSize = useEditorStore((s) => s.brushSize)
   const shape = useEditorStore((s) => s.brushShape)
   const showGrid = useEditorStore((s) => s.showGrid)
+  const layersOpen = useEditorStore((s) => s.layersOpen)
+  const setLayersOpen = useEditorStore((s) => s.setLayersOpen)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
@@ -301,6 +303,11 @@ export function TopBar() {
         }}
       >
         <input
+          // Uncontrolled, so it needs remounting when the DOCUMENT's name
+          // changes — loading an example used to leave "untitled" on screen next
+          // to a face. Typing here does not write back to the document (that is
+          // still unwired), so the key is stable while the user types.
+          key={doc?.name ?? ''}
           defaultValue={doc?.name || 'untitled'}
           spellCheck={false}
           aria-label="Artwork name"
@@ -356,8 +363,18 @@ export function TopBar() {
           <>
             <GlyphBtn title="Code & Export" Icon={Code} disabled />
             <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />
-            <GlyphBtn title="Layers" Icon={Stack} disabled />
           </>
+        )}
+
+        {/* Live, so it is no longer gated with the dead controls above — it
+            survives down to tablet on its own terms. */}
+        {c.showLayers && (
+          <GlyphBtn
+            title="Layers"
+            Icon={Stack}
+            active={layersOpen}
+            onClick={() => setLayersOpen(!layersOpen)}
+          />
         )}
       </div>
     </header>
@@ -428,6 +445,7 @@ function FileMenu({ onClose }: { onClose: () => void }) {
 
   const item = (label: string, hint: string, run: () => void) => (
     <button
+      key={label}
       role="menuitem"
       onClick={() => {
         run()
@@ -462,6 +480,14 @@ function FileMenu({ onClose }: { onClose: () => void }) {
         if (!r.ok) window.alert(r.error)
       })}
       {item('Open…', '', () => openFile())}
+
+      {/* Examples. The editor opens blank, so the starters had to become
+          something you reach for. Routed through commit() like everything else:
+          one undo step, and the drawing you had is on the stack rather than
+          gone. */}
+      <div style={{ height: 1, margin: '4px 6px', background: 'var(--line)' }} />
+      {listStarters().map((s) => item(`Example — ${s}`, '', () => loadExample(s)))}
+
       {item('Export .tessera.json', 'Ctrl S', () => {
         const d = useDocStore.getState().doc
         if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
@@ -472,6 +498,29 @@ function FileMenu({ onClose }: { onClose: () => void }) {
       })}
     </div>
   )
+}
+
+/**
+ * Load a bundled starter over the current document.
+ *
+ * Keeps the current document's id so this replaces the open drawing rather than
+ * spawning a second draft in IndexedDB, and goes through commit() so Ctrl+Z puts
+ * the user's own work back — the example is a guide, not a demolition.
+ *
+ * The viewport is refitted afterwards because a starter can be a different size
+ * from what was open, and the old scale and offset would leave it off-screen.
+ */
+function loadExample(name: StarterName) {
+  const before = useDocStore.getState().doc
+  if (!before) return
+  const after = { ...loadStarter(name), id: before.id }
+  useDocStore.getState().commit({ type: 'replace_doc', label: `Example: ${name}`, before, after })
+
+  const el = document.querySelector('canvas')
+  if (el) {
+    const r = el.getBoundingClientRect()
+    useEditorStore.getState().setViewport(fitViewport(after, r.width, r.height))
+  }
 }
 
 /** Reads a .tessera.json from disk. A failed parse surfaces — never silently discarded. */
@@ -643,7 +692,14 @@ export function ToolRail() {
           gap: 0,
           padding: 6,
           maxWidth: '100%',
-          overflowX: c.railHorizontal ? 'auto' : undefined,
+          // Wrap, not scroll. Eight 44px buttons need 364px and a 320px phone
+          // has 304 — the rail used to scroll, which put the eyedropper and the
+          // gradient tool off-screen behind an affordance a touch device never
+          // draws. Found by adding 320x568 to tools/check-responsive.ts; 390 had
+          // just enough room to hide it. Wrapping keeps every target at 44px and
+          // needs no width measurement.
+          flexWrap: c.railHorizontal ? 'wrap' : undefined,
+          justifyContent: c.railHorizontal ? 'center' : undefined,
           borderRadius: 'var(--r-xl)',
           background: 'color-mix(in srgb, var(--panel) 90%, transparent)',
           backdropFilter: 'blur(8px)',

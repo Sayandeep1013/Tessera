@@ -18,6 +18,7 @@ import { getProvider } from '../lib/ai/provider'
 import { buildContext } from '../lib/ai/context'
 import { loadStarter } from '../lib/artwork-core/create'
 import { applyCommand } from '../lib/artwork-core/commands'
+import { clampLayer } from '../lib/artwork-core/layers'
 import { serializeDoc } from '../lib/artwork-core/codec'
 import type { ActionCtx, EditorSnapshot } from '../lib/actions/types'
 import type { Doc } from '../lib/artwork-core/schema'
@@ -81,9 +82,15 @@ const editor: EditorSnapshot = {
   showGrid: true,
 }
 
+let layer = 0
+
 const ctx: ActionCtx = {
   doc: () => doc,
   frame: () => 0,
+  layer: () => layer,
+  setLayer: (i) => {
+    layer = clampLayer(doc, 0, i)
+  },
   commit: (cmd) => {
     doc = applyCommand(doc, cmd)
   },

@@ -70,6 +70,9 @@ export type ActionResult =
 export type ActionCtx = {
   doc: () => Doc
   frame: () => number
+  /** The layer edits land on. Added by 14 — Layers; see that spec for the rules. */
+  layer: () => number
+  setLayer: (i: number) => void
   /** During a session this is intercepted — see §4. */
   commit: (cmd: EditorCommand) => void
   editor: {
@@ -126,8 +129,8 @@ Names are the wire contract. Do not rename without regenerating declarations.
 
 | Action | Input | Returns |
 |---|---|---|
-| `get_state` | — | `{ w, h, frame, frames, palette[], tool, colorIndex, brushSize, brushShape, zoom, undoDepth, redoDepth }` |
-| `get_grid` | — | The text grid + legend, byte-identical to [06 §3.2](./06-ai-protocol.md) |
+| `get_state` | — | `{ w, h, frame, frames, layers[], activeLayer, palette[], tool, colorIndex, brushSize, brushShape, zoom, undoDepth, redoDepth }` |
+| `get_grid` | — | The ACTIVE LAYER's text grid + legend, byte-identical to [06 §3.2](./06-ai-protocol.md). On a frame with more than one layer, plus a flattened `composite` |
 | `get_region` | `{ x, y, w, h }` | The same encoding for a sub-rectangle |
 
 **One fat `get_state` beats four thin queries.** At 5 requests/minute, every avoided
@@ -135,7 +138,11 @@ round trip is 12 seconds.
 
 ### view — changes UI state, applies immediately, not undoable
 
-`select_tool` · `set_color` · `set_brush` · `set_zoom` · `fit_view` · `toggle_grid`
+`select_tool` · `set_color` · `set_brush` · `set_zoom` · `fit_view` · `toggle_grid` ·
+`select_layer`
+
+`select_layer` is here rather than in `mutate` for the same reason `select_tool` is: it
+changes what the NEXT edit will affect, not the document. See [14 §7.1](./14-layers.md).
 
 These are *not* recorded in the session (§4). They are how the user watches the agent
 work, and reverting them on undo would be surprising — undo restores artwork, not
@@ -144,7 +151,11 @@ which tool happened to be selected.
 ### mutate — changes the document, routed through `commit()`
 
 `set_pixels` · `draw_line` · `draw_rect` · `flood_fill` · `replace_color` ·
-`add_palette_color` · `edit_palette_color` · `undo` · `redo`
+`add_palette_color` · `edit_palette_color` · `add_layer` · `set_layer_visible` ·
+`undo` · `redo`
+
+`set_layer_visible` is a mutation, not a view: `hidden` is serialized, so it *is* the
+document.
 
 The five drawing operations reuse `applyOps` from
 [03 §4](./03-artwork-core.md) — the agent and the user's own tools share one
@@ -152,7 +163,9 @@ implementation, so a model-drawn line covers the same cells as a hand-drawn one.
 
 ### destructive — always confirmed, regardless of any other setting
 
-`new_document` · `resize` · `clear_layer`
+`new_document` · `resize` · `clear_layer` · `delete_layer`
+
+`clear_layer` clears the ACTIVE layer, not the whole frame.
 
 A destructive action whose `ctx.confirmed` is false returns
 `{ ok: false, error: 'requires user confirmation' }` **without mutating anything**.

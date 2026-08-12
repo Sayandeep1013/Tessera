@@ -7,7 +7,7 @@ import { chromium } from 'playwright'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
-const URL = process.argv[2] ?? 'http://localhost:3000'
+const URL = process.argv[2] ?? process.env.APP_URL ?? 'http://localhost:3000'
 const OUT = join(process.cwd(), 'docs', 'shots')
 
 async function main() {

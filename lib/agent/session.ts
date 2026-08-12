@@ -15,7 +15,7 @@
 
 import { cloneDoc } from '../artwork-core/codec'
 import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
-import { diff, isEmpty, type PixelDiff } from '../artwork-core/diff'
+import { changedLayers, diff, isEmpty, sameLayerShape, type PixelDiff } from '../artwork-core/diff'
 import type { Doc, PaletteEntry } from '../artwork-core/schema'
 import type { ActionBudget, ActionResult } from '../actions/types'
 import { MAX_SESSION_COLORS, MAX_SESSION_PIXELS } from './limits'
@@ -149,29 +149,50 @@ export class AgentSession {
    * `current` is the live document as it stands now — the caller owns the store,
    * so the session does not reach into it.
    */
-  finalise(current: Doc, summary: string, stoppedBy: SessionOutcome['stoppedBy'], frame = 0): SessionOutcome {
+  finalise(
+    current: Doc,
+    summary: string,
+    stoppedBy: SessionOutcome['stoppedBy'],
+    frame = 0,
+    layer = 0,
+  ): SessionOutcome {
     this.closed = true
     if (openSession === this) openSession = null
 
+    const replaceDoc = (): SessionOutcome => ({
+      summary,
+      diff: { added: [], changed: [], removed: [], paletteAdded: [] },
+      changed: current.w * current.h,
+      steps: this.steps,
+      stoppedBy,
+      command: {
+        type: 'replace_doc',
+        label: `AI: ${this.instruction}`,
+        before: this.before,
+        after: cloneDoc(current),
+      },
+    })
+
     // A resize or new_document changes dimensions, which diff() cannot compare.
     // Fall back to a whole-document replacement so undo still works.
-    if (current.w !== this.before.w || current.h !== this.before.h) {
-      return {
-        summary,
-        diff: { added: [], changed: [], removed: [], paletteAdded: [] },
-        changed: current.w * current.h,
-        steps: this.steps,
-        stoppedBy,
-        command: {
-          type: 'replace_doc',
-          label: `AI: ${this.instruction}`,
-          before: this.before,
-          after: cloneDoc(current),
-        },
-      }
-    }
+    if (current.w !== this.before.w || current.h !== this.before.h) return replaceDoc()
 
-    const d = diff(this.before, current, frame)
+    // Same fallback, same reason, one level down: an ai_edit carries ONE layer
+    // index, so it can only express a change confined to one layer of an
+    // otherwise-unchanged stack. An agent that added a layer, or called
+    // select_layer and painted on two, would otherwise collapse to a command
+    // that undoes half its work and leaves the rest — the silent-corruption
+    // class this whole design exists to avoid. See docs/specs/14-layers.md §7.3.
+    if (!sameLayerShape(this.before, current)) return replaceDoc()
+
+    const touched = changedLayers(this.before, current, frame)
+    if (touched.length > 1) return replaceDoc()
+
+    // With one layer touched, that is the layer the command belongs to;
+    // with none, the session only moved the palette and the active layer will do.
+    const target = touched[0] ?? layer
+
+    const d = diff(this.before, current, frame, target)
     if (isEmpty(d)) {
       return { summary, diff: d, changed: 0, steps: this.steps, command: null, stoppedBy }
     }
@@ -193,6 +214,7 @@ export class AgentSession {
         type: 'ai_edit',
         label: `AI: ${this.instruction}`,
         frame,
+        layer: target,
         cells,
         summary,
         ops: [],

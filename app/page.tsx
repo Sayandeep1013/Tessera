@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react'
 import { Canvas } from '@/components/Canvas'
 import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
 import { AgentPanel } from '@/components/AgentPanel'
+import { LayersPanel } from '@/components/Layers'
+import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { MosaicLoader } from '@/components/Loaders'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
-import { loadStarter } from '@/lib/artwork-core/create'
+import { createDoc } from '@/lib/artwork-core/create'
+import { nanoid } from 'nanoid'
 import { loadLatestDraft } from '@/lib/persist/idb'
 import { fitViewport, nextScale } from '@/lib/editor/viewport'
 import { serializeDoc } from '@/lib/artwork-core/codec'
@@ -14,6 +17,11 @@ import { serializeDoc } from '@/lib/artwork-core/codec'
 export default function EditorPage() {
   const [notice, setNotice] = useState<string | null>(null)
   const doc = useDocStore((s) => s.doc)
+  const layersOpen = useEditorStore((s) => s.layersOpen)
+  // The panel is withheld on a phone (see breakpoint.ts). Gating here as well as
+  // on the button means a resize while it is open puts it away rather than
+  // leaving it stranded over a 320px canvas.
+  const { showLayers } = chromeFor(useTier())
 
   /**
    * The editor does not server-render.
@@ -52,10 +60,40 @@ export default function EditorPage() {
       } catch {
         /* IndexedDB unavailable (private mode) — fall through to a starter */
       }
-      if (!cancelled) useDocStore.getState().setDoc(loadStarter('face'))
+      // A blank canvas, not the face starter. Opening on somebody else's drawing
+      // makes the first thing you do "delete this"; the examples live in the File
+      // menu, where they are something you reach for rather than something you
+      // are handed.
+      if (!cancelled) useDocStore.getState().setDoc(createDoc({ id: nanoid() }))
     })()
     return () => {
       cancelled = true
+    }
+  }, [])
+
+  /**
+   * A read-only window hook for the probe scripts in tools/.
+   *
+   * Development only, and deliberately without a setter: the probes need to
+   * assert which LAYER a stroke landed on, which is not observable from a
+   * screenshot, and `commit()` stays the only way anything writes the document.
+   * tools/probe-tools-ui.ts carried a stub for this that referenced a global
+   * nothing ever defined, so its per-pixel assertions never ran.
+   */
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'production') return
+    const w = window as unknown as { __tessera?: unknown }
+    w.__tessera = {
+      layers: () =>
+        useDocStore.getState().doc?.frames[useDocStore.getState().frame]?.layers.map((l) => ({
+          n: l.n,
+          hidden: Boolean(l.hidden),
+          px: Array.from(l.px),
+        })) ?? null,
+      active: () => useDocStore.getState().layer,
+    }
+    return () => {
+      delete w.__tessera
     }
   }, [])
 
@@ -152,6 +190,9 @@ export default function EditorPage() {
             <Canvas />
             <ToolRail />
             <ZoomBar />
+            {layersOpen && showLayers && (
+              <LayersPanel onClose={() => useEditorStore.getState().setLayersOpen(false)} />
+            )}
             <AgentPanel />
           </>
         ) : (

@@ -122,8 +122,8 @@ contract is here.
 type Op = /* discriminated union on `op` — see 06 §4 */
 const opSchema: z.ZodType<Op>
 
-function applyOp(doc: Doc, op: Op, frameIndex?: number): Result<Doc, OpError>
-function applyOps(doc: Doc, ops: Op[], frameIndex?: number): Result<Doc, OpError>
+function applyOp (doc: Doc, op:  Op,   frameIndex?: number, layerIndex?: number): Result<Doc, OpError>
+function applyOps(doc: Doc, ops: Op[], frameIndex?: number, layerIndex?: number): Result<Doc, OpError>
 
 // Geometry primitives — shared with the editor's tools
 function linePoints(x1: number, y1: number, x2: number, y2: number): Array<[number, number]>
@@ -139,8 +139,9 @@ function rectPoints(x: number, y: number, w: number, h: number, fill: boolean): 
   work happens on a clone, this is free.
 - **Ordered.** Ops apply in array order. `add_palette_color` at index 2 makes its new index available
   to ops 3+, which is why validation must simulate the palette growing (see 06 §5).
-- **Targets `layers[0]`** of the given frame. The v1 UI has no layer selection; when layers ship this
-  becomes a parameter.
+- **Targets `layerIndex` of the given frame**, defaulting to 0 so every pre-layers call site keeps
+  its meaning. A missing layer is `err({ code: 'no_layer' })`, alongside the existing `no_frame`.
+  Owned by [14 — Layers](./14-layers.md) §3.
 - `applyOp` is `applyOps` with a single-element array. It exists for readability at call sites.
 
 ### Why the primitives live here
@@ -166,11 +167,17 @@ accept, or a code-panel edit — goes through exactly one command.
 type PaintCell = [number, number, number, number]
 
 type EditorCommand =
-  | { type: 'paint';          label: string; frame: number; cells: PaintCell[] }
-  | { type: 'ai_edit';        label: string; frame: number; cells: PaintCell[]
+  | { type: 'paint';          label: string; frame: number; layer: number; cells: PaintCell[] }
+  | { type: 'ai_edit';        label: string; frame: number; layer: number; cells: PaintCell[]
                             ; summary: string; ops: Op[]; paletteAdded: PaletteEntry[] }
+  | { type: 'batch';          label: string; cmds: EditorCommand[] }
   | { type: 'palette_add';    label: string; entry: PaletteEntry }
   | { type: 'palette_edit';   label: string; index: number; before: PaletteEntry; after: PaletteEntry }
+  | { type: 'layer_add';      label: string; frame: number; at: number; layer: Layer }
+  | { type: 'layer_delete';   label: string; frame: number; at: number; layer: Layer }
+  | { type: 'layer_move';     label: string; frame: number; from: number; to: number }
+  | { type: 'layer_rename';   label: string; frame: number; at: number; before: string; after: string }
+  | { type: 'layer_visible';  label: string; frame: number; at: number; before: boolean; after: boolean }
   | { type: 'frame_add';      label: string; at: number; frame: Frame }
   | { type: 'frame_delete';   label: string; at: number; frame: Frame }
   | { type: 'frame_duration'; label: string; at: number; before: number; after: number }
@@ -241,7 +248,9 @@ type PixelDiff = {
   paletteAdded: PaletteEntry[]
 }
 
-function diff(before: Doc, after: Doc, frame: number): PixelDiff
+function diff(before: Doc, after: Doc, frame?: number, layer?: number): PixelDiff
+function changedLayers(before: Doc, after: Doc, frame: number): number[]
+function sameLayerShape(before: Doc, after: Doc): boolean
 function isEmpty(d: PixelDiff): boolean
 function diffCounts(d: PixelDiff): { added: number; changed: number; removed: number }
 ```

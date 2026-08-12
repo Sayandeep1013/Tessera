@@ -10,12 +10,16 @@
 
 import { chromium } from 'playwright'
 
+const APP = process.env.APP_URL ?? 'http://localhost:3000'
 const SIZES = [
   { w: 1440, h: 900, tier: 'wide' },
   { w: 1280, h: 800, tier: 'wide' },
   { w: 1024, h: 768, tier: 'compact' },
   { w: 768, h: 1024, tier: 'tablet' },
   { w: 390, h: 844, tier: 'mobile' },
+  // The narrowest phone still in real use. Added when the Layers button arrived:
+  // 390 had room to spare and would not have caught a header one control too wide.
+  { w: 320, h: 568, tier: 'mobile' },
 ]
 
 // Passed as a plain string: tsx/esbuild injects a __name helper that does not
@@ -44,7 +48,7 @@ let failures = 0
 
 for (const { w, h, tier } of SIZES) {
   const page = await browser.newPage({ viewport: { width: w, height: h } })
-  await page.goto('http://localhost:3000', { waitUntil: 'networkidle' })
+  await page.goto(APP, { waitUntil: 'networkidle' })
   await page.waitForTimeout(600)
 
   const r = (await page.evaluate(PROBE)) as {

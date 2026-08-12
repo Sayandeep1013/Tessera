@@ -28,6 +28,8 @@ export type Proposal = {
   diff: PixelDiff
   preview: Doc
   frame: number
+  /** Captured at propose time — the user may switch layers while the model thinks. */
+  layer: number
   latencyMs?: number
 }
 
@@ -62,7 +64,7 @@ export const useAiStore = create<AiState>((set, get) => ({
     const instruction = get().instruction.trim()
     if (!instruction || get().status === 'pending') return
 
-    const { doc, frame } = useDocStore.getState()
+    const { doc, frame, layer } = useDocStore.getState()
     if (!doc) return
 
     set({ status: 'pending', error: null })
@@ -82,7 +84,7 @@ export const useAiStore = create<AiState>((set, get) => ({
 
       const ops = data.operations as Op[]
       // Re-apply locally: the preview is derived here, not trusted from the wire.
-      const applied = applyOps(doc, ops, frame)
+      const applied = applyOps(doc, ops, frame, layer)
       if (!applied.ok) {
         set({ status: 'error', error: 'The proposed edit could not be applied. Nothing changed.' })
         return
@@ -95,9 +97,10 @@ export const useAiStore = create<AiState>((set, get) => ({
           instruction,
           summary: String(data.summary ?? ''),
           ops,
-          diff: computeDiff(doc, applied.value, frame),
+          diff: computeDiff(doc, applied.value, frame, layer),
           preview: applied.value,
           frame,
+          layer,
           latencyMs: typeof data.latencyMs === 'number' ? data.latencyMs : undefined,
         },
       })
@@ -123,6 +126,7 @@ export const useAiStore = create<AiState>((set, get) => ({
       type: 'ai_edit',
       label: `AI: ${p.instruction}`,
       frame: p.frame,
+      layer: p.layer,
       cells,
       summary: p.summary,
       ops: p.ops,

@@ -19,6 +19,7 @@ import {
 } from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
 import { floodFillPoints, linePoints, rectPoints } from '@/lib/artwork-core/ops'
+import { compositeAt } from '@/lib/artwork-core/layers'
 import { densityFor, ditherPasses, gradientCells } from '@/lib/editor/dither'
 import { paintCommand, type PaintCell } from '@/lib/artwork-core/commands'
 
@@ -135,12 +136,13 @@ export function Canvas() {
 
   // ── painting ──────────────────────────────────────────────────────────────
   const paintAt = useCallback((x: number, y: number) => {
-    const { doc, frame } = useDocStore.getState()
+    const { doc, frame, layer } = useDocStore.getState()
     const buf = stroke.current
     if (!doc || !buf) return
     const { tool, colorIndex, brushSize, brushShape } = useEditorStore.getState()
     const value = tool === 'eraser' ? 0 : colorIndex
-    const px = doc.frames[frame]!.layers[0]!.px
+    const px = doc.frames[frame]?.layers[layer]?.px
+    if (!px) return
 
     const density = densityFor(useEditorStore.getState().dither)
 
@@ -169,10 +171,11 @@ export function Canvas() {
    * undo restore an intermediate frame of the drag.
    */
   const previewShape = useCallback((cells: Array<[number, number]>, value: number) => {
-    const { doc, frame } = useDocStore.getState()
+    const { doc, frame, layer } = useDocStore.getState()
     const buf = stroke.current
     if (!doc || !buf) return
-    const px = doc.frames[frame]!.layers[0]!.px
+    const px = doc.frames[frame]?.layers[layer]?.px
+    if (!px) return
 
     for (const [bx, by, before] of buf.values()) px[by * doc.w + bx] = before
     buf.clear()
@@ -189,10 +192,11 @@ export function Canvas() {
   /** Like previewShape, but each cell carries its own value (used by move). */
   const previewMoved = useCallback(
     (cells: Array<[number, number]>, values: Map<string, number>) => {
-      const { doc, frame } = useDocStore.getState()
+      const { doc, frame, layer } = useDocStore.getState()
       const buf = stroke.current
       if (!doc || !buf) return
-      const px = doc.frames[frame]!.layers[0]!.px
+      const px = doc.frames[frame]?.layers[layer]?.px
+      if (!px) return
 
       for (const [bx, by, before] of buf.values()) px[by * doc.w + bx] = before
       buf.clear()
@@ -212,7 +216,7 @@ export function Canvas() {
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       const canvas = ref.current
-      const { doc } = useDocStore.getState()
+      let doc = useDocStore.getState().doc
       if (!canvas || !doc) return
       const ed = useEditorStore.getState()
       const rect = canvas.getBoundingClientRect()
@@ -238,12 +242,34 @@ export function Canvas() {
       if (!isInside(x, y, doc)) return
       canvas.setPointerCapture(e.pointerId)
 
-      const px = doc.frames[useDocStore.getState().frame]!.layers[0]!.px
+      const { frame, layer } = useDocStore.getState()
 
+      // The eyedropper picks what the user is LOOKING at, not what is on the
+      // active layer — sampling the active layer would return transparent
+      // whenever the pixel under the cursor belongs to a layer above or below,
+      // which reads as the tool being broken. See docs/specs/14-layers.md §5.
       if (ed.tool === 'eyedropper') {
-        ed.setColorIndex(px[y * doc.w + x]!)
+        ed.setColorIndex(compositeAt(doc, frame, x, y))
         return
       }
+
+      // Drawing on a hidden layer would show nothing for the whole drag and then
+      // nothing afterwards either. Reveal it first, as its own history entry, so
+      // the stroke that follows behaves normally and the reveal is its own undo.
+      //
+      // commit() replaces the document, so `doc` has to be re-read afterwards —
+      // painting into the old clone's buffer would write to a document the store
+      // no longer holds, and the stroke would vanish on the next render.
+      if (doc.frames[frame]?.layers[layer]?.hidden) {
+        useDocStore.getState().commit({
+          type: 'layer_visible', label: 'Show layer', frame, at: layer,
+          before: true, after: false,
+        })
+        doc = useDocStore.getState().doc!
+      }
+
+      const px = doc.frames[frame]?.layers[layer]?.px
+      if (!px) return
 
       // ── marquee: drag a selection rectangle ──
       if (ed.tool === 'marquee') {
@@ -287,7 +313,8 @@ export function Canvas() {
         for (const [fx, fy] of floodFillPoints(px, doc.w, doc.h, x, y)) {
           cells.push([fx, fy, px[fy * doc.w + fx]!, target])
         }
-        useDocStore.getState().commit(paintCommand('Fill', useDocStore.getState().frame, cells))
+        const ds = useDocStore.getState()
+        ds.commit(paintCommand('Fill', ds.frame, ds.layer, cells))
         return
       }
 
@@ -405,7 +432,7 @@ export function Canvas() {
     lastCell.current = null
     if (!buf) return
 
-    const { frame } = useDocStore.getState()
+    const { frame, layer } = useDocStore.getState()
     const label =
       ed.tool === 'eraser' ? 'Erase'
       : ed.tool === 'rect' ? 'Rectangle'
@@ -413,7 +440,7 @@ export function Canvas() {
       : wasMoving ? 'Move'
       : 'Brush'
 
-    useDocStore.getState().commit(paintCommand(label, frame, buf.values()))
+    useDocStore.getState().commit(paintCommand(label, frame, layer, buf.values()))
 
     // A completed move leaves the selection over where the pixels landed, so a
     // second drag continues from there rather than snapping back.
@@ -432,10 +459,10 @@ export function Canvas() {
   const onPointerCancel = useCallback(() => {
     // Discard the buffer and repaint from the document — nothing is committed.
     const buf = stroke.current
-    const { doc, frame } = useDocStore.getState()
+    const { doc, frame, layer } = useDocStore.getState()
     if (buf && doc) {
-      const px = doc.frames[frame]!.layers[0]!.px
-      for (const [x, y, before] of buf.values()) px[y * doc.w + x] = before
+      const px = doc.frames[frame]?.layers[layer]?.px
+      if (px) for (const [x, y, before] of buf.values()) px[y * doc.w + x] = before
     }
     stroke.current = null
     lastCell.current = null

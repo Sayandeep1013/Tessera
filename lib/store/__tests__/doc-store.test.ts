@@ -1,0 +1,138 @@
+/**
+ * The document store's active-layer invariant. See docs/specs/14-layers.md §8.7.
+ *
+ * The point of keeping `layer` beside `frame` in this store is that ONE clamp in
+ * commit() covers every path that can invalidate it. These tests exercise those
+ * paths rather than the clamp function, which has its own tests.
+ */
+
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createDoc } from '../../artwork-core/create'
+import type { EditorCommand } from '../../artwork-core/commands'
+import type { Doc } from '../../artwork-core/schema'
+
+// IndexedDB does not exist in the node environment and autosave fires on a
+// timer, so the real module would throw somewhere nothing is looking.
+vi.mock('../../persist/idb', () => ({ saveDraft: vi.fn(async () => {}) }))
+
+const { useDocStore } = await import('../editor')
+
+function threeLayers(): Doc {
+  const doc = createDoc({ id: 'three', w: 2, h: 2, now: '2026-08-11T00:00:00.000Z' })
+  doc.frames[0]!.layers.push({ n: 'over', px: new Uint8Array(4) })
+  doc.frames[0]!.layers.push({ n: 'top', px: new Uint8Array(4) })
+  return doc
+}
+
+const del = (at: number, doc: Doc): EditorCommand => ({
+  type: 'layer_delete',
+  label: 'Delete layer',
+  frame: 0,
+  at,
+  layer: { ...doc.frames[0]!.layers[at]!, px: new Uint8Array(doc.frames[0]!.layers[at]!.px) },
+})
+
+beforeEach(() => {
+  useDocStore.setState({ doc: null, frame: 0, layer: 0, past: [], future: [], agentDepth: 0 })
+})
+
+describe('setDoc', () => {
+  it('resets the active layer — another document\'s indices mean nothing', () => {
+    useDocStore.getState().setDoc(threeLayers())
+    useDocStore.getState().setLayer(2)
+    expect(useDocStore.getState().layer).toBe(2)
+
+    useDocStore.getState().setDoc(createDoc({ id: 'fresh', w: 2, h: 2 }))
+    expect(useDocStore.getState().layer).toBe(0)
+  })
+})
+
+describe('setLayer', () => {
+  it('clamps rather than rejecting — nothing is lost by correcting it', () => {
+    useDocStore.getState().setDoc(threeLayers())
+    useDocStore.getState().setLayer(99)
+    expect(useDocStore.getState().layer).toBe(2)
+    useDocStore.getState().setLayer(-4)
+    expect(useDocStore.getState().layer).toBe(0)
+  })
+})
+
+describe('commit clamps the active layer', () => {
+  it('deleting the active top layer moves the selection into range', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    s.setLayer(2)
+    useDocStore.getState().commit(del(2, useDocStore.getState().doc!))
+
+    expect(useDocStore.getState().doc!.frames[0]!.layers).toHaveLength(2)
+    expect(useDocStore.getState().layer).toBe(1)
+  })
+
+  it('undo of that delete leaves the selection in range', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    s.setLayer(2)
+    useDocStore.getState().commit(del(2, useDocStore.getState().doc!))
+    useDocStore.getState().undo()
+
+    expect(useDocStore.getState().doc!.frames[0]!.layers).toHaveLength(3)
+    expect(useDocStore.getState().layer).toBeLessThan(3)
+  })
+
+  it('redo also clamps', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    s.setLayer(2)
+    useDocStore.getState().commit(del(2, useDocStore.getState().doc!))
+    useDocStore.getState().undo()
+    useDocStore.getState().setLayer(2)
+    useDocStore.getState().redo()
+
+    expect(useDocStore.getState().layer).toBe(1)
+  })
+
+  it('clamps on the agent-session path too, where nothing is pushed to history', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    s.setLayer(2)
+    useDocStore.getState().beginAgentSession()
+    useDocStore.getState().commit(del(2, useDocStore.getState().doc!))
+
+    expect(useDocStore.getState().past).toHaveLength(0)
+    expect(useDocStore.getState().layer).toBe(1)
+    useDocStore.getState().endAgentSession()
+  })
+
+  it('a replace_doc that shrinks the stack still clamps', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    s.setLayer(2)
+    const before = useDocStore.getState().doc!
+    useDocStore.getState().commit({
+      type: 'replace_doc',
+      label: 'AI: start over',
+      before,
+      after: createDoc({ id: 'three', w: 2, h: 2 }),
+    })
+    expect(useDocStore.getState().layer).toBe(0)
+  })
+})
+
+describe('paint commands still record their own layer', () => {
+  it('undo writes back to the recorded layer, not the active one', () => {
+    const s = useDocStore.getState()
+    s.setDoc(threeLayers())
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Brush', frame: 0, layer: 1, cells: [[0, 0, 0, 1]],
+    })
+    expect(useDocStore.getState().doc!.frames[0]!.layers[1]!.px[0]).toBe(1)
+
+    // Move the selection somewhere else before undoing — the command must not care.
+    useDocStore.getState().setLayer(2)
+    useDocStore.getState().undo()
+
+    const layers = useDocStore.getState().doc!.frames[0]!.layers
+    expect(Array.from(layers[1]!.px)).toEqual([0, 0, 0, 0])
+    expect(Array.from(layers[2]!.px)).toEqual([0, 0, 0, 0])
+  })
+})

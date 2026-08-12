@@ -174,6 +174,19 @@ describe('bundle safety', () => {
     }
     expect(offenders).toEqual([])
   })
+
+  it.skipIf(!existsSafe(clientDir))('ships no probe hook to the browser', () => {
+    // app/page.tsx installs window.__tessera for tools/probe-layers.ts, behind a
+    // NODE_ENV guard that the production build is expected to eliminate. It is a
+    // read-only view of the document rather than a way to write one, but it is
+    // still internals, and a guard that silently stopped working would leave it
+    // on a public page with nothing to say so.
+    const offenders: string[] = []
+    for (const file of allFiles(clientDir)) {
+      if (readFileSync(file, 'utf8').includes('__tessera')) offenders.push(file.slice(ROOT.length + 1))
+    }
+    expect(offenders).toEqual([])
+  })
 })
 
 function existsSafe(p: string): boolean {

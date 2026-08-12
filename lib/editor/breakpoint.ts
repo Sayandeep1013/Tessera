@@ -69,6 +69,14 @@ export function chromeFor(tier: Tier) {
      */
     showFilename: tier === 'wide' || tier === 'tablet',
     showSaveStatus: tier === 'wide' || tier === 'compact',
+    /**
+     * Layers are built now, so they are not gated with the dead controls. Not on
+     * a phone though: a 248px panel over a 320px canvas is not a layer panel,
+     * and layers are a desk activity. The agent's layer actions still work
+     * there, and every layer in a document still renders.
+     */
+    showLayers: tier !== 'mobile',
+    /** Code, Timeline and Share — still not built. */
     showUnbuilt: tier === 'wide',
   }
 }

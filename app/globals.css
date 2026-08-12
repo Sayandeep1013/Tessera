@@ -46,28 +46,39 @@
   --solid: #f4f4f5;
   --onsolid: #0b0b0d;
 
-  /* Canvas — flat white in BOTH themes, and deliberately not on the surface
-     ladder.
+  /* Canvas — the ground transparent pixels are drawn against. Follows the theme.
 
-     Spec 13 §2.A puts --art-bg at #1e1e22 in dark to make the artwork separate
-     from the app, and that gate is real. But it optimises the wrong pair.
-     Transparent pixels are the ground the user's own colours are judged against,
-     and those colours are arbitrary data: the shipped starter's outline is
-     #2d1b00, which lands at 1.005:1 on #1e1e22 and simply disappears. Separation
-     from the app is better bought with the surface below and the artwork's own
-     1px edge — which cost the artwork nothing — than by tinting the one area
-     whose whole job is to be neutral. The reference paints flat white always.
-     Recorded against spec 13 §2.A. */
-  --art-bg: #ffffff;
-  /* A backdrop colour — used by the boot loader's own gridlines. */
-  --art-grid: #ededed;
+     This was flat white in both themes until the user asked for it to match the
+     theme, and the reason it was white is worth keeping written down: dark
+     artwork on a dark ground loses contrast, and the old starter's outline
+     (#2d1b00) sits at 1.005:1 on #1e1e22, i.e. invisible. That trade is now the
+     user's, made deliberately — a near-black drawing on a dark ground is a
+     choice the artist can see themselves making, whereas a white slab in a dark
+     app is a thing the app is doing to them. Spec 13 §2.A wanted #1e1e22 all
+     along; this restores it and the correction note there no longer applies.
+
+     Three things follow from it and are NOT independent choices — change one and
+     you have to re-check the others against a real screenshot:
+       - --grid-ink, because the grid is a difference blend (see below)
+       - --art-edge-*, because a black bevel is invisible on a dark ground
+       - --art-grid, the boot loader's gridlines, which sit on --art-bg cells */
+  --art-bg: #1e1e22;
+  /* A backdrop colour — used by the boot loader's own gridlines. Must read as
+     the gap BETWEEN tiles, so it is lighter than --art-bg in dark and darker
+     than it in light. */
+  --art-grid: #303038;
   /* The canvas grid is composited with `difference`, so this is a MAGNITUDE of
-     inversion rather than a colour, and it is identical in both themes. It has
-     to be: the artwork it sits on is arbitrary user data, not a theme surface.
-     Near-black would be a no-op — difference with #000000 changes nothing. */
-  --grid-ink: #262626;
-  --art-edge-tl: #0000002e;
-  --art-edge-br: #0000003c;
+     inversion rather than a colour. It cannot be shared between themes any more:
+     difference against a backdrop it nearly equals is a no-op, and #262626 on
+     #1e1e22 is a difference of 8/8/4 — the grid would simply not be there on the
+     empty canvas. #565660 lands ~56 away from the dark ground and ~169 away from
+     white, so it is visible on the ground AND on light artwork. Verified by
+     looking, at 32x, not by arithmetic alone. */
+  --grid-ink: #565660;
+  /* Light top-left, dark bottom-right — a raised edge. In dark the top-left has
+     to be white-alpha; black on #1e1e22 over a #0b0b0d surface reads as nothing. */
+  --art-edge-tl: #ffffff1f;
+  --art-edge-br: #00000059;
 
   /* ours, not theirs: the AI diff */
   --diff-add: #00bb7f;
@@ -97,7 +108,8 @@
   --solid: #18181b;
   --onsolid: #ffffff;
 
-  /* Identical to dark on purpose — see the note above. */
+  /* The light-theme half of the set above. Read that note before touching these
+     — the four move together. */
   --art-bg: #ffffff;
   --art-grid: #ededed;
   --grid-ink: #262626;

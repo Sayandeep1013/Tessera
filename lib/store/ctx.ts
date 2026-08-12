@@ -18,6 +18,8 @@ export function buildCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
   return {
     doc: () => useDocStore.getState().doc,
     frame: () => useDocStore.getState().frame,
+    layer: () => useDocStore.getState().layer,
+    setLayer: (i) => useDocStore.getState().setLayer(i),
     commit: (cmd) => useDocStore.getState().commit(cmd),
     editor: {
       setTool: (t) => useEditorStore.getState().setTool(t),

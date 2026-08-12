@@ -1,18 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import { AgentSession, currentSession } from '../session'
 import { MAX_SESSION_COLORS, MAX_SESSION_PIXELS } from '../limits'
-import { loadStarter } from '../../artwork-core/create'
+import { createDoc, loadStarter } from '../../artwork-core/create'
+import { cloneDoc } from '../../artwork-core/codec'
+import { clampLayer } from '../../artwork-core/layers'
 import { applyCommand, invertCommand } from '../../artwork-core/commands'
 import { runAction } from '../../actions/registry'
 import type { ActionCtx, EditorSnapshot } from '../../actions/types'
 import type { Doc } from '../../artwork-core/schema'
 
+/** Every layer's pixels, as plain arrays — easy to deep-compare. */
+function layerPixels(doc: Doc): number[][] {
+  return doc.frames[0]!.layers.map((l) => Array.from(l.px))
+}
+
 /**
  * A harness that behaves the way the real store will: mutations apply to the live
  * document but never reach history while a session is open.
  */
-function harness() {
-  let doc: Doc = loadStarter('face')
+function harness(start?: Doc) {
+  let doc: Doc = start ?? loadStarter('face')
+  let layer = 0
   const history: ReturnType<typeof applyCommand> extends never ? never : Array<Parameters<typeof applyCommand>[1]> = []
   const session = new AgentSession('s1', 'make it angrier', doc)
 
@@ -28,6 +36,10 @@ function harness() {
   const ctx: ActionCtx = {
     doc: () => doc,
     frame: () => 0,
+    layer: () => layer,
+    setLayer: (i) => {
+      layer = clampLayer(doc, 0, i)
+    },
     // the interception: apply live, do NOT push to history
     commit: (cmd) => {
       doc = applyCommand(doc, cmd)
@@ -54,7 +66,7 @@ function harness() {
     return r
   }
 
-  return { session, ctx, call, history, getDoc: () => doc, editor }
+  return { session, ctx, call, history, getDoc: () => doc, getLayer: () => layer, editor }
 }
 
 describe('session collapses to one command', () => {
@@ -226,5 +238,93 @@ describe('only one session is open at a time', () => {
     new AgentSession('b', 'two', doc)
     // still 'finish' — opening another session must not rewrite a closed one
     expect(out.stoppedBy).toBe('finish')
+  })
+})
+
+// ─── layers. See docs/specs/14-layers.md §8.6. ───────────────────────────────
+
+/**
+ * A 8x8 document with three empty layers, so a session can paint on more than
+ * one and the collapse has something to get wrong.
+ */
+function layeredDoc(): Doc {
+  const doc = createDoc({ id: 'layered', w: 8, h: 8, now: '2026-08-11T00:00:00.000Z' })
+  doc.frames[0]!.layers.push({ n: 'over', px: new Uint8Array(64) })
+  doc.frames[0]!.layers.push({ n: 'top', px: new Uint8Array(64) })
+  return doc
+}
+
+describe('session collapse across layers', () => {
+  it('a session confined to one layer collapses to an ai_edit carrying that index', () => {
+    const start = layeredDoc()
+    const h = harness(cloneDoc(start))
+    expect(h.call('select_layer', { index: 1 }).ok).toBe(true)
+    expect(h.call('draw_line', { x1: 0, y1: 0, x2: 7, y2: 0, i: 1 }).ok).toBe(true)
+
+    const out = h.session.finalise(h.getDoc(), 'drew a line', 'finish', 0, h.getLayer())
+    expect(out.command!.type).toBe('ai_edit')
+    expect((out.command as { layer: number }).layer).toBe(1)
+
+    const back = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(layerPixels(back)).toEqual(layerPixels(start))
+  })
+
+  /**
+   * The case that made the fallback necessary. A single-layer ai_edit would
+   * describe one of these two strokes and silently leave the other behind on
+   * undo.
+   */
+  it('a session that paints on two layers collapses to replace_doc', () => {
+    const start = layeredDoc()
+    const h = harness(cloneDoc(start))
+    h.call('select_layer', { index: 1 })
+    h.call('draw_line', { x1: 0, y1: 0, x2: 7, y2: 0, i: 1 })
+    h.call('select_layer', { index: 2 })
+    h.call('draw_line', { x1: 0, y1: 7, x2: 7, y2: 7, i: 1 })
+
+    const out = h.session.finalise(h.getDoc(), 'two layers', 'finish', 0, h.getLayer())
+    expect(out.command!.type).toBe('replace_doc')
+
+    const back = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(layerPixels(back)).toEqual(layerPixels(start))
+  })
+
+  it('a session that adds a layer collapses to replace_doc', () => {
+    const start = layeredDoc()
+    const h = harness(cloneDoc(start))
+    expect(h.call('add_layer', { name: 'shadow' }).ok).toBe(true)
+    h.call('draw_line', { x1: 0, y1: 3, x2: 7, y2: 3, i: 1 })
+
+    const out = h.session.finalise(h.getDoc(), 'added a layer', 'finish', 0, h.getLayer())
+    expect(out.command!.type).toBe('replace_doc')
+
+    const back = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(back.frames[0]!.layers).toHaveLength(3)
+    expect(layerPixels(back)).toEqual(layerPixels(start))
+  })
+
+  it('hiding a layer counts as a shape change and collapses to replace_doc', () => {
+    const start = layeredDoc()
+    const h = harness(cloneDoc(start))
+    h.call('set_layer_visible', { index: 1, visible: false })
+
+    const out = h.session.finalise(h.getDoc(), 'hid a layer', 'finish', 0, h.getLayer())
+    expect(out.command!.type).toBe('replace_doc')
+
+    const back = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(back.frames[0]!.layers[1]!.hidden).toBeFalsy()
+  })
+
+  it('a palette-only session still collapses to an ai_edit whose inverse restores the palette', () => {
+    const start = layeredDoc()
+    const h = harness(cloneDoc(start))
+    expect(h.call('add_palette_color', { color: '#abcdef' }).ok).toBe(true)
+
+    const out = h.session.finalise(h.getDoc(), 'added a colour', 'finish', 0, h.getLayer())
+    expect(out.command!.type).toBe('ai_edit')
+    expect((out.command as { cells: unknown[] }).cells).toHaveLength(0)
+
+    const back = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(back.palette).toHaveLength(start.palette.length)
   })
 })

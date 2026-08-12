@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { applyOps, floodFillPoints, linePoints, rectPoints, type Op } from '../ops'
 import { encodeRows } from '../codec'
 import { MAX_PALETTE, type PaletteEntry } from '../schema'
-import { docOf } from './helpers'
+import { docLayers, docOf } from './helpers'
 
 const PAL: PaletteEntry[] = [{ c: 'transparent' }, { c: '#2d1b00' }, { c: '#f4c430' }]
 const blank4 = () => docOf(['....', '....', '....', '....'], PAL)
@@ -188,5 +188,82 @@ describe('applyOps — immutability and atomicity', () => {
     const r = applyOps(d, [{ op: 'set_pixels', px: [[0, 0, 1]] }])
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.value.meta.updatedAt).not.toBe(d.meta.updatedAt)
+  })
+})
+
+// ─── layers. See docs/specs/14-layers.md §8.4. ───────────────────────────────
+
+describe('applyOps targets one layer', () => {
+  const twoLayer = () =>
+    docLayers(
+      [
+        { n: 'base', rows: ['1111', '1111', '1111', '1111'] },
+        { n: 'over', rows: ['....', '....', '....', '....'] },
+      ],
+      PAL,
+    )
+
+  it('writes to the requested layer and leaves the others byte-identical', () => {
+    const d = twoLayer()
+    const r = applyOps(d, [{ op: 'set_pixels', px: [[0, 0, 2]] }], 0, 1)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(Array.from(r.value.frames[0]!.layers[0]!.px)).toEqual(
+      Array.from(d.frames[0]!.layers[0]!.px),
+    )
+    expect(r.value.frames[0]!.layers[1]!.px[0]).toBe(2)
+  })
+
+  it('defaults to layer 0', () => {
+    const r = applyOps(twoLayer(), [{ op: 'set_pixels', px: [[0, 0, 2]] }])
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.value.frames[0]!.layers[0]!.px[0]).toBe(2)
+      expect(r.value.frames[0]!.layers[1]!.px[0]).toBe(0)
+    }
+  })
+
+  it('fails with no_layer for a missing layer, mutating nothing (L-E4)', () => {
+    const d = twoLayer()
+    const before = Array.from(d.frames[0]!.layers[0]!.px)
+    const r = applyOps(d, [{ op: 'set_pixels', px: [[0, 0, 2]] }], 0, 5)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error.code).toBe('no_layer')
+    expect(Array.from(d.frames[0]!.layers[0]!.px)).toEqual(before)
+  })
+
+  it('flood fill is bounded by its own layer, not by what is beneath it', () => {
+    // Layer 0 is a solid block that would stop nothing; layer 1 has a wall of 1s
+    // down the middle. Filling the left half of layer 1 must not cross it, and
+    // must not be influenced by layer 0 at all.
+    const d = docLayers(
+      [
+        { n: 'base', rows: ['2222', '2222', '2222', '2222'] },
+        { n: 'over', rows: ['..1.', '..1.', '..1.', '..1.'] },
+      ],
+      PAL,
+    )
+    const r = applyOps(d, [{ op: 'flood_fill', x: 0, y: 0, i: 2 }], 0, 1)
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(encodeRows(r.value.frames[0]!.layers[1]!.px, 4, 4)).toEqual([
+        '221.', '221.', '221.', '221.',
+      ])
+      expect(encodeRows(r.value.frames[0]!.layers[0]!.px, 4, 4)).toEqual([
+        '2222', '2222', '2222', '2222',
+      ])
+    }
+  })
+
+  it('replace_color only touches the addressed layer', () => {
+    const d = twoLayer()
+    const r = applyOps(d, [{ op: 'replace_color', from: 1, to: 2 }], 0, 1)
+    expect(r.ok).toBe(true)
+    // Layer 1 has no 1s, so nothing changes anywhere — layer 0's 1s are untouched.
+    if (r.ok) {
+      expect(encodeRows(r.value.frames[0]!.layers[0]!.px, 4, 4)).toEqual([
+        '1111', '1111', '1111', '1111',
+      ])
+    }
   })
 })

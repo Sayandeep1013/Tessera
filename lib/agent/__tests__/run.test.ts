@@ -3,6 +3,7 @@ import { runAgent, type AgentStep } from '../run'
 import { MAX_CALLS_PER_TURN, MAX_STEPS } from '../limits'
 import { createMockProvider } from '../../ai/provider/mock'
 import { loadStarter } from '../../artwork-core/create'
+import { clampLayer } from '../../artwork-core/layers'
 import { applyCommand } from '../../artwork-core/commands'
 import type { ActionCtx, EditorSnapshot } from '../../actions/types'
 import type { Doc } from '../../artwork-core/schema'
@@ -42,6 +43,7 @@ function stubFetch(overrides?: { status?: number; body?: unknown }) {
 
 function harness() {
   let doc: Doc = loadStarter('face')
+  let layer = 0
   const editor: EditorSnapshot = {
     tool: 'brush',
     colorIndex: 1,
@@ -54,6 +56,10 @@ function harness() {
   const ctx: ActionCtx = {
     doc: () => doc,
     frame: () => 0,
+    layer: () => layer,
+    setLayer: (i) => {
+      layer = clampLayer(doc, 0, i)
+    },
     commit: (cmd) => {
       doc = applyCommand(doc, cmd)
     },

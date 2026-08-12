@@ -108,6 +108,9 @@ Read [01](./specs/01-document-format.md) before any other.
 | 09 | [Persistence and Sharing](./specs/09-persistence.md) | IndexedDB, Supabase snapshots, viewer, remix, OG image |
 | 10 | [Animation](./specs/10-animation.md) | Frames, timeline, playback — **the cut line** |
 | 11 | [Testing](./specs/11-testing.md) | Layers, goldens, properties, fuzzing, E2E, invariants |
+| 12 | [Agent Actions](./specs/12-agent-actions.md) | The registry, the look-act-verify loop, sessions, budgets |
+| 13 | [Visual Identity](./specs/13-visual-identity.md) | "Mosaic" — the direction, tokens, and what was rejected |
+| 14 | [Layers](./specs/14-layers.md) | Active layer, layer commands, the panel, the layer actions |
 
 Process: [WORKFLOW.md](./WORKFLOW.md) — scope → spec → review → plan → build → score, iterating until ≥ 9/10.
 
@@ -124,8 +127,15 @@ criteria are green.
 | **1** | Document model, canvas, tools, palette, undo, zoom/pan, IndexedDB, starters | Draw→undo→redo exact; round-trip property holds; refresh restores; goldens match; 60fps at 64×64 |
 | **2** | AI route, validator, diff overlay, accept/reject, composer — **money shot** | "make it angrier" → diff → Accept → one `⌘Z` reverses; malformed response mutates nothing; no key in the bundle |
 | **3** | Code panel, PNG/SVG/CSS/React/JSON export | Bidirectional sync with no loop; exported React is pixel-identical to canvas |
-| **4** | Share links, `/a/[id]` viewer, remix, OG image | Share → open in a private window → renders → Remix opens an editable copy |
+| **4** | **Layers** · share links, `/a/[id]` viewer, remix, OG image | Layers: paint on layer 2, undo, layer 1 is untouched · Share → open in a private window → renders → Remix opens an editable copy |
 | **5** | Frames, timeline, playback, GIF, sprite sheet — **cut line** | 4-frame blink plays and exports with matching delays |
+
+> **Correction, 12 Aug 2026 (rule 13).** This table never listed layers, even though `layers[]` has
+> been in the format since v1 and §1 records Newt's own layers button as a finding. The omission was
+> silent: layers were tracked as "Phase 4 #46" in `docs/HANDOFF.md` and built there, against a table
+> that did not mention them. Added above rather than given a phase of their own, because they shipped
+> alongside Phase 4 and inserting a phase would renumber the cut line. Spec:
+> [14 — Layers](./specs/14-layers.md).
 
 ---
 

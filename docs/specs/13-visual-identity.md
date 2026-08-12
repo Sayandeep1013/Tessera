@@ -220,20 +220,33 @@ in the set — nothing structural moves.
 could not describe it back to you. It fixes D1, D6, and D4 only by borrowing. If the real complaint
 is "we look like everyone else", this does not answer it.
 
-> **Correction, applied in build (rule 10).** The `--art-bg: #1e1e22` above is **not built**, in
-> either theme. G1 asks the artwork to separate from the app and that gate is right, but this
-> optimises the wrong pair. Transparent pixels are the ground the user's *own* colours are judged
-> against, and those colours are arbitrary data — the shipped starter's outline is `#2d1b00`, which
-> lands at **1.005:1** on `#1e1e22` and disappears entirely. Verified in a screenshot, twice: the
-> defect was found, fixed, reintroduced by following this section, and found again the same way.
+> **Correction, applied in build (rule 10).** `--art-bg: #1e1e22` was **reverted, then restored**.
+> Both halves are recorded because the second decision only makes sense next to the first.
 >
-> Separation from the app is bought instead with the deeper `--surface` and the artwork's existing
-> 1px two-tone edge, neither of which costs the artwork anything. **`--art-bg` is `#ffffff` in both
-> themes**, as the reference paints it, and `--art-grid` is therefore `#00000014` in both — a white
-> grid on a white ground would have been invisible, which is the same failure one level down.
+> *Reverted (earlier build).* G1 asks the artwork to separate from the app and that gate is right,
+> but it optimises the wrong pair. Transparent pixels are the ground the user's *own* colours are
+> judged against, and those colours are arbitrary data — the then-shipped starter's outline is
+> `#2d1b00`, which lands at **1.005:1** on `#1e1e22` and disappears entirely. Verified in a
+> screenshot, twice: the defect was found, fixed, reintroduced by following this section, and found
+> again the same way. `--art-bg` went to `#ffffff` in both themes, as the reference paints it.
 >
-> G1 should be restated as *the artwork must separate from the app*, not *the artwork background
-> must sit on the surface ladder*.
+> *Restored (this build, at the user's request).* A white slab in a dark app is something the app is
+> doing to the user; a dark drawing on a dark ground is a choice the artist can see themselves
+> making and correct. The contrast risk above is real and is now the artist's to manage, which is
+> the right owner for it. `--art-bg` is `#1e1e22` in dark and `#ffffff` in light.
+>
+> **Three tokens move with it and are not independent** — the earlier revert missed the third and
+> that is what made the grid vanish in the first place:
+>
+> | Token | Dark | Why it had to change |
+> |---|---|---|
+> | `--grid-ink` | `#565660` | The grid is a `difference` composite, so this is an inversion *magnitude*. `#262626` against `#1e1e22` differs by 8/8/4 — no grid at all on the empty canvas. |
+> | `--art-edge-tl` | `#ffffff1f` | A black bevel on `#1e1e22` over a `#0b0b0d` surface reads as nothing. The top-left edge becomes white-alpha; the bottom-right stays black-alpha and deepens to `#00000059`. |
+> | `--art-grid` | `#303038` | The boot loader's gaps must read as gaps, so lighter than `--art-bg` in dark and darker than it in light. |
+>
+> G1 stands as originally written for dark, and is still better read as *the artwork must separate
+> from the app* rather than *the artwork background must sit on the surface ladder* — in light it
+> separates via `--surface` and the 1px edge, not via its own fill.
 
 ### 2.B — "Mosaic"  ← **recommended**
 

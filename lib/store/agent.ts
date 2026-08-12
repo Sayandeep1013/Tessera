@@ -148,7 +148,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     try {
       outcome = await runAgent({
         instruction,
-        imagePngBase64: buildContext(doc, docStore.frame).png,
+        imagePngBase64: buildContext(doc, docStore.frame, docStore.layer).png,
         ctx,
         sessionId: `${Date.now()}-${instruction.length}`,
         apiKey: access.usingOwnKey ? access.apiKey : undefined,

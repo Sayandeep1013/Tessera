@@ -1,49 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { ACTIONS, runAction, toDeclarations, actionNamesByKind } from '../registry'
 import { CATALOGUE } from '../catalogue'
-import type { ActionCtx, EditorSnapshot } from '../types'
-import { loadStarter } from '../../artwork-core/create'
-import { applyCommand, type EditorCommand } from '../../artwork-core/commands'
-import type { Doc } from '../../artwork-core/schema'
-
-/** A ctx backed by a real document, so actions are exercised for real. */
-function makeCtx(over: Partial<ActionCtx> = {}) {
-  let doc: Doc = loadStarter('face')
-  const committed: EditorCommand[] = []
-  const editor: EditorSnapshot = {
-    tool: 'brush',
-    colorIndex: 1,
-    brushSize: 1,
-    brushShape: 'square',
-    viewport: { scale: 16, offsetX: 0, offsetY: 0 },
-    showGrid: true,
-  }
-
-  const ctx: ActionCtx = {
-    doc: () => doc,
-    frame: () => 0,
-    commit: (cmd) => {
-      committed.push(cmd)
-      doc = applyCommand(doc, cmd)
-    },
-    editor: {
-      setTool: (t) => (editor.tool = t as never),
-      setColorIndex: (i) => (editor.colorIndex = i),
-      setBrushSize: (n) => (editor.brushSize = n),
-      setBrushShape: (s) => (editor.brushShape = s),
-      setViewport: (vp) => (editor.viewport = vp),
-      toggleGrid: (on) => (editor.showGrid = on ?? !editor.showGrid),
-      state: () => ({ ...editor }),
-    },
-    undo: () => {},
-    redo: () => {},
-    historyDepth: () => ({ undo: committed.length, redo: 0 }),
-    confirmed: false,
-    budget: null,
-    ...over,
-  }
-  return { ctx, committed, getDoc: () => doc, editor }
-}
+import type { ActionCtx } from '../types'
+import { makeCtx } from './harness'
 
 describe('registry integrity', () => {
   it('has no duplicate action names', () => {

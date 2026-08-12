@@ -153,22 +153,35 @@ export function rectPoints(
  * Apply one op to a clone. Returns a NEW document; the input is untouched.
  * For a sequence, prefer `applyOps` — it clones once.
  */
-export function applyOp(doc: Doc, op: Op, frameIndex = 0): Result<Doc, OpError> {
-  return applyOps(doc, [op], frameIndex)
+export function applyOp(doc: Doc, op: Op, frameIndex = 0, layerIndex = 0): Result<Doc, OpError> {
+  return applyOps(doc, [op], frameIndex, layerIndex)
 }
 
 /**
- * Apply a sequence of ops. Clones once, then mutates the clone.
+ * Apply a sequence of ops to ONE LAYER. Clones once, then mutates the clone.
  * Fails atomically: on any error nothing is returned and the input is untouched.
+ *
+ * Both indices default to 0, so every pre-layers call site keeps its meaning.
  */
-export function applyOps(doc: Doc, ops: Op[], frameIndex = 0): Result<Doc, OpError> {
+export function applyOps(
+  doc: Doc,
+  ops: Op[],
+  frameIndex = 0,
+  layerIndex = 0,
+): Result<Doc, OpError> {
   const frame = doc.frames[frameIndex]
   if (!frame) {
     return err({ code: 'no_frame', message: `frame ${frameIndex} does not exist` })
   }
+  if (!frame.layers[layerIndex]) {
+    return err({
+      code: 'no_layer',
+      message: `layer ${layerIndex} does not exist on frame ${frameIndex} (it has ${frame.layers.length})`,
+    })
+  }
 
   const next = cloneDoc(doc)
-  const layer = next.frames[frameIndex]!.layers[0]!
+  const layer = next.frames[frameIndex]!.layers[layerIndex]!
   const { w, h } = next
   const px = layer.px
 

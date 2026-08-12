@@ -146,16 +146,56 @@ export function renderRuledPng(doc: Doc, frame: number, scale: number): Buffer {
   return PNG.sync.write(png)
 }
 
-/** Byte-identical to the document's px rows, with a column ruler. */
-export function buildGrid(doc: Doc, frame: number): string {
-  const rows = encodeRows(doc.frames[frame]!.layers[0]!.px, doc.w, doc.h)
+/**
+ * Byte-identical to the layer's px rows, with a column ruler.
+ *
+ * The PNG has always been the composite. This is the layer being edited, because
+ * that is where coordinates have to land — and when there is more than one, the
+ * composite follows underneath so the model can still see the whole picture. On
+ * a single-layer document the output is unchanged, so the common path costs
+ * nothing.
+ */
+export function buildGrid(doc: Doc, frame: number, layer = 0): string {
+  const layers = doc.frames[frame]!.layers
+  const active = layers[layer] ?? layers[0]!
   const pad = String(doc.h - 1).length
   const ruler = Array.from({ length: doc.w }, (_, i) => String(i % 10)).join('')
-  return [
+  const number = (rows: string[]) => rows.map((r, i) => `${String(i).padStart(pad)} | ${r}`)
+
+  const head = [
     `CANVAS ${doc.w} wide x ${doc.h} tall. Rows are listed top to bottom.`,
     '',
     `${' '.repeat(pad)}   ${ruler}`,
-    ...rows.map((r, i) => `${String(i).padStart(pad)} | ${r}`),
+    ...number(encodeRows(active.px, doc.w, doc.h)),
+  ]
+  if (layers.length < 2) return head.join('\n')
+
+  const composite: string[] = []
+  for (let y = 0; y < doc.h; y++) {
+    let row = ''
+    for (let x = 0; x < doc.w; x++) {
+      let idx = 0
+      for (let i = layers.length - 1; i >= 0; i--) {
+        const l = layers[i]!
+        if (l.hidden) continue
+        const v = l.px[y * doc.w + x]!
+        if (v !== 0) {
+          idx = v
+          break
+        }
+      }
+      row += idx === 0 ? '.' : idx <= 9 ? String(idx) : String.fromCharCode(87 + idx)
+    }
+    composite.push(row)
+  }
+
+  return [
+    `ACTIVE LAYER ${layer} of ${layers.length}: "${active.n}". Coordinates you draw at land here.`,
+    ...head,
+    '',
+    'COMPOSITE — everything visible, flattened. Read only; you cannot draw at this level.',
+    `${' '.repeat(pad)}   ${ruler}`,
+    ...number(composite),
   ].join('\n')
 }
 
@@ -175,18 +215,18 @@ export function buildLegend(doc: Doc): string {
   return lines.join('\n')
 }
 
-export function buildContext(doc: Doc, frame = 0): AiContext {
+export function buildContext(doc: Doc, frame = 0, layer = 0): AiContext {
   const scale = pickScale(doc.w, doc.h)
   return {
     png: renderRuledPng(doc, frame, scale).toString('base64'),
-    grid: buildGrid(doc, frame),
+    grid: buildGrid(doc, frame, layer),
     legend: buildLegend(doc),
     scale,
   }
 }
 
-export function buildUserText(doc: Doc, frame: number, instruction: string): string {
-  const ctx = buildContext(doc, frame)
+export function buildUserText(doc: Doc, frame: number, instruction: string, layer = 0): string {
+  const ctx = buildContext(doc, frame, layer)
   return [
     ctx.grid,
     '',

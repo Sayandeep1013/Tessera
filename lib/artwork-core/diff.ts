@@ -18,21 +18,27 @@ export type PixelDiff = {
 }
 
 /**
- * Compare one frame of two documents.
+ * Compare ONE LAYER of one frame of two documents.
  *
  * Throws RangeError on mismatched dimensions — reaching that means a caller bug,
  * not bad user input. A dimension change is a `resize` command, not a diff.
+ *
+ * `layer` defaults to 0 so every pre-layers call site keeps its meaning. A caller
+ * that might be looking at a multi-layer document should ask `changedLayers`
+ * first — a single-layer diff of a two-layer edit silently reports half of it.
  */
-export function diff(before: Doc, after: Doc, frame = 0): PixelDiff {
+export function diff(before: Doc, after: Doc, frame = 0, layer = 0): PixelDiff {
   if (before.w !== after.w || before.h !== after.h) {
     throw new RangeError(
       `cannot diff documents of different sizes (${before.w}x${before.h} vs ${after.w}x${after.h})`,
     )
   }
 
-  const a = before.frames[frame]?.layers[0]?.px
-  const b = after.frames[frame]?.layers[0]?.px
-  if (!a || !b) throw new RangeError(`frame ${frame} does not exist in both documents`)
+  const a = before.frames[frame]?.layers[layer]?.px
+  const b = after.frames[frame]?.layers[layer]?.px
+  if (!a || !b) {
+    throw new RangeError(`frame ${frame} layer ${layer} does not exist in both documents`)
+  }
 
   const out: PixelDiff = { added: [], changed: [], removed: [], paletteAdded: [] }
   const { w } = before
@@ -55,6 +61,61 @@ export function diff(before: Doc, after: Doc, frame = 0): PixelDiff {
   }
 
   return out
+}
+
+/**
+ * Which layers of `frame` differ in pixels, ascending.
+ *
+ * The question `diff` cannot answer on its own. An agent session that painted on
+ * two layers must not collapse to a single-layer `ai_edit`; that command would
+ * undo half the work and leave the rest, which is the silent-corruption class
+ * this whole design exists to avoid. See docs/specs/14-layers.md §7.3.
+ *
+ * Layers present in only one of the two documents count as changed.
+ */
+export function changedLayers(before: Doc, after: Doc, frame: number): number[] {
+  const a = before.frames[frame]?.layers ?? []
+  const b = after.frames[frame]?.layers ?? []
+  const out: number[] = []
+
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const pa = a[i]?.px
+    const pb = b[i]?.px
+    if (!pa || !pb || pa.length !== pb.length) {
+      out.push(i)
+      continue
+    }
+    for (let p = 0; p < pa.length; p++) {
+      if (pa[p] !== pb[p]) {
+        out.push(i)
+        break
+      }
+    }
+  }
+  return out
+}
+
+/**
+ * True when the two documents have the same layer *structure* everywhere: same
+ * frame count, same layer count per frame, same names, same visibility. Pixels
+ * are not compared.
+ *
+ * Deliberately strict, and deliberately across all frames. It gates the session
+ * fallback to `replace_doc`, so a false positive is a wrong undo and a false
+ * negative is only a heavier command.
+ */
+export function sameLayerShape(before: Doc, after: Doc): boolean {
+  if (before.frames.length !== after.frames.length) return false
+  for (let f = 0; f < before.frames.length; f++) {
+    const a = before.frames[f]!.layers
+    const b = after.frames[f]!.layers
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+      if (a[i]!.n !== b[i]!.n) return false
+      if (Boolean(a[i]!.hidden) !== Boolean(b[i]!.hidden)) return false
+    }
+  }
+  return true
 }
 
 export function isEmpty(d: PixelDiff): boolean {

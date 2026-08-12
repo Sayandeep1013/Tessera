@@ -9,8 +9,11 @@ import { z } from 'zod'
 import { encodeRows } from '../artwork-core/codec'
 import { applyOps, type Op } from '../artwork-core/ops'
 import { diff } from '../artwork-core/diff'
-import { paintCommand, type PaintCell } from '../artwork-core/commands'
+import { cloneLayer, paintCommand, type PaintCell } from '../artwork-core/commands'
 import { createDoc } from '../artwork-core/create'
+import {
+  MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, compositeAt, nextLayerName,
+} from '../artwork-core/layers'
 import { MAX_PALETTE, type Doc } from '../artwork-core/schema'
 import { fitViewport, snapScale } from '../editor/viewport'
 import { defineAction, fail, ok, type Action, type ActionCtx } from './types'
@@ -32,6 +35,30 @@ function legendOf(doc: Doc): string {
   return lines.join('\n')
 }
 
+const layersOf = (doc: Doc, frame: number) =>
+  (doc.frames[frame]?.layers ?? []).map((l, index) => ({
+    index,
+    name: l.n,
+    hidden: Boolean(l.hidden),
+  }))
+
+/**
+ * The flattened view, as a text grid. Only ever attached when the frame has more
+ * than one layer — on a single-layer document it would be the same characters
+ * twice, and every extra line is prompt weight on every turn.
+ */
+function compositeRows(doc: Doc, frame: number): string[] {
+  const rows: string[] = []
+  for (let y = 0; y < doc.h; y++) {
+    let row = ''
+    for (let x = 0; x < doc.w; x++) row += charFor(compositeAt(doc, frame, x, y))
+    rows.push(row)
+  }
+  return rows
+}
+
+const layerCount = (doc: Doc, frame: number) => doc.frames[frame]?.layers.length ?? 0
+
 /**
  * Apply a drawing op through the shared implementation, then commit the resulting
  * pixel delta as ONE paint command. Both the agent and the editor's own tools end
@@ -41,10 +68,10 @@ function commitOp(op: Op, label: string, ctx: ActionCtx) {
   const doc = needDoc(ctx)
   if (!doc) return fail('no document is open')
 
-  const applied = applyOps(doc, [op], ctx.frame())
+  const applied = applyOps(doc, [op], ctx.frame(), ctx.layer())
   if (!applied.ok) return fail(applied.error.message)
 
-  const d = diff(doc, applied.value, ctx.frame())
+  const d = diff(doc, applied.value, ctx.frame(), ctx.layer())
   const touched = d.added.length + d.changed.length + d.removed.length
   if (touched === 0) return ok({ changed: 0, note: 'that had no effect' })
 
@@ -59,7 +86,7 @@ function commitOp(op: Op, label: string, ctx: ActionCtx) {
   for (const [x, y, from, to] of d.changed) cells.push([x, y, from, to])
   for (const [x, y, from] of d.removed) cells.push([x, y, from, 0])
 
-  const cmd = paintCommand(label, ctx.frame(), cells)
+  const cmd = paintCommand(label, ctx.frame(), ctx.layer(), cells)
   if (!cmd) return ok({ changed: 0 })
   ctx.commit(cmd)
   return ok({ changed: touched })
@@ -88,6 +115,8 @@ const getState = defineAction({
       palette: doc.palette.map((p, i) => ({ index: i, char: charFor(i), color: p.c, name: p.n })),
       paletteFull: doc.palette.length >= MAX_PALETTE,
       nextColorIndex: doc.palette.length < MAX_PALETTE ? doc.palette.length : null,
+      layers: layersOf(doc, ctx.frame()),
+      activeLayer: ctx.layer(),
       tool: e.tool,
       colorIndex: e.colorIndex,
       brushSize: e.brushSize,
@@ -105,19 +134,34 @@ const getGrid = defineAction({
   description:
     'Read the artwork as a text grid: one character per pixel, one line per row, ' +
     'with a palette legend. x increases right from 0, y increases down from 0. ' +
-    'Use this to find exact coordinates, and to check your work after editing.',
+    'Use this to find exact coordinates, and to check your work after editing. ' +
+    'On a layered document this returns the ACTIVE layer, plus a composite of ' +
+    'everything visible — draw using the active-layer coordinates.',
   input: z.object({}),
   kind: 'query',
   run: (_i, ctx) => {
     const doc = needDoc(ctx)
     if (!doc) return fail('no document is open')
-    const rows = encodeRows(doc.frames[ctx.frame()]!.layers[0]!.px, doc.w, doc.h)
+    const px = doc.frames[ctx.frame()]?.layers[ctx.layer()]?.px
+    if (!px) return fail(`layer ${ctx.layer()} does not exist`)
     const pad = String(doc.h - 1).length
+    const number = (rows: string[]) =>
+      rows.map((r, i) => `${String(i).padStart(pad)} | ${r}`).join('\n')
+
     return ok({
       width: doc.w,
       height: doc.h,
-      grid: rows.map((r, i) => `${String(i).padStart(pad)} | ${r}`).join('\n'),
+      grid: number(encodeRows(px, doc.w, doc.h)),
       legend: legendOf(doc),
+      // Single-layer documents get exactly the response they got before layers
+      // existed — no extra keys, no extra tokens on the common path.
+      ...(layerCount(doc, ctx.frame()) > 1
+        ? {
+            layer: ctx.layer(),
+            layers: layersOf(doc, ctx.frame()),
+            composite: number(compositeRows(doc, ctx.frame())),
+          }
+        : {}),
     })
   },
 })
@@ -140,14 +184,27 @@ const getRegion = defineAction({
     if (x < 0 || y < 0 || x + w > doc.w || y + h > doc.h) {
       return fail(`region is outside the ${doc.w}x${doc.h} canvas`)
     }
-    const px = doc.frames[ctx.frame()]!.layers[0]!.px
+    const px = doc.frames[ctx.frame()]?.layers[ctx.layer()]?.px
+    if (!px) return fail(`layer ${ctx.layer()} does not exist`)
     const rows: string[] = []
+    const comp: string[] = []
+    const multi = layerCount(doc, ctx.frame()) > 1
     for (let ry = y; ry < y + h; ry++) {
       let row = ''
-      for (let rx = x; rx < x + w; rx++) row += charFor(px[ry * doc.w + rx]!)
+      let crow = ''
+      for (let rx = x; rx < x + w; rx++) {
+        row += charFor(px[ry * doc.w + rx]!)
+        if (multi) crow += charFor(compositeAt(doc, ctx.frame(), rx, ry))
+      }
       rows.push(`${String(ry).padStart(3)} | ${row}`)
+      if (multi) comp.push(`${String(ry).padStart(3)} | ${crow}`)
     }
-    return ok({ origin: { x, y }, grid: rows.join('\n'), legend: legendOf(doc) })
+    return ok({
+      origin: { x, y },
+      grid: rows.join('\n'),
+      legend: legendOf(doc),
+      ...(multi ? { layer: ctx.layer(), composite: comp.join('\n') } : {}),
+    })
   },
 })
 
@@ -299,7 +356,7 @@ const floodFill = defineAction({
 const replaceColor = defineAction({
   name: 'replace_color',
   description:
-    'Replace every pixel of one palette index with another, across the whole frame. ' +
+    'Replace every pixel of one palette index with another, across the current layer. ' +
     'The right way to recolour a garment or an outline — far cheaper than listing pixels.',
   input: z.object({ from: z.number().int().min(0), to: z.number().int().min(0) }),
   kind: 'mutate',
@@ -412,23 +469,135 @@ const newDocument = defineAction({
 const clearLayer = defineAction({
   name: 'clear_layer',
   description:
-    'Erase everything on the current frame, leaving a blank canvas of the same size. ' +
-    'Destructive — the user is asked to confirm.',
+    'Erase everything on the CURRENT LAYER, leaving it blank. Other layers are ' +
+    'untouched. Destructive — the user is asked to confirm.',
   input: z.object({}),
   kind: 'destructive',
   run: (_i, ctx) => {
     if (!ctx.confirmed) return fail('requires user confirmation')
     const doc = needDoc(ctx)
     if (!doc) return fail('no document is open')
-    const px = doc.frames[ctx.frame()]!.layers[0]!.px
+    const px = doc.frames[ctx.frame()]?.layers[ctx.layer()]?.px
+    if (!px) return fail(`layer ${ctx.layer()} does not exist`)
     const cells: PaintCell[] = []
     for (let p = 0; p < px.length; p++) {
       if (px[p] !== 0) cells.push([p % doc.w, Math.floor(p / doc.w), px[p]!, 0])
     }
-    const cmd = paintCommand('AI: clear', ctx.frame(), cells)
+    const cmd = paintCommand('AI: clear', ctx.frame(), ctx.layer(), cells)
     if (!cmd) return ok({ cleared: 0 })
     ctx.commit(cmd)
     return ok({ cleared: cells.length })
+  },
+})
+
+// ─── layers ──────────────────────────────────────────────────────────────────
+
+const addLayer = defineAction({
+  name: 'add_layer',
+  description:
+    'Add an empty layer above the current one and make it active. Use a layer when ' +
+    'something should sit ON TOP of existing work without destroying it — a hat, a ' +
+    'shadow, a highlight pass — so it can be hidden or removed later.',
+  input: z.object({
+    name: z.string().max(MAX_LAYER_NAME).optional(),
+    above: z.number().int().min(0).optional(),
+  }),
+  kind: 'mutate',
+  run: ({ name, above }, ctx) => {
+    const doc = needDoc(ctx)
+    if (!doc) return fail('no document is open')
+    const frame = ctx.frame()
+    const count = layerCount(doc, frame)
+    if (count >= MAX_LAYERS) {
+      return fail(`this frame already has the maximum of ${MAX_LAYERS} layers`)
+    }
+    if (above !== undefined && above >= count) {
+      return fail(`layer ${above} does not exist; this frame has ${count}`)
+    }
+    const at = (above ?? ctx.layer()) + 1
+    const layer = {
+      n: cleanLayerName(name ?? nextLayerName(doc, frame)),
+      px: new Uint8Array(doc.w * doc.h),
+    }
+    ctx.commit({ type: 'layer_add', label: 'Add layer', frame, at, layer })
+    ctx.setLayer(at)
+    return ok({ index: at, name: layer.n, layers: count + 1 })
+  },
+})
+
+const selectLayer = defineAction({
+  name: 'select_layer',
+  description:
+    'Choose which layer the drawing actions write to. Index 0 is the BOTTOM of the ' +
+    'stack. Like select_tool, this changes nothing in the artwork by itself. ' +
+    'get_state lists the layers.',
+  input: z.object({ index: z.number().int().min(0) }),
+  kind: 'view',
+  run: ({ index }, ctx) => {
+    const doc = needDoc(ctx)
+    if (!doc) return fail('no document is open')
+    const count = layerCount(doc, ctx.frame())
+    if (index >= count) return fail(`layer ${index} does not exist; this frame has ${count}`)
+    ctx.setLayer(index)
+    return ok({ index, name: doc.frames[ctx.frame()]!.layers[index]!.n })
+  },
+})
+
+const setLayerVisible = defineAction({
+  name: 'set_layer_visible',
+  description:
+    'Show or hide a layer. A hidden layer keeps its pixels and still saves — this is ' +
+    'how you compare two versions of an idea rather than deleting one.',
+  input: z.object({ index: z.number().int().min(0), visible: z.boolean() }),
+  kind: 'mutate',
+  run: ({ index, visible }, ctx) => {
+    const doc = needDoc(ctx)
+    if (!doc) return fail('no document is open')
+    const layer = doc.frames[ctx.frame()]?.layers[index]
+    if (!layer) {
+      return fail(`layer ${index} does not exist; this frame has ${layerCount(doc, ctx.frame())}`)
+    }
+    const before = Boolean(layer.hidden)
+    if (before === !visible) return ok({ index, visible, note: 'already set' })
+    ctx.commit({
+      type: 'layer_visible',
+      label: visible ? 'Show layer' : 'Hide layer',
+      frame: ctx.frame(),
+      at: index,
+      before,
+      after: !visible,
+    })
+    return ok({ index, visible })
+  },
+})
+
+const deleteLayer = defineAction({
+  name: 'delete_layer',
+  description:
+    'Remove a layer and everything on it. Destructive — the user is asked to confirm. ' +
+    'Prefer set_layer_visible when the intent is "get this out of the way".',
+  input: z.object({ index: z.number().int().min(0) }),
+  kind: 'destructive',
+  run: ({ index }, ctx) => {
+    if (!ctx.confirmed) return fail('requires user confirmation')
+    const doc = needDoc(ctx)
+    if (!doc) return fail('no document is open')
+    const frame = ctx.frame()
+    const count = layerCount(doc, frame)
+    const layer = doc.frames[frame]?.layers[index]
+    if (!layer) return fail(`layer ${index} does not exist; this frame has ${count}`)
+    if (count <= 1) return fail('a frame must keep at least one layer')
+    ctx.commit({
+      type: 'layer_delete',
+      label: 'Delete layer',
+      frame,
+      at: index,
+      layer: cloneLayer(layer),
+    })
+    // commit() clamps the active index, so this only moves the selection down to
+    // the layer that took the deleted one's place when it was the top of the stack.
+    ctx.setLayer(Math.min(ctx.layer(), count - 2))
+    return ok({ index, layers: count - 1 })
   },
 })
 
@@ -449,9 +618,10 @@ const finish = defineAction({
 export const CATALOGUE: Array<Action<never>> = [
   getState, getGrid, getRegion,
   selectTool, setColor, setBrush, setZoom, fitView, toggleGrid,
+  selectLayer,
   setPixels, drawLine, drawRect, floodFill, replaceColor,
-  addPaletteColor, editPaletteColor, undoAction, redoAction,
-  newDocument, clearLayer,
+  addPaletteColor, editPaletteColor, addLayer, setLayerVisible, undoAction, redoAction,
+  newDocument, clearLayer, deleteLayer,
   finish,
 ] as unknown as Array<Action<never>>
 

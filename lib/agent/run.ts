@@ -173,7 +173,13 @@ export async function runAgent(opts: RunOptions): Promise<AgentOutcome> {
   }
 
   const endDoc = opts.currentDoc() ?? startDoc
-  return session.finalise(endDoc, summary || 'Finished.', stoppedBy, opts.ctx.frame())
+  return session.finalise(
+    endDoc,
+    summary || 'Finished.',
+    stoppedBy,
+    opts.ctx.frame(),
+    opts.ctx.layer(),
+  )
 }
 
 // ─── one action, including the confirmation round trip ───────────────────────

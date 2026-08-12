@@ -63,14 +63,15 @@ npx tsx tools/shoot-ai.ts   # end-to-end AI proposal flow
 
 ## Current state
 
-See `docs/HANDOFF.md` for the full picture. In brief, as of 11 Aug 2026:
+See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
 
 - **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
-  tiers, the "Mosaic" visual identity, IndexedDB autosave, and the AI agent (21 actions, look-act-
-  verify loop, one-undo sessions, bring-your-own-key). The agent unit scored **9/10**.
-- **Next:** Phase 4 — layers (#46), animation timeline (#47), share via Supabase (#48). The Layers,
-  Timeline and Share buttons in the top bar are the only dead controls left, and each is a real
-  feature rather than a wiring job.
+  tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
+  loop, one-undo sessions, bring-your-own-key), and layers (#46). Both units scored **9/10**.
+- **Next:** Phase 4 — animation timeline (#47), then share via Supabase (#48). The Timeline and
+  Share buttons in the top bar are the only dead controls left, and each is a real feature rather
+  than a wiring job. Read `docs/specs/14-layers.md §9` before #47: layers are per-frame, and whether
+  a layer belongs to one frame or all of them is the decision that unit left open.
 - **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent
   loop and at 32x32 produces recognisable, correctly-placed edits that damage nothing, but the
   output is still not artist-grade. Recorded in `docs/PHASE-0-FINDINGS.md`. The remaining gap is
@@ -83,6 +84,10 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 11 Aug 2026:
 ```
 npx tsx tools/check-responsive.ts   # overflow + target size at 5 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts     # drives every tool with real pointer events
+npx tsx tools/probe-layers.ts       # 42 assertions on the layer panel, both themes
 npx tsx tools/e2e-agent.ts          # agent flow end to end (wants AI_PROVIDER=mock)
 npx tsx tools/render-probe.ts       # render the last AI probe result and LOOK at it
 ```
+
+The browser probes default to `localhost:3000` and honour `APP_URL` — check the port is actually
+this project's before believing a failure.

@@ -11,6 +11,7 @@
 import { create } from 'zustand'
 import type { Doc } from '../artwork-core/schema'
 import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
+import { clampLayer } from '../artwork-core/layers'
 import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
@@ -37,6 +38,13 @@ const AUTOSAVE_MS = 500
 type DocState = {
   doc: Doc | null
   frame: number
+  /**
+   * The layer edits land on. Lives here rather than in useEditorStore because it
+   * indexes into the document and its valid range is a property of the document
+   * — which lets one guard in commit() cover every path that can invalidate it,
+   * including undo, redo and the agent session.
+   */
+  layer: number
   past: EditorCommand[]
   future: EditorCommand[]
   saveStatus: SaveStatus
@@ -51,6 +59,7 @@ type DocState = {
   agentDepth: number
 
   setDoc: (doc: Doc) => void
+  setLayer: (i: number) => void
   commit: (cmd: EditorCommand | null) => void
   undo: () => void
   redo: () => void
@@ -71,6 +80,7 @@ export const useDocStore = create<DocState>((set, get) => {
   return {
     doc: null,
     frame: 0,
+    layer: 0,
     past: [],
     future: [],
     agentDepth: 0,
@@ -78,43 +88,65 @@ export const useDocStore = create<DocState>((set, get) => {
     saveError: null,
 
     setDoc: (doc) => {
-      set({ doc, past: [], future: [] })
+      // Layer 0, not the previous index: another document's indices mean nothing.
+      set({ doc, layer: 0, past: [], future: [] })
       scheduleSave()
+    },
+
+    setLayer: (i) => {
+      const { doc, frame } = get()
+      set({ layer: clampLayer(doc, frame, i) })
     },
 
     commit: (cmd) => {
       if (!cmd) return // an empty stroke must not consume an undo step
-      const { doc, past, agentDepth } = get()
+      const { doc, past, frame, layer, agentDepth } = get()
       if (!doc) return
       const next = applyCommand(doc, cmd)
+      // One clamp on every write path. Deleting the top layer, undoing an add,
+      // replacing the document from an agent session — each of them can leave
+      // the active index past the end, and enumerating them is how one gets
+      // missed.
+      const nextLayer = clampLayer(next, frame, layer)
 
       // Still the only writer — an agent session changes what happens to history,
       // not who writes the document.
       if (agentDepth > 0) {
-        set({ doc: next })
+        set({ doc: next, layer: nextLayer })
         scheduleSave()
         return
       }
 
       const trimmed = past.length >= HISTORY_CAP ? past.slice(past.length - HISTORY_CAP + 1) : past
-      set({ doc: next, past: [...trimmed, cmd], future: [] })
+      set({ doc: next, layer: nextLayer, past: [...trimmed, cmd], future: [] })
       scheduleSave()
     },
 
     undo: () => {
-      const { doc, past, future } = get()
+      const { doc, past, future, frame, layer } = get()
       if (!doc || past.length === 0) return
       const cmd = past[past.length - 1]!
       const next = applyCommand(doc, invertCommand(cmd))
-      set({ doc: next, past: past.slice(0, -1), future: [cmd, ...future] })
+      set({
+        doc: next,
+        layer: clampLayer(next, frame, layer),
+        past: past.slice(0, -1),
+        future: [cmd, ...future],
+      })
       scheduleSave()
     },
 
     redo: () => {
-      const { doc, past, future } = get()
+      const { doc, past, future, frame, layer } = get()
       if (!doc || future.length === 0) return
       const cmd = future[0]!
-      set({ doc: applyCommand(doc, cmd), past: [...past, cmd], future: future.slice(1) })
+      const next = applyCommand(doc, cmd)
+      set({
+        doc: next,
+        layer: clampLayer(next, frame, layer),
+        past: [...past, cmd],
+        future: future.slice(1),
+      })
       scheduleSave()
     },
 
@@ -152,6 +184,12 @@ type EditorState = {
   dither: DitherMode
   /** Document-space rectangle, or null. Set by the marquee, moved by select. */
   selection: { x: number; y: number; w: number; h: number } | null
+  /**
+   * Whether the layer panel is on screen. UI state, so it lives here rather than
+   * in the document store — but the button that toggles it is in the header and
+   * the panel itself is in <main>, so it cannot be component-local.
+   */
+  layersOpen: boolean
 
   setTool: (t: Tool) => void
   setColorIndex: (i: number) => void
@@ -163,6 +201,7 @@ type EditorState = {
   setPanning: (p: boolean) => void
   setDither: (d: DitherMode) => void
   setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
+  setLayersOpen: (open: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -177,6 +216,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   panning: false,
   dither: 'solid',
   selection: null,
+  layersOpen: false,
 
   setTool: (t) => set({ tool: t, prevTool: get().tool }),
   setColorIndex: (i) => set({ colorIndex: i }),
@@ -188,4 +228,5 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPanning: (p) => set({ panning: p }),
   setDither: (d) => set({ dither: d }),
   setSelection: (sel) => set({ selection: sel }),
+  setLayersOpen: (open) => set({ layersOpen: open }),
 }))

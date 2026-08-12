@@ -25,6 +25,43 @@ export function docOf(rows: string[], palette: PaletteEntry[]): Doc {
   }
 }
 
+/**
+ * A multi-layer document. `layers` is bottom-first, matching `frames[].layers`,
+ * and each entry is that layer's rows in the same character form as `docOf`.
+ * Every layer must be the same size.
+ */
+export function docLayers(
+  layers: Array<{ n: string; rows: string[]; hidden?: boolean }>,
+  palette: PaletteEntry[],
+): Doc {
+  const first = layers[0]!
+  const h = first.rows.length
+  const w = first.rows[0]!.length
+  return {
+    ...docOf(first.rows, palette),
+    frames: [
+      {
+        ms: 100,
+        layers: layers.map((l) => {
+          if (l.rows.length !== h || l.rows.some((r) => r.length !== w)) {
+            throw new Error(`layer "${l.n}" is not ${w}x${h}`)
+          }
+          return {
+            n: l.n,
+            ...(l.hidden ? { hidden: true } : {}),
+            px: docOf(l.rows, palette).frames[0]!.layers[0]!.px,
+          }
+        }),
+      },
+    ],
+  }
+}
+
+/** Every layer's pixels of one frame, as plain arrays — easy to deep-compare. */
+export function pixelsOf(doc: Doc, frame = 0): number[][] {
+  return doc.frames[frame]!.layers.map((l) => Array.from(l.px))
+}
+
 const hex = fc
   .integer({ min: 0, max: 0xffffff })
   .map((n) => '#' + n.toString(16).padStart(6, '0'))

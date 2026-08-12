@@ -55,6 +55,9 @@ export type ActionBudget = {
 export type ActionCtx = {
   doc: () => Doc | null
   frame: () => number
+  /** The layer edits land on. Alongside frame(), because it indexes the document. */
+  layer: () => number
+  setLayer: (i: number) => void
   commit: (cmd: EditorCommand) => void
   editor: {
     setTool: (t: Tool) => void
