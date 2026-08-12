@@ -1,6 +1,6 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `TBD` (unit **B3** — Paste image) ·
+**Written:** 12 Aug 2026 · last commit `01ec4e1` (unit **B3** — Paste image) ·
 branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.

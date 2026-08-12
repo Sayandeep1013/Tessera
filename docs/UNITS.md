@@ -476,7 +476,7 @@ F-M4 asks for; the parse error is developer detail.
 
 ## B3 — Paste image · DONE
 
-**12 Aug 2026 · `TBD` · 9/10**
+**12 Aug 2026 · `01ec4e1` · 9/10**
 
 `lib/artwork-core/fit-image.ts` (placement and resampling),
 `quantise.ts` (redmean distance, median cut, palette reuse), `paste-image.ts`
