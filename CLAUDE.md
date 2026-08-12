@@ -24,6 +24,9 @@ Repo: https://github.com/Sayandeep1013/Tessera
 
 ## Start here
 
+Opening this repo cold, the whole instruction is: **read `docs/HANDOFF.md`, then
+`docs/UNITS.md`, and build the unit marked `NEXT`.** The two files below say the rest.
+
 **`docs/UNITS.md`** — the ledger. What is done, what is next, a ready-to-use prompt for every
 remaining unit, and the protocol for finishing one so the next session can start cold. Read this
 first; it will tell you which unit is yours.

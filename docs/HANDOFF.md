@@ -12,35 +12,28 @@ clean · and **every** browser probe in one run (`npm run probes`) —
 
 ---
 
-## 0. Start here — the whole prompt
+## 0. Start here
+
+If you are an agent opening this repo cold, this is the whole instruction:
+
+> Read `docs/HANDOFF.md`, then `docs/UNITS.md`, and build the unit marked
+> `NEXT`.
+
+Everything else follows from those two files.
 
 **[`docs/UNITS.md`](./UNITS.md) is the ledger.** It says what is done, what is
-next, and carries a ready-to-use prompt for every remaining unit. It also
-carries the protocol that keeps the chain unbroken: what an agent must do when
-it finishes, so the next one can start without asking anything.
+next, and carries a ready-to-use prompt for every remaining unit — **including
+the next one, so it is not repeated here.** It also carries the finishing
+protocol: what an agent must do before it stops, so the next one can start
+without asking anything.
 
-The next unit is **B2 — Open recent**. Paste this:
+The next unit is **B2 — Open recent**. Its prompt is in `UNITS.md`, in the B2
+block, directly under "Context handed over".
 
-> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md` (§2 and §7), then build
-> unit **B2**: Open recent.
->
-> `listDrafts()` exists and nothing calls it. Surface it as a submenu — newest
-> first, capped at 10, name and relative date, a real empty state, and a record
-> that no longer parses shown disabled rather than dropped. Add the row to
-> `FILE_MENU` in `lib/editor/file-menu.ts`; the menu renders from that array and
-> the handler table is exhaustive, so the compiler will name what you missed.
-> Reuse the Examples disclosure rather than building a flyout, and extend
-> `tools/probe-file-menu.ts` rather than writing a second probe.
->
-> Decide, in writing, whether `New…` should take a fresh document id so that
-> "the old drawing stays in recent" becomes true — and if it should, fix
-> `lib/agent/session.ts` in the same change, because it compares dimensions and
-> layer shape but not ids.
->
-> Verify with `npm test`, `npm run typecheck`, `npm run build` and
-> `npm run probes` (see `UNITS.md §0` for the exact invocation — the agent runs
-> server-side, so the mock goes on the server), then screenshot both themes and
-> look at it. Then follow the finishing protocol in `docs/UNITS.md §0`.
+> This section used to paste that prompt as well, and the copy went stale within
+> one unit — it was still asking B2 to decide something B1 had already settled.
+> One prompt, one place. If you find a second copy of anything here, delete it
+> rather than syncing it.
 
 Before writing code, read `CLAUDE.md` and **§5 of this file** (traps). Every
 entry in §5 has already cost this repo an hour and none of them announce what
