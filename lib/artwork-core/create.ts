@@ -8,6 +8,7 @@
 import { parseDoc } from './codec'
 import { FORMAT_VERSION, type Doc, type PaletteEntry } from './schema'
 import faceJson from './fixtures/starters/face.tessera.json'
+import birdJson from './fixtures/starters/bird.tessera.json'
 import logoJson from './fixtures/logo.tessera.json'
 
 /** Transparent plus a compact ramp that is immediately usable for drawing. */
@@ -53,10 +54,11 @@ export function createDoc(opts: {
   }
 }
 
-export type StarterName = 'face'
+export type StarterName = 'face' | 'bird'
 
 const STARTERS: Record<StarterName, unknown> = {
   face: faceJson,
+  bird: birdJson,
 }
 
 /**
