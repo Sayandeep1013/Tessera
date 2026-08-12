@@ -162,16 +162,20 @@ Our aspect presets, sized to keep the pixel count sane rather than copied:
 
 ### 4.2 The command
 
-A new command, because it mutates the document and rule 4 says every mutation is
-a command.
+**Correction, written during the build.** This section originally specified a
+new command carrying `prev: Uint8Array[]`. A `resize` command **already exists**
+in `commands.ts` and has since the format was written:
 
 ```ts
-{ type: 'resize'; label: string
-  before: { w: number; h: number }
-  after: { w: number; h: number }
-  /** Every layer of every frame, in order, as it was BEFORE. */
-  prev: Uint8Array[] }
+{ type: 'resize'; label: string; before: Doc; after: Doc }
 ```
+
+`applyCommand` returns `cloneDoc(cmd.after)` and `invertCommand` swaps the two,
+so it already carries every cropped pixel by construction — a whole-document
+snapshot is strictly safer than the cell list I was about to specify, and it is
+already tested by the command suite. Nothing new is needed. What was actually
+missing is the transform, `resizeDoc`, and that is all §4.2 should ever have
+asked for.
 
 - **Centred.** Growing pads equally; shrinking crops equally. An odd difference
   biases to the top-left, chosen because it is deterministic and therefore
