@@ -24,8 +24,14 @@ Repo: https://github.com/Sayandeep1013/Tessera
 
 ## Start here
 
-**`docs/HANDOFF.md`** — current state, what is next, the traps that have already cost time in this
-repo, and the decisions that are settled. Read it before anything else.
+**`docs/UNITS.md`** — the ledger. What is done, what is next, a ready-to-use prompt for every
+remaining unit, and the protocol for finishing one so the next session can start cold. Read this
+first; it will tell you which unit is yours.
+
+**`docs/HANDOFF.md`** — what you need to know while doing it: the traps that have already cost time
+in this repo, the settled decisions, the repo map, the debt.
+
+**`docs/DEFERRED.md`** — what looks finished and is not. Read before assuming a button works.
 
 ## Working loop
 

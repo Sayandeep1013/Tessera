@@ -1,39 +1,53 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026, end of session.
-**Repo:** https://github.com/Sayandeep1013/Tessera · branch `main` · last commit `9065da9`
-**Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`, git-connected to `main`,
-so every push deploys. **`GEMINI_API_KEY` is not set there**, so the live site is BYOK-only until it
-is added in the dashboard.
-**State:** everything green, committed and pushed. 269 tests across 18 files, production build
-clean, 6 measured viewports clean, and five browser probes green: `probe-layers` 42/42,
-`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-tools-ui`, `check-responsive`.
+**Written:** 12 Aug 2026 · last commit `e4ffa2c` · branch `main`, pushed.
+**Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
+git-connected to `main`, so every push deploys.
+**Green:** 301 tests across 20 files · production build clean · 6 viewports
+clean · `probe-layers` 42/42 · `probe-tooltip` 23/23 · `probe-agent-ui` 18/18 ·
+`probe-crisp` 4/4 · `probe-tools-ui` · zero runtime errors.
 
 ---
 
-> **Parked work lives in [`DEFERRED.md`](./DEFERRED.md)** — code that exists and
-> looks finished but is not wired, tested or switched on. Share is there, on
-> hold at the user's request. Read it before assuming a button works.
+## 0. Start here — the whole prompt
 
-## 0. The prompt to start the next session with
+**[`docs/UNITS.md`](./UNITS.md) is the ledger.** It says what is done, what is
+next, and carries a ready-to-use prompt for every remaining unit. It also
+carries the protocol that keeps the chain unbroken: what an agent must do when
+it finishes, so the next one can start without asking anything.
 
-Paste this verbatim:
+The next unit is **A2 — the Canvas tab size UI**. Paste this:
 
-> Read `docs/HANDOFF.md` and continue the work.
+> Read `docs/UNITS.md` and `docs/specs/16-settings.md §4`, then build unit **A2**:
+> the Canvas tab's size UI.
 >
-> Start with task **#47 — Phase 4: Animation timeline and frames**. Follow the working loop in §3 of
-> the handoff: scope → sub-spec → self-review the spec → implementation plan + task list → build →
-> score across six dimensions taking the lowest as the overall, and iterate until ≥ 9/10. Do not
-> inflate the score.
+> A 3×3 grid of preset buttons (16, 32, 64, 128, 256, 16:9, Banner, Portrait,
+> Custom), paired W×H number inputs, and an apply button that shows the pending
+> size — `32×32`, not the word "Apply" — and is disabled while it equals the
+> current size. Clicking a preset fills the inputs; typing in the inputs selects
+> Custom; nothing resizes until apply is pressed. When a shrink would destroy
+> painted pixels, say how many before it happens (`pixelsLostOnResize`, error
+> code S-E2).
 >
-> Read `docs/specs/14-layers.md §9` first — layers landed last session and that section is the note
-> it left for you about where frames and layers touch.
+> `resizeDoc` and the `resize` command already exist and are tested — this is
+> wiring. Commit through `useDocStore.commit()`.
 >
-> Before writing any code, read `CLAUDE.md`, `docs/WORKFLOW.md`, and §5 (traps) of the handoff —
-> §5 will save you an hour of rediscovering things that have already bitten this repo.
->
-> Ask me before making decisions that §8 lists as already settled. Everything else, use your
-> judgement and tell me what you decided.
+> Verify with `npm test`, `npm run typecheck`, `npm run build`,
+> `npx tsx tools/check-responsive.ts`, and screenshot the panel in both themes
+> and look at it. Then follow the finishing protocol in `docs/UNITS.md §0`.
+
+Before writing code, read `CLAUDE.md` and **§5 of this file** (traps). Every
+entry in §5 has already cost this repo an hour and none of them announce what
+they actually are.
+
+### The three documents, and which is which
+
+| File | What it is for |
+|---|---|
+| [`UNITS.md`](./UNITS.md) | **What to do next.** The ledger, the per-unit prompts, the finishing protocol. |
+| `HANDOFF.md` (this) | **What you need to know.** The traps, the settled decisions, the repo map, the debt. |
+| [`DEFERRED.md`](./DEFERRED.md) | **What looks finished and is not.** Read before assuming a button works. |
+| [`PLAN.md`](./PLAN.md) | Why the units are in the order they are. |
 
 ---
 
@@ -132,22 +146,16 @@ looked fine in a screenshot until magnified.
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Persistence | IndexedDB autosave. |
 
-### Not built
+### Not built, and what is next
 
-| Control | Why it's dead |
-|---|---|
-| **Timeline** button | Feature not built → **task #47, next** |
-| **Share** button | Needs Supabase backend → task #48 |
+**[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
+part of finishing a unit, and this section is not. In brief: the Code and
+Timeline buttons are the last dead controls, Share is built but parked
+(`DEFERRED.md`), and units A2 through F remain.
 
-These two are hidden below 1100px width already (`showUnbuilt` in `lib/editor/breakpoint.ts`), so
-a dead control never costs a live one its place. When you build one, flip it on there — Layers now
-sits in `showLayers` instead, which is `tier !== 'mobile'`.
-
-### Open tasks
-
-- **#47 Phase 4: Animation timeline and frames** ← start here, see §7
-- **#48 Phase 4: Share via Supabase snapshots** ← chosen as the next feature after this one
-- **#23 Phase 6: AI edit quality** — assessed, honestly still open. See §7.
+Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
+below 1100px, so a dead control never costs a live one its place. When you build
+one, move it out — Layers went to `showLayers`, Share to `showShare`.
 
 ---
 
@@ -205,7 +213,7 @@ Every one of these has already cost time in this repo.
 
 ---
 
-## 6. Task #46 — Layers. Done, scored 9/10.
+## 6. Layers phase 1 — done, 9/10. Kept for the two defects it found.
 
 Sub-spec: `docs/specs/14-layers.md`. Read it rather than this section if you are changing layers;
 this is the summary and the honest score.
@@ -266,38 +274,15 @@ this is the summary and the honest score.
 
 ---
 
-## 7. Tasks #47, #48, #23
+## 7. The remaining work, and the one thing that is deferred
 
-### #47 — Animation timeline and frames ← next
+Units A2–F, their order and their reasoning: **[`PLAN.md`](./PLAN.md)**.
+Their status and their prompts: **[`UNITS.md`](./UNITS.md)**.
+Share, built but switched off: **[`DEFERRED.md`](./DEFERRED.md)**.
 
-Format already supports `frames[]` with per-frame `ms`. Needs frame navigation in the store, a
-timeline strip (add, duplicate, delete, reorder, set duration), playback, onion skinning if cheap,
-and registry actions. Animated export is out of scope for that unit.
-
-**Settle this in the sub-spec before any UI.** Layers are **per-frame** — `frames[0].layers` and
-`frames[1].layers` are independent arrays — so "add a layer" becomes ambiguous the moment a second
-frame exists. `docs/specs/14-layers.md §9` lists the three questions it deliberately left open:
-
-- Does adding a layer add it to **every** frame or only the current one? The format permits
-  divergence; a timeline that shows layers as rows does not.
-- What does the active layer become when the frame changes? `commit` already clamps, so the failure
-  mode is a silently-moved selection rather than a crash — but "clamped" is not "correct".
-- Should `sameLayerShape` compare across all frames (it does today) or only the active one? The
-  strict version is what makes the agent session fallback safe; the loose version may be wanted once
-  frames can legitimately differ.
-
-There is a second, cheaper trap: **`frame` and `layer` are already two pieces of store state that
-every command carries.** Do not add a third. If you find yourself threading a frame index through
-call sites by hand, that is the signal the store should own it.
-
-### #48 — Share via Supabase snapshots
-
-Publish a read-only snapshot to a short URL, **no login** (there are no accounts, by rule).
-Supabase project is already provisioned and there is MCP access to the account. Needs schema + RLS
-allowing anonymous insert and public read, a POST route, a `/s/[id]` viewer page, and the Share
-button wired. **Think hard about the abuse surface** — an unauthenticated public insert needs a rate
-limit and a size cap, and the user should be told what "share" means before their artwork leaves the
-browser.
+**Do not build:** accounts, profiles, Explore, publish-to-community, likes,
+comments, feeds. `SPEC.md §0` puts them out permanently and the user confirmed
+it on 12 Aug 2026.
 
 ### #23 — AI edit quality (Phase 6, deferred)
 

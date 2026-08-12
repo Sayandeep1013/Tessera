@@ -121,3 +121,25 @@ the threshold defeats the entire loop.
 - Never silently discard artwork.
 - Colours come from tokens; no hard-coded hex outside `globals.css`.
 - When the spec turns out to be wrong, say so and propose the change — do not work around it.
+
+---
+
+## Continuity between sessions
+
+A unit is not finished when the code works. It is finished when the next agent
+can start without asking anything.
+
+**[`docs/UNITS.md`](./UNITS.md) §0 is the protocol** — what to do on starting,
+and the six steps to complete before stopping. The important ones:
+
+- Update the ledger: your unit to `DONE` with date, commit and score; the next
+  unit to `NEXT`.
+- Write that unit's **Context handed over** — not a summary of what you did, but
+  the specific things that would otherwise be rediscovered the hard way. What
+  already exists that they will assume does not. Which control is the wrong one
+  to reuse. Which spec section is stale.
+- Add any new trap to `HANDOFF.md §5`.
+- Update `HANDOFF.md §0` so its prompt is the next unit's.
+
+The test of a good handover is whether the next session's first tool call is
+useful work rather than an orientation question.
