@@ -124,22 +124,76 @@ Rules that fall out of the format and the invariants:
 
 ## 4. Canvas resize
 
+### 4.1 Measured layout
+
+From `docs/research/newt/shots/settings-canvas-tab.png`. The Canvas tab is one
+section, and its shape matters because it is doing more than it looks:
+
+```
+Size
+┌────────┬────────┬────────┐
+│   16   │   32   │   64   │      3x3 grid of pills, ~73x36, gap 8
+├────────┼────────┼────────┤
+│  128   │  256   │  16:9  │
+├────────┼────────┼────────┤
+│ Banner │Portrait│ Custom │
+└────────┴────────┴────────┘
+┌──────────────┐ x ┌──────────────┐
+│ W       16   │   │ H       16   │   paired number inputs, label inside
+└──────────────┘   └──────────────┘
+┌───────────────────────────────────┐
+│              16x16                │   full-width APPLY, showing the target
+└───────────────────────────────────┘
+Keeps art centered - grow pads, shrink crops. Undo to revert.
+```
+
+The two things worth copying, because they are not obvious:
+
+1. **The apply button shows the pending size, not the word "Apply".** It reads
+   `16x16` and is disabled while that equals the current size. So the control
+   answers "what will I get" before it answers "do it", and the disabled state
+   needs no explanation.
+2. **The presets and the inputs are one mechanism.** Clicking `64` fills W and H
+   with 64; typing in W and H selects `Custom`. Nothing applies until the button
+   is pressed, so a half-typed `1` in a width field never resizes anything.
+
+Our aspect presets, sized to keep the pixel count sane rather than copied:
+`16:9` -> 64x36, `Banner` -> 128x32, `Portrait` -> 48x64.
+
+### 4.2 The command
+
 A new command, because it mutates the document and rule 4 says every mutation is
 a command.
 
 ```ts
-{ type: 'resize'; label: string; before: { w: number; h: number };
-  after: { w: number; h: number }; cells: PaintCell[] }
+{ type: 'resize'; label: string
+  before: { w: number; h: number }
+  after: { w: number; h: number }
+  /** Every layer of every frame, in order, as it was BEFORE. */
+  prev: Uint8Array[] }
 ```
 
-- **Centred.** Growing pads equally on both sides; shrinking crops equally. An
-  odd difference biases to the top-left, chosen so it is deterministic.
+- **Centred.** Growing pads equally; shrinking crops equally. An odd difference
+  biases to the top-left, chosen because it is deterministic and therefore
+  testable, not because it is prettier.
 - **Every layer of every frame** resizes together, or the document is invalid.
-- **Cropping destroys pixels**, so the inverse has to carry them. Storing the
-  full before-image is the honest way — rule 7 says never silently discard
-  artwork, and "undo brings it back" is only true if undo has the bytes.
-- Presets: 16, 32, 64, 128, 256 square; plus 16:9, banner and portrait shapes;
-  plus explicit W × H. Clamp to whatever `schema.ts` already allows.
+- **Cropping destroys pixels, so the inverse carries them.** `prev` holds the
+  whole previous buffer per layer. That is heavier than a cell list and it is
+  the honest choice: a crop can destroy thousands of pixels, and rule 7 says
+  never silently discard artwork. "Undo restores it" is only true if undo has
+  the bytes.
+- Clamp to the schema's limits; `S-E1` covers the rejection.
+- **`S-E2` is a real case, not a formality.** Shrinking a 64x64 with art in the
+  corners loses it. The apply button says how many painted pixels will be
+  dropped before it is pressed.
+
+### 4.3 Interaction with layers and frames
+
+Resize is the one operation that must touch *every* layer of *every* frame at
+once. A document whose frames disagree about their dimensions is not
+representable — `w` and `h` live on the document, not the frame — so a partial
+resize is not a degraded state, it is a corrupt one. Do it in a single pass that
+builds the whole new `frames` array, and validate before committing.
 
 ---
 
