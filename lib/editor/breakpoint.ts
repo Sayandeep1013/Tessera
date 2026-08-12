@@ -75,8 +75,30 @@ export function chromeFor(tier: Tier) {
      * and layers are a desk activity. The agent's layer actions still work
      * there, and every layer in a document still renders.
      */
+    /**
+     * How far the vertical tool rail is lifted above the centre of <main>.
+     *
+     * <main> starts below the header, so centring the rail in it put the rail
+     * low: a wide gap above, and the agent panel crowding it below. Lifting it
+     * by half the panel's idle footprint centres it on the space that is
+     * actually free. Shared rather than inlined because AgentPanel derives its
+     * own height cap from where the rail's bottom edge ends up, and the two
+     * drifting apart is how a panel starts overlapping a rail again.
+     *
+     * 58 is half of the panel's idle footprint plus its inset (16 + 100) / 2.
+     * Zero on a phone, where the rail lies along the bottom instead.
+     */
+    railLift: tier === 'mobile' ? 0 : 58,
     showLayers: tier !== 'mobile',
-    /** Code, Timeline and Share — still not built. */
+    /**
+     * Share is built, so it leaves the dead-control group too. It survives to
+     * tablet but not to a phone: the popover is 320px wide and the whole point
+     * of it is text the user has to read before their artwork leaves the
+     * browser. Squeezed onto a 320px screen that text is the first thing to go,
+     * and it is the part that must not.
+     */
+    showShare: tier !== 'mobile',
+    /** Code and Timeline — still not built. */
     showUnbuilt: tier === 'wide',
   }
 }

@@ -98,13 +98,18 @@ function shellFor(c: ReturnType<typeof chromeFor>, railBottom: number): React.CS
      * vh value was the first attempt and is wrong — it does not know how tall
      * the rail is, and railButton changes with the tier.
      *
+     * railLift is added back because the rail is no longer centred on <main>:
+     * it is lifted, so its bottom edge is that much higher and this panel has
+     * that much more room. Reading the same constant the rail uses is what
+     * keeps the two from drifting apart.
+     *
      * On a phone the rail is horizontal along the bottom and the panel already
      * clears it via `bottom`, so there the cap only needs to stop the panel
      * swallowing the whole canvas.
      */
     maxHeight: c.railHorizontal
       ? `calc(100% - ${railBottom + c.inset + 8}px)`
-      : `calc(50% - ${c.inset + railHeight(c) / 2 + 8}px)`,
+      : `calc(50% - ${c.inset + railHeight(c) / 2 + 8 - c.railLift}px)`,
     // The log is the part that gives way; the composer and the outcome row are
     // pinned. A user must never have to scroll to reach Undo all or Stop.
     display: 'flex',

@@ -74,15 +74,33 @@ export function Canvas() {
     const ro = new ResizeObserver(apply)
     ro.observe(wrap)
 
-    const mq = window.matchMedia('(prefers-color-scheme: dark)')
     const onTheme = () => {
       themeRef.current = readTheme(document.documentElement)
       markDirty()
     }
+
+    /**
+     * Two triggers, because there are two ways the theme changes and watching
+     * only one of them was a real bug.
+     *
+     * The media query catches the OS switching. It does NOT catch the theme
+     * button in the top bar, which toggles a `dark`/`light` class on
+     * documentElement — so drawing in dark mode and then switching to light
+     * left the canvas holding the dark palette, and the artwork sat on a black
+     * slab on a white page until something else happened to invalidate the
+     * cached theme. Harmless while --art-bg was white in both themes; the
+     * moment it started following the theme, it was the most visible thing on
+     * the screen.
+     */
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
     mq.addEventListener('change', onTheme)
+    const classes = new MutationObserver(onTheme)
+    classes.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
     return () => {
       ro.disconnect()
       mq.removeEventListener('change', onTheme)
+      classes.disconnect()
     }
   }, [markDirty])
 

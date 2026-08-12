@@ -23,6 +23,7 @@ import {
   PaintBucket, PixelPerfect, Plus, Selection, Sliders, Square, Stack,
 } from './icons'
 import { Tooltip, type Placement } from './Tooltip'
+import { SharePopover } from './SharePopover'
 
 type IconCmp = typeof PaintBrush
 
@@ -140,6 +141,7 @@ export function TopBar() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
   const [ditherOpen, setDitherOpen] = useState(false)
+  const [shareOpen, setShareOpen] = useState(false)
   const dither = useEditorStore((s) => s.dither)
   const [dark, setDark] = useState(false)
   const c = chromeFor(useTier())
@@ -361,21 +363,28 @@ export function TopBar() {
         <GlyphBtn title="Undo (Ctrl+Z)" Icon={ArrowUturnLeft} onClick={() => runUi('undo', {})} disabled={!past.length} />
         <GlyphBtn title="Redo (Ctrl+Shift+Z)" Icon={ArrowUturnRight} onClick={() => runUi('redo', {})} disabled={!future.length} />
 
-        {c.showUnbuilt && (
-        <Tooltip label="Share — not built yet" placement="bottom">
-          <button
-            aria-label="Share — export, publish"
-            disabled
-            style={{
-              height: 40, display: 'flex', alignItems: 'center', gap: 6,
-              padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
-              font: 'var(--t-label-lg)', color: 'var(--disabled)',
-            }}
-          >
-            <Export size={20} />
-            <span>Share</span>
-          </button>
-        </Tooltip>
+        {c.showShare && (
+          <div style={{ position: 'relative' }}>
+            <Tooltip label="Share a link to this artwork" placement="bottom">
+              <button
+                aria-label="Share"
+                aria-haspopup="dialog"
+                aria-expanded={shareOpen}
+                onClick={() => setShareOpen((v) => !v)}
+                style={{
+                  height: 40, display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
+                  font: 'var(--t-label-lg)',
+                  color: shareOpen ? 'var(--fg)' : 'var(--muted)',
+                  background: shareOpen ? 'var(--hover)' : 'transparent',
+                }}
+              >
+                <Export size={20} />
+                <span>Share</span>
+              </button>
+            </Tooltip>
+            {shareOpen && <SharePopover onClose={() => setShareOpen(false)} />}
+          </div>
         )}
 
         {/* Not built yet. They hold newt's layout on a wide screen, but they are
@@ -695,8 +704,25 @@ export function ToolRail() {
         pointerEvents: 'none', zIndex: 10,
       }
     : {
-        position: 'absolute', left: c.inset, top: '50%', transform: 'translateY(-50%)',
-        pointerEvents: 'none', zIndex: 10,
+        /**
+         * Centred on the space it actually has, not on <main>.
+         *
+         * <main> starts below the header, so `top: 50%` centres the rail in the
+         * full column — but the agent panel occupies the bottom of that column
+         * and the header sits directly above it, so the rail read as sitting
+         * too low, with a wide gap above and none below. Reported as such.
+         *
+         * The lift itself lives in chromeFor, because AgentPanel derives its
+         * height cap from where this leaves the rail's bottom edge. Kept as a
+         * translate so the rail's own height still does the centring and
+         * nothing here has to know it.
+         */
+        position: 'absolute',
+        left: c.inset,
+        top: '50%',
+        transform: `translateY(calc(-50% - ${c.railLift}px))`,
+        pointerEvents: 'none',
+        zIndex: 10,
       }
 
   return (

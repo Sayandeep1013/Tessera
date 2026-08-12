@@ -65,8 +65,26 @@ export function readTheme(el: HTMLElement): ThemeColors {
 
 /** Size the backing store for the device, then work in CSS pixels forever after. */
 export function resizeCanvas(canvas: HTMLCanvasElement, cssW: number, cssH: number): void {
-  // Capped at 2: the artwork is hard-edged rectangles, so a 3x store buys nothing.
-  const dpr = Math.min(typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1, 2)
+  /**
+   * A WHOLE number, capped at 2.
+   *
+   * Capped because the artwork is hard-edged rectangles and a 3x store buys
+   * nothing. Floored because a fractional one is visibly wrong: Windows at 125%
+   * and 150% display scaling reports devicePixelRatio 1.25 and 1.5, and this
+   * value goes straight into setTransform. A cell boundary at an odd CSS pixel
+   * then lands on a HALF device pixel, the browser antialiases it, and the
+   * result is one faint line per row — which reads as a grid that will not
+   * switch off. Reported as exactly that, and measured in tools/probe-crisp.ts:
+   * a flat fill sampled down a column gives 1 colour at dpr 1 and 2, but 4 at
+   * 1.25 and 2 at 1.5.
+   *
+   * Flooring costs nothing real. Crispness in pixel art comes from exact
+   * alignment, not from extra resolution: at an integer scale and an integer
+   * dpr every cell edge is a device pixel edge, which is the sharpest an edge
+   * can possibly be.
+   */
+  const raw = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1
+  const dpr = Math.max(1, Math.min(Math.floor(raw), 2))
   const w = Math.max(1, Math.round(cssW * dpr))
   const h = Math.max(1, Math.round(cssH * dpr))
   if (canvas.width !== w || canvas.height !== h) {
