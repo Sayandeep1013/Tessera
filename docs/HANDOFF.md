@@ -1,10 +1,10 @@
 # Session handoff — Tessera
 
 **Written:** 12 Aug 2026, end of session.
-**Repo:** https://github.com/Sayandeep1013/Tessera · branch `main` · last commit `72de67d`
-**State:** everything green, **not yet committed** — the layers unit is sitting in the working tree.
-253 tests across 16 files, production build clean, 6 measured viewports clean,
-`tools/probe-layers.ts` 42/42 in both themes, zero runtime errors.
+**Repo:** https://github.com/Sayandeep1013/Tessera · branch `main` · last commit `3844da0`
+**State:** everything green and committed; **not pushed**. 253 tests across 16 files, production
+build clean, 6 measured viewports clean, `tools/probe-layers.ts` 42/42 in both themes, zero runtime
+errors.
 
 ---
 
