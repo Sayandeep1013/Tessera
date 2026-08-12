@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ACTIONS, runAction, toDeclarations, actionNamesByKind } from '../registry'
 import { CATALOGUE } from '../catalogue'
 import type { ActionCtx } from '../types'
+import { applyCommand, invertCommand } from '../../artwork-core/commands'
 import { makeCtx } from './harness'
 
 describe('registry integrity', () => {
@@ -238,6 +239,37 @@ describe('destructive actions', () => {
     const b = makeCtx({ confirmed: true })
     expect(runAction('new_document', { width: 8, height: 8 }, b.ctx).ok).toBe(true)
     expect(b.getDoc().w).toBe(8)
+  })
+
+  /**
+   * Spec 17 §7.11. Drafts are keyed by doc.id, so reusing it meant the blank
+   * canvas was autosaved straight over the drawing it replaced — undo brought
+   * the artwork back, but only until a reload.
+   */
+  it('new_document forks to a fresh id, so the old draft survives', () => {
+    const b = makeCtx({ confirmed: true })
+    const before = b.getDoc().id
+    runAction('new_document', { width: 8, height: 8 }, b.ctx)
+    expect(b.getDoc().id).toBe('new-id-1')
+    expect(b.getDoc().id).not.toBe(before)
+  })
+
+  it('…and undo puts the original id back with the original artwork', () => {
+    const b = makeCtx({ confirmed: true })
+    const before = b.getDoc()
+    runAction('new_document', { width: 8, height: 8 }, b.ctx)
+    const back = applyCommand(b.getDoc(), invertCommand(b.committed[0]!))
+    expect(back.id).toBe(before.id)
+    expect(back.w).toBe(before.w)
+  })
+
+  /** A blank canvas called "face" is wrong, and two "face" rows in Open recent
+   *  — one of them empty — is worse. */
+  it('…and does not carry the old name onto a blank canvas', () => {
+    const b = makeCtx({ confirmed: true })
+    expect(b.getDoc().name).toBe('face')
+    runAction('new_document', { width: 8, height: 8 }, b.ctx)
+    expect(b.getDoc().name).toBe('')
   })
 })
 

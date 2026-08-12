@@ -177,6 +177,21 @@ export class AgentSession {
     // Fall back to a whole-document replacement so undo still works.
     if (current.w !== this.before.w || current.h !== this.before.h) return replaceDoc()
 
+    /**
+     * The document's IDENTITY changed, so this is a different document even if
+     * every other measurement matches.
+     *
+     * `new_document` forks to a fresh id (spec 17 §7.11), and a same-size
+     * new_document — 32x32 over 32x32 — passes the dimension check above and the
+     * layer-shape check below, because a blank canvas has the same one layer as
+     * the document it replaced. Without this guard the session would collapse to
+     * an `ai_edit` carrying pixels only, and undo would restore the artwork
+     * under the NEW id while leaving the old draft orphaned. Same
+     * silent-corruption class as the ai_edit palette bug in 14 §0.2, and it is
+     * why B1 refused to fork the id until this line existed.
+     */
+    if (current.id !== this.before.id) return replaceDoc()
+
     // Same fallback, same reason, one level down: an ai_edit carries ONE layer
     // index, so it can only express a change confined to one layer of an
     // otherwise-unchanged stack. An agent that added a layer, or called

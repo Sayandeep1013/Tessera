@@ -25,8 +25,28 @@ unit to do — the ledger says.
 This is the part that keeps the chain unbroken. A unit is not done when the code
 works; it is done when the next agent can start without asking anything.
 
-1. **Verify.** `npm test` · `npm run typecheck` · `npm run build` ·
-   `npx tsx tools/check-responsive.ts` · the probes your unit touched. All green.
+1. **Verify.** All green, all four:
+
+   ```bash
+   npm test          # 385 tests, no browser needed
+   npm run typecheck
+   npm run build     # rm -rf .next first if a dev server has been running
+
+   # every browser probe, against one server, in one command
+   AI_PROVIDER=mock npx next dev --turbopack -p 3100
+   MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
+   ```
+
+   **Run all of the probes, not the ones you think you touched.** B1 renamed a
+   File-menu item and broke `probe-layers` and `probe-zoom`, which are about
+   neither files nor menus. Nobody would have chosen to run them. `npm run
+   probes` exists so the choice is not yours to get wrong — and it is how
+   `e2e-agent` was found never to have passed in mock mode at all.
+
+   Start the server with `AI_PROVIDER=mock`: the agent runs **server-side**, so
+   setting it on the probe leaves the real key in play, spends the 5-per-minute
+   budget and fails on wording the model was never asked for. Without
+   `MOCK_SERVER=1` the runner skips those two rather than burning quota.
 2. **Look at it.** Screenshot both themes and actually read the image. Measured
    and looked-at are different checks and this repo has been caught by both.
 3. **Score honestly** in the unit's block below. Six dimensions, overall is the
@@ -187,12 +207,11 @@ around** (rule 10):
    is still tested.
 2. **New… *is* undoable.** §2 says it is not. `new_document` commits a
    `replace_doc` carrying the whole previous document, so Ctrl+Z restores the
-   drawing exactly. What is not recoverable is a **reload** — the blank canvas
-   keeps the same document id, autosave writes over the draft, and history is
-   memory-only. The confirm says that and no more.
-3. **§2's "the old drawing stays in recent" is not true today**, for the same
-   reason. See the note handed to B2 below; the fix belongs there and is not
-   safe here.
+   drawing exactly.
+3. **§2's "the old drawing stays in recent" was not true**, because
+   `new_document` and `loadExample` both reused the document's id and were
+   autosaved over the drawing they replaced. **Now fixed** — see the follow-up
+   below.
 
 **Four decisions the spec did not contain**, all in §7: the shortcut column
 shows `Ctrl S` only, because that is the only key wired and a hint is a promise;
@@ -213,16 +232,68 @@ Duplicate does not. §7.3 is the table.
 (`HANDOFF §11`). It is one line, it is the same defect A2 fixed elsewhere, and
 this is the unit that owns that function.
 
+### The follow-up — the two things B1 first shipped as caveats
+
+B1's first pass named two problems and handed them on. Both are now fixed, in
+the same unit, because a caveat handed forward is a caveat nobody owns. Recorded
+in `17-file-menu.md §7.11` and `§7.12`.
+
+**1. Replacing the document now forks to a new draft.** Drafts are keyed by
+`doc.id`, so `new_document` and `loadExample` reusing it meant the replacement
+was autosaved straight over the drawing it replaced. The rule is now uniform —
+*anything that replaces the whole document with a different artwork takes a
+fresh id* — and it covers New…, Examples and Duplicate. All three still go
+through `commit()`, so undo restores the previous document **including its id**:
+both recoveries, not a choice between them.
+
+The reason B1 would not do this alone was real, and it is now the guard that
+makes it safe. `lib/agent/session.ts` collapsed a session by comparing
+dimensions and layer shape and nothing else, so a *same-size* `new_document`
+inside an agent session would have collapsed to an `ai_edit` carrying pixels
+only — undo restoring the artwork under the **new** id and orphaning the old
+draft. One line, `if (current.id !== this.before.id) return replaceDoc()`,
+pinned by a test that fails without it.
+
+Two consequences: New… no longer carries the old name onto a blank canvas, and
+its confirm stopped being red. It now promises something the code keeps, so it
+gets `--solid` and Clear keeps `--diff-remove` — a red button that never costs
+anything is how a red button stops meaning anything.
+
+**2. Probe rot is now caught, twice.** `lib/__tests__/probe-handles.test.ts`
+statically asserts every `#id` selector in `tools/` still exists in the app; the
+File menu's handles are built by functions that also feed the test's allow-list,
+so the component and the check cannot drift. Verified by breaking it on purpose
+— it named all three affected probes. And `npm run probes` runs every browser
+probe against one server in one command, which is the answer to a protocol step
+that used to require guessing your own blast radius.
+
+**The runner paid for itself on its first run**, finding two pre-existing
+problems neither of which is about this unit:
+
+- `probe-agent-ui` and `e2e-agent` need `AI_PROVIDER=mock` on the **dev server**,
+  not the probe process — the agent runs server-side, so the old invocation left
+  the server on a real key, spent quota, and failed on wording it never asked
+  the model for. The runner now skips them unless `MOCK_SERVER=1`.
+- **`e2e-agent` had never actually passed in mock mode** (HANDOFF §11 suspected
+  as much and nobody had checked). It ignored `APP_URL`, and its `Stop` click
+  raced the agent panel's own aria-live log into a 30-second timeout. Both
+  fixed, and that block now asserts the run really stopped instead of passing
+  vacuously when the click was swallowed.
+
 ### Score — six dimensions, overall is the lowest
+
+Scored after the follow-up. The first pass scored the same 9 overall, but on
+weaker lines — correctness carried a caveat about New overwriting the previous
+draft, and regressions carried two probes broken by a rename.
 
 | # | Dimension | Score | Why not higher |
 |---|---|---|---|
-| 1 | Spec conformance | 9 | Every item in §6 step 1 is built, three spec errors corrected and seven gaps filled in §7. Not 10: the menu on screen is not yet the menu §1 draws — Open recent and Paste image are absent by §6's own ordering, and the shortcut hints §1 shows are withheld until step 3 wires the keys. |
-| 2 | Correctness | 9 | F-M1 handled both ways; Clear is one batch, undoes byte-exactly, clears hidden layers and leaves other frames alone; Duplicate's flush-then-fork verified against real IndexedDB records. The coarse edge, stated rather than hidden: New reuses the document id, so the previous drawing does not survive a reload. The confirm says so; the fix is B2's, and §7.2 of this table says why it is not safe here. |
-| 3 | Tests | 9 | 49 unit tests on the three new modules, 80 browser checks on the wiring, in both themes and at 390 and 320. Still the repo-wide condition: the probe needs a dev server, so `npm test` cannot guard menu wiring — which is exactly how the rename silently broke two unrelated probes. |
-| 4 | Integration | 9 | `commit()` is still the only writer of the open document; `setDoc` is used only where `openFile` already used it, for "a different document is now open"; artwork-core still imports nothing but zod; the menu is data plus an exhaustive `Record<FileMenuItemId, …>`, so a new item cannot render dead; tokens only. One new read on the dev-only `window.__tessera`. |
-| 5 | Design fidelity | 9 | Read in both themes and at both phone widths, with the submenu expanded and with the confirm open. The one divergence from §1 is the disclosure instead of the flyout, and it is a divergence because the flyout does not fit — measured, §7.1. |
-| 6 | No regressions | 9 | 376 tests, clean build, six viewports, `probe-layers`, `probe-tools-ui`, `probe-tooltip`, `probe-canvas-size` 70/70 and `probe-zoom` all green. Two probes the rename broke are fixed in this same change, and a `HANDOFF §11` debt item is gone. |
+| 1 | Spec conformance | 9 | Every item in §6 step 1 is built; four spec errors corrected and nine gaps filled in §7, including §2's "stays in recent", which is now true rather than explained away. Not 10: the menu on screen is not yet the menu §1 draws — Open recent and Paste image are absent by §6's own ordering, and the shortcut hints §1 shows are withheld until step 3 wires the keys. |
+| 2 | Correctness | 9 | F-M1 handled both ways; Clear is one batch, undoes byte-exactly, clears hidden layers and leaves other frames alone; New, Examples and Duplicate all fork, all verified against real IndexedDB records, and all still undoable including their ids. Not 10: the header's filename input still does not write back, so Duplicate copies whatever name the document loaded with — pre-existing, and it makes `untitled copy` the common case. |
+| 3 | Tests | 9 | 52 unit tests on the new modules plus the id fork and its session guard, 80 browser checks on the wiring in both themes and at 390 and 320, and a static guard that fails `npm test` when a probe names an element that no longer exists. Not 10: that guard catches ids, not labels or flow — a probe can still rot in ways only running it will show, which is what `npm run probes` is for and why it is now in the protocol. |
+| 4 | Integration | 9 | `commit()` is still the only writer of the open document; the fork goes through `replace_doc` rather than around it; ids are injected through `ActionCtx.newId` so artwork-core and the catalogue stay pure and deterministic under test; the menu is data plus an exhaustive `Record<FileMenuItemId, …>`; tokens only. Not 10: adding a required `ActionCtx` field showed there are four near-identical hand-built contexts in the repo, and I updated all four rather than consolidating them — noted as debt. |
+| 5 | Design fidelity | 9 | Read in both themes and at both phone widths, with the submenu expanded and both confirms open. The two confirms are now painted by what they cost — red only where work is destroyed. The one divergence from §1 is the disclosure instead of the flyout, and it is a divergence because the flyout does not fit — measured, §7.1. |
+| 6 | No regressions | 9 | 385 tests, clean build, six viewports, and **every** browser probe green in one run — including `e2e-agent`, which had never actually passed in mock mode before. Two probes this unit broke are fixed, and two `HANDOFF §11` debt items are gone. |
 
 **Overall: 9/10.**
 
@@ -234,15 +305,20 @@ this is the unit that owns that function.
 - **`⌘N`, `⌘O`, `⌘V`.** Step 3 of §6. Two of them are the browser's own and need
   §3's conditional `preventDefault`, which is the whole reason shortcuts are a
   separate step.
-- **Giving New… a fresh document id.** It would make §2's "stays in recent" true,
-  and it is three lines — but `lib/agent/session.ts` collapses a session by
-  comparing dimensions and layer shape, *not* ids, so a same-size
-  `new_document` inside an agent session would collapse to an `ai_edit` that
-  silently drops the id change. B2 is where the fix pays off and where the guard
-  can move with it.
 - **Renaming the document from the header.** The filename input still does not
   write back (a pre-existing gap, noted in `Chrome.tsx`), so Duplicate copies
   whatever name the document loaded with — `untitled copy` for a fresh canvas.
+  It is a small unit of its own and B2 will feel it first, because Open recent
+  lists documents by name.
+- **Consolidating the four hand-built `ActionCtx` objects.** Adding `newId` made
+  the compiler name all four — `lib/actions/__tests__/harness.ts`,
+  `session.test.ts`, `run.test.ts`, `tools/probe-agent.ts`. They should share
+  the harness. Left alone deliberately: it touches the agent's tests and this
+  change was already reaching into the agent for the session guard.
+- **A probe guard for labels and flow.** `probe-handles.test.ts` catches a probe
+  naming a dead id, which is the common rot. A probe can still break on a
+  changed label or an extra confirm step, and only running it will show that —
+  hence `npm run probes` in the protocol.
 
 ---
 
@@ -282,18 +358,21 @@ this is the unit that owns that function.
 - **B1 already proved two drafts survive a Duplicate**, so there is real data to
   list on day one.
 
-**The decision this unit should make, which B1 deliberately did not:**
+**There will already be drafts to list, and that is deliberate:**
 
-- **Should `New…` mint a fresh document id?** §2 promises "the old drawing stays
-  in recent" and it does not: `new_document` reuses `doc.id`, so autosave writes
-  over the previous draft and only in-session undo brings it back. B1's confirm
-  is honest about that rather than papering over it (`§7`, `newConfirm`). The fix
-  is three lines in `lib/actions/catalogue.ts` — **but do not make it without
-  also fixing `lib/agent/session.ts`**, which collapses a session by comparing
-  dimensions and layer shape and *not* ids. A same-size `new_document` inside an
-  agent session would otherwise collapse to an `ai_edit` that silently drops the
-  id change. That is the silent-corruption class the whole command design exists
-  to avoid, so it is a guard plus a test, not a one-liner.
+- **`New…`, `Examples` and `Duplicate` all fork to a fresh document id** as of
+  B1's follow-up (`17-file-menu.md §7.11`), so every one of them leaves the
+  previous drawing in IndexedDB under its own key. Open recent is what makes
+  that reachable — the plumbing is done and this unit is the surface.
+- **The rule is written down**: *anything that replaces the whole document with
+  a different artwork takes a fresh id*. If you add such a command, it forks,
+  and `lib/agent/session.ts` already falls back to `replace_doc` on an id change
+  so a session cannot silently drop it.
+- **Names are the weak spot.** The header's filename input does not write back
+  to the document, so most drafts are called nothing and show as `untitled`.
+  A recent list of eight `untitled` rows is a bad list. Either wire the input as
+  part of this unit or lean on the relative date and a thumbnail — decide
+  deliberately and say which.
 
 ### Prompt
 
@@ -308,10 +387,9 @@ this is the unit that owns that function.
 > Reuse the Examples disclosure rather than building a flyout, and extend
 > `tools/probe-file-menu.ts` rather than writing a second probe.
 >
-> Decide, in writing, whether `New…` should take a fresh document id so that
-> "the old drawing stays in recent" becomes true — and if it should, fix
-> `lib/agent/session.ts` in the same change, because it compares dimensions and
-> layer shape but not ids.
+> Most drafts have no name, because the header's filename input does not write
+> back to the document. Decide whether wiring it belongs in this unit or whether
+> the date and a thumbnail carry the list, and say which.
 >
 > Then follow the finishing protocol in `docs/UNITS.md §0`.
 

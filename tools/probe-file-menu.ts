@@ -189,8 +189,11 @@ async function run(p: Page, theme: string) {
   await p.waitForTimeout(200)
   const newMsg = (await p.getByRole('alertdialog').innerText()).replace(/\s+/g, ' ')
   check(t('New confirms on a painted document (F-M1)'), newMsg.includes('blank 32×32'), newMsg)
-  check(t('…and is honest that undo lasts until a reload'),
-    newMsg.includes('Undo brings it back') && newMsg.includes('reload'), newMsg)
+  check(t('…and promises the drawing is kept, and undo works (§7.11)'),
+    newMsg.includes('kept as its own draft') && newMsg.toLowerCase().includes('undo brings it'),
+    newMsg)
+  check(t('…without hedging about a reload, because it no longer has to'),
+    !newMsg.toLowerCase().includes('reload'), newMsg)
   check(t('…the menu body is replaced while it asks (§7.5)'),
     (await menu(p).getByRole('menuitem').count()) === 0)
   await p.screenshot({ path: join(OUT, `probe-file-menu-${theme}-confirm-new.png`) })
@@ -201,7 +204,31 @@ async function run(p: Page, theme: string) {
     (await menu(p).count()) === 1 && (await menu(p).getByRole('menuitem').count()) > 0)
   check(t('…and nothing was destroyed'), (await paintedCount(p)) === 1)
 
+  // ── New really does keep the old drawing — §7.11, the point of the fork ───
+  const beforeNew = await identity(p)
+  await p.locator('#file-new').click()
+  await p.waitForTimeout(200)
+  // A literal, not a template — probe-handles.test.ts scans for `locator('#…')`
+  // and a computed selector would slip past the guard that exists for this file.
+  await p.locator('#file-confirm-new').click()
+  await p.waitForTimeout(1200) // the fork's own debounced save
+
+  const afterNew = await identity(p)
+  check(t('New forks to a fresh document id'), afterNew.id !== beforeNew.id,
+    `${beforeNew.id} → ${afterNew.id}`)
+  check(t('…giving a blank canvas'), (await paintedCount(p)) === 0)
+  const afterNewDrafts = (await p.evaluate(DRAFTS)) as Identity[]
+  check(t('…while the drawing it replaced is still saved'),
+    afterNewDrafts.some((d) => d.id === beforeNew.id), JSON.stringify(afterNewDrafts))
+
+  await p.keyboard.press('Control+z')
+  await p.waitForTimeout(400)
+  check(t('…and Ctrl+Z brings that drawing straight back'),
+    (await paintedCount(p)) === 1 && (await identity(p)).id === beforeNew.id)
+
   // ── Clear: the cost first, then one undoable command ──────────────────────
+  // Reopen: confirming New closes the menu, unlike cancelling it.
+  await openMenu(p)
   await p.locator('#file-clear').click()
   await p.waitForTimeout(200)
   const clearMsg = (await p.getByRole('alertdialog').innerText()).replace(/\s+/g, ' ')

@@ -40,6 +40,8 @@ function harness(start?: Doc) {
     setLayer: (i) => {
       layer = clampLayer(doc, 0, i)
     },
+    // Deterministic, so "did new_document fork the id" is assertable.
+    newId: () => 'forked-id',
     // the interception: apply live, do NOT push to history
     commit: (cmd) => {
       doc = applyCommand(doc, cmd)
@@ -201,6 +203,33 @@ describe('dimension changes fall back to replace_doc', () => {
     const back = applyCommand(applyCommand(start, out.command!), invertCommand(out.command!))
     expect(back.w).toBe(16)
     expect(back.h).toBe(16)
+  })
+
+  /**
+   * The guard that made forking the id safe — spec 17 §7.11.
+   *
+   * A SAME-SIZE new_document passes the dimension check (16x16 over 16x16) and
+   * the layer-shape check (a blank canvas has the same single layer), so before
+   * this guard the session collapsed to an `ai_edit` carrying pixels only. Undo
+   * would then restore the artwork under the NEW id and orphan the old draft:
+   * the same silent-corruption class as the ai_edit palette bug in 14 §0.2.
+   */
+  it('a same-size new_document still falls back, because the id changed', () => {
+    const h = harness()
+    const start = loadStarter('face')
+    h.call('new_document', { width: start.w, height: start.h })
+
+    expect(h.getDoc().w).toBe(start.w)
+    expect(h.getDoc().h).toBe(start.h)
+    expect(h.getDoc().id).not.toBe(start.id)
+
+    const out = h.session.finalise(h.getDoc(), 'started over', 'finish')
+    expect(out.command!.type).toBe('replace_doc')
+
+    const back = applyCommand(applyCommand(start, out.command!), invertCommand(out.command!))
+    expect(back.id).toBe(start.id)
+    expect(Array.from(back.frames[0]!.layers[0]!.px))
+      .toEqual(Array.from(start.frames[0]!.layers[0]!.px))
   })
 })
 

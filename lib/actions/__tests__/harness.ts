@@ -16,6 +16,9 @@ import type { ActionCtx, EditorSnapshot } from '../types'
 export function makeCtx(over: Partial<ActionCtx> = {}, start?: Doc) {
   let doc: Doc = start ?? loadStarter('face')
   let layer = 0
+  // Deterministic, so a test can assert the id a fork took. The app injects
+  // nanoid() (lib/store/ctx.ts).
+  let ids = 0
   const committed: EditorCommand[] = []
   const editor: EditorSnapshot = {
     tool: 'brush',
@@ -49,6 +52,7 @@ export function makeCtx(over: Partial<ActionCtx> = {}, start?: Doc) {
       toggleGrid: (on) => (editor.showGrid = on ?? !editor.showGrid),
       state: () => ({ ...editor }),
     },
+    newId: () => `new-id-${++ids}`,
     undo: () => {},
     redo: () => {},
     historyDepth: () => ({ undo: committed.length, redo: 0 }),

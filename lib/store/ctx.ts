@@ -10,6 +10,7 @@
  * building its own.
  */
 
+import { nanoid } from 'nanoid'
 import { runAction } from '../actions/registry'
 import type { ActionCtx, ActionResult } from '../actions/types'
 import { useDocStore, useEditorStore } from './editor'
@@ -43,6 +44,7 @@ export function buildCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
         }
       },
     },
+    newId: () => nanoid(),
     undo: () => useDocStore.getState().undo(),
     redo: () => useDocStore.getState().redo(),
     historyDepth: () => {

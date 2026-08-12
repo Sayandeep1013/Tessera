@@ -88,6 +88,7 @@ const ctx: ActionCtx = {
   doc: () => doc,
   frame: () => 0,
   layer: () => layer,
+  newId: () => `probe-${Date.now()}`,
   setLayer: (i) => {
     layer = clampLayer(doc, 0, i)
   },

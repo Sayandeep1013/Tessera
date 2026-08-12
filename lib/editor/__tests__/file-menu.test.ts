@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CLEAR_ACTION, FILE_MENU, FILE_MENU_ITEMS, NEW_ACTION,
+  CLEAR_ACTION, CLEAR_TONE, FILE_MENU, FILE_MENU_ITEMS, NEW_ACTION, NEW_TONE,
   clearConfirm, needsNewConfirm, newConfirm, starterLabel,
 } from '../file-menu'
 import { createDoc, listStarters } from '../../artwork-core/create'
@@ -106,15 +106,27 @@ describe('what the confirms say', () => {
   })
 
   /**
-   * §7 corrects §2 here: New DOES go through commit, so Ctrl+Z brings the
-   * drawing back — but the blank canvas keeps the same document id, so autosave
-   * writes over the old draft and a reload is the real one-way door. The
-   * sentence says that and no more.
+   * §7.11. New forks to a fresh document id, so the previous drawing keeps its
+   * own draft AND undo restores it. Both halves are promised, and both are true
+   * — the earlier wording had to hedge about a reload because the id was reused.
    */
-  it('New promises undo, and is honest about the reload', () => {
+  it('New promises the draft is kept, and that undo works', () => {
     const m = newConfirm(16, 16)
-    expect(m).toContain('Undo brings it back')
-    expect(m).toContain('reload')
+    expect(m).toContain('kept as its own draft')
+    expect(m.toLowerCase()).toContain('undo brings it straight back')
+  })
+
+  it('New no longer hedges about a reload, because it no longer has to', () => {
+    expect(newConfirm(16, 16).toLowerCase()).not.toContain('reload')
+  })
+
+  /**
+   * The tones are the whole point of having two confirms. A red button that
+   * never costs anything is how a red button stops meaning anything.
+   */
+  it('only the confirm that destroys work is red', () => {
+    expect(CLEAR_TONE).toBe('danger')
+    expect(NEW_TONE).toBe('primary')
   })
 
   it('Clear says the cost while the decision is still open', () => {

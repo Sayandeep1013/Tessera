@@ -465,11 +465,28 @@ const redoAction = defineAction({
 
 // ─── destructive ─────────────────────────────────────────────────────────────
 
+/**
+ * Start over on a blank canvas.
+ *
+ * **Takes a fresh id**, so this forks rather than overwrites. Drafts are keyed
+ * by `doc.id` (`lib/persist/idb.ts`), so reusing it meant the blank canvas was
+ * autosaved straight over the drawing it replaced: undo brought the artwork
+ * back, but only until a reload. Spec 17 §2 promises the previous drawing is
+ * kept, and this is what makes that true — see §7.11.
+ *
+ * Still `destructive`, and still confirmed. The confirmation is not about
+ * losing bytes any more, it is about swapping the whole document under someone.
+ *
+ * The name is NOT carried over. A blank canvas called "face" is wrong on its own
+ * terms, and once Open recent lists both drafts, two rows called "face" — one of
+ * them empty — is worse than an untitled row.
+ */
 const newDocument = defineAction({
   name: 'new_document',
   description:
-    'Discard the current artwork and start a blank canvas. Destructive — the user is ' +
-    'asked to confirm. Only call this when explicitly asked to start over.',
+    'Set the current artwork aside and start a blank canvas. The previous drawing is kept ' +
+    'as its own draft. Destructive — the user is asked to confirm. Only call this when ' +
+    'explicitly asked to start over.',
   input: z.object({
     width: z.number().int().min(1).max(256),
     height: z.number().int().min(1).max(256),
@@ -479,7 +496,7 @@ const newDocument = defineAction({
     if (!ctx.confirmed) return fail('requires user confirmation')
     const doc = needDoc(ctx)
     if (!doc) return fail('no document is open')
-    const next = createDoc({ id: doc.id, w: width, h: height, name: doc.name })
+    const next = createDoc({ id: ctx.newId(), w: width, h: height })
     ctx.commit({ type: 'replace_doc', label: 'AI: new document', before: doc, after: next })
     return ok({ width, height })
   },

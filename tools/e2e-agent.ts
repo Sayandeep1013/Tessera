@@ -15,7 +15,11 @@
 
 import { chromium, type Page } from 'playwright'
 
-const URL = process.env.E2E_URL ?? 'http://localhost:3000'
+// APP_URL as well as E2E_URL: every other probe honours APP_URL, and this one
+// silently did not — `npm run probes` pointed the whole suite at 3100 and this
+// script alone went to 3000 and died on ERR_CONNECTION_REFUSED. E2E_URL still
+// wins so any existing invocation keeps working.
+const URL = process.env.E2E_URL ?? process.env.APP_URL ?? 'http://localhost:3000'
 
 const CANVAS_HASH = `(() => {
   const c = document.querySelector('canvas')
@@ -65,8 +69,25 @@ async function main() {
 
   const stop = p.getByRole('button', { name: 'Stop' })
   await stop.waitFor({ timeout: 15_000 }).catch(() => {})
-  if (await stop.isVisible().catch(() => false)) await stop.click()
-  await p.waitForTimeout(1000)
+  /**
+   * `force`, because the step log is repainting underneath the cursor.
+   *
+   * The runaway scenario appends a row per step to an aria-live log that sits
+   * over the button, so a normal click loses a race against it: Playwright
+   * reports "element is not stable", then "<div class=step-row> intercepts
+   * pointer events", then "element was detached from the DOM", and finally
+   * times out after 30s and takes the whole script down. The button is visible
+   * and real the entire time — what fails is the actionability wait, not the
+   * control. Found by `npm run probes`; this script had never been run in mock
+   * mode, which is the gap HANDOFF §11 recorded and nobody had closed.
+   */
+  await stop.click({ force: true, timeout: 5_000 }).catch(() => {})
+  await p.waitForTimeout(1500)
+
+  // The assertions below are only worth anything if the run actually stopped —
+  // without this, a Stop that silently did nothing still "leaves a rendered
+  // document".
+  check('Stop ends the run', (await stop.count()) === 0)
 
   const afterStop = (await p.evaluate(CANVAS_HASH)) as number
   check('stopping leaves a rendered document', afterStop > 0)

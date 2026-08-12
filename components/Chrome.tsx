@@ -18,8 +18,9 @@ import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/art
 import { clearFrameCommand, paintedCellCount } from '@/lib/artwork-core/clear'
 import { duplicateDoc } from '@/lib/artwork-core/duplicate'
 import {
-  CLEAR_ACTION, FILE_MENU, NEW_ACTION, clearConfirm, needsNewConfirm, newConfirm,
-  starterLabel, type FileMenuItem, type FileMenuItemId,
+  CLEAR_ACTION, CLEAR_TONE, CONFIRM_DOM_ID, FILE_MENU, NEW_ACTION, NEW_TONE,
+  clearConfirm, exampleDomId, menuItemDomId, needsNewConfirm, newConfirm, starterLabel,
+  type ConfirmTone, type FileMenuItem, type FileMenuItemId,
 } from '@/lib/editor/file-menu'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
@@ -566,18 +567,20 @@ function FileMenu({ onClose }: { onClose: () => void }) {
     >
       {confirming === 'new' && (
         <MenuConfirm
-          id="file-confirm-new"
+          id={CONFIRM_DOM_ID.new}
           message={newConfirm(doc?.w ?? 16, doc?.h ?? 16)}
           action={NEW_ACTION}
+          tone={NEW_TONE}
           onCancel={() => setConfirming(null)}
           onConfirm={startNew}
         />
       )}
       {confirming === 'clear' && (
         <MenuConfirm
-          id="file-confirm-clear"
+          id={CONFIRM_DOM_ID.clear}
           message={clearConfirm(painted)}
           action={CLEAR_ACTION}
+          tone={CLEAR_TONE}
           onCancel={() => setConfirming(null)}
           onConfirm={clearFrame}
         />
@@ -608,7 +611,7 @@ function FileMenu({ onClose }: { onClose: () => void }) {
                   {listStarters().map((s) => (
                     <button
                       key={s}
-                      id={`file-example-${s}`}
+                      id={exampleDomId(s)}
                       role="menuitem"
                       onClick={() => { loadExample(s); onClose() }}
                       style={{ ...ROW, paddingLeft: 28, color: 'var(--muted)' }}
@@ -647,8 +650,10 @@ function MenuItem({
     <button
       // An id, not an aria-label. Clear's label is plain text but the confirm it
       // opens is labelled with a COUNT, and a probe reading a label needs a
-      // handle that is not the label — HANDOFF §5, the trap A2 hit.
-      id={`file-${item.id}`}
+      // handle that is not the label — HANDOFF §5, the trap A2 hit. Built by
+      // `menuItemDomId` so probe-handles.test.ts can check the probes against
+      // the same source.
+      id={menuItemDomId(item.id)}
       role="menuitem"
       aria-haspopup={item.submenu ? 'true' : undefined}
       aria-expanded={item.submenu ? expanded : undefined}
@@ -696,11 +701,13 @@ function MenuItem({
  * you were reading.
  */
 function MenuConfirm({
-  id, message, action, onCancel, onConfirm,
+  id, message, action, tone, onCancel, onConfirm,
 }: {
   id: string
   message: string
   action: string
+  /** danger = destroys work. primary = a big change that loses nothing. */
+  tone: ConfirmTone
   onCancel: () => void
   onConfirm: () => void
 }) {
@@ -723,7 +730,8 @@ function MenuConfirm({
           style={{
             height: 30, padding: '0 14px', borderRadius: 'var(--r-md)',
             font: 'var(--t-label-sm)',
-            background: 'var(--diff-remove)', color: 'var(--onaccent)',
+            background: tone === 'danger' ? 'var(--diff-remove)' : 'var(--solid)',
+            color: tone === 'danger' ? 'var(--onaccent)' : 'var(--onsolid)',
           }}
         >
           {action}
@@ -759,11 +767,17 @@ async function duplicateCurrent() {
 }
 
 /**
- * Load a bundled starter over the current document.
+ * Load a bundled starter as a new draft.
  *
- * Keeps the current document's id so this replaces the open drawing rather than
- * spawning a second draft in IndexedDB, and goes through commit() so Ctrl+Z puts
- * the user's own work back — the example is a guide, not a demolition.
+ * **Takes a fresh id**, like New… and Duplicate. It used to keep the current
+ * document's id, on the reasoning that an example should replace the open
+ * drawing rather than spawn a second draft — but drafts are keyed by id, so
+ * that meant autosave wrote the starter straight over whatever was open. Ctrl+Z
+ * brought the drawing back; a reload did not. Spawning a draft is the feature
+ * once Open recent exists, not the cost. See docs/specs/17-file-menu.md §7.11.
+ *
+ * Still through commit(), so it is one undo step and the drawing you had is on
+ * the stack rather than gone — the example is a guide, not a demolition.
  *
  * The viewport is refitted afterwards because a starter can be a different size
  * from what was open, and the old scale and offset would leave it off-screen.
@@ -771,7 +785,7 @@ async function duplicateCurrent() {
 function loadExample(name: StarterName) {
   const before = useDocStore.getState().doc
   if (!before) return
-  const after = { ...loadStarter(name), id: before.id }
+  const after = { ...loadStarter(name), id: nanoid() }
   useDocStore.getState().commit({ type: 'replace_doc', label: `Example: ${name}`, before, after })
   refitViewport(after)
 }

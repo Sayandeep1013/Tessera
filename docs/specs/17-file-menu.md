@@ -75,9 +75,16 @@ Two deliberate differences from the measured original:
 ### New… — `⌘N`
 
 A blank document at the current size. **Confirms if the current document has
-unsaved painted pixels**, because it is otherwise one click from destroying
-work. Not undoable through `commit` — it replaces the document — so the confirm
-is the safety, and the dialog says the old drawing stays in recent.
+painted pixels**, because it is otherwise one click from swapping the whole
+document under someone.
+
+> **Corrected while building — see §7.11.** This section originally said New is
+> "not undoable through `commit`" and that the confirm is therefore the only
+> safety. Both were wrong. It commits a `replace_doc` carrying the whole
+> previous document, so Ctrl+Z restores it exactly; and it now takes a **fresh
+> document id**, so the previous drawing keeps its own draft and survives a
+> reload. It still confirms, but as a beat before a big change rather than as a
+> last line of defence — which is why its button is not red.
 
 ### Open recent › — submenu
 
@@ -255,10 +262,11 @@ Pressing `New…` or `Clear…` swaps the menu's contents for a confirm panel
 return to the menu rather than closing it, so backing out of a confirm does not
 also cost you the menu.
 
-This is also what keeps the two verbs honest about their difference (§2): Clear
-says *"Undo will bring it back"*, New says *"This cannot be undone"* — and New's
-also says the old drawing stays in recent, which is true and is the only reason
-New is allowed to be a one-way door.
+The two confirms are also painted differently, and the difference is
+load-bearing rather than decorative — see §7.11. Clear's button is red
+(`--diff-remove`) because Clear destroys work. New's is the product's standard
+action fill (`--solid`) because New destroys nothing. A red button that never
+costs anything is how a red button stops meaning anything.
 
 ### 7.6 `Export .tessera.json` is renamed `Download .tessera.json`
 
@@ -303,3 +311,105 @@ than carried further.
 `face copy copy copy`. `copyName` instead increments: `face` → `face copy` →
 `face copy 2` → `face copy 3`. An empty name — the default, shown as the
 placeholder `untitled` — becomes `untitled copy` rather than `" copy"`.
+
+---
+
+## 7.11 Replacing the document forks to a new draft — the rule, and the guard
+
+**This landed as a follow-up to B1, after the first pass shipped a confirm that
+had to apologise for the code.**
+
+### The defect
+
+Drafts are keyed by `doc.id` (`lib/persist/idb.ts`). Both `new_document` and
+`loadExample` reused the current document's id, so the thing they put on screen
+was autosaved *straight over the drawing it replaced*. Undo brought the artwork
+back, but only until a reload — and undo history is memory-only, so a reload was
+the end of it. §2's promise that "the old drawing stays in recent" was simply
+not true, and B1's first confirm said so out loud rather than fixing it.
+
+### The rule
+
+> **Anything that replaces the whole document with a different artwork takes a
+> fresh id.**
+
+| | Id | Why |
+|---|---|---|
+| `New…` | fresh (`ctx.newId()`) | a blank canvas is a different document |
+| `Examples` | fresh (`nanoid()`) | a starter is somebody else's drawing |
+| `Duplicate` | fresh (`nanoid()`) | already did; this is the same rule |
+| `Open…` | the file's own | it arrives with an identity |
+| Everything else | unchanged | editing a document does not replace it |
+
+All three forks still go through `commit()` as a `replace_doc`, so undo restores
+the previous document **including its id** — you get both recoveries, not a
+choice between them.
+
+Two consequences worth stating. `new_document` no longer carries the old name
+over: a blank canvas called "face" is wrong on its own terms, and once Open
+recent lists both drafts, two rows called "face" with one of them empty is worse
+than an untitled row. And the confirm changed voice — it now says *"This drawing
+is kept as its own draft, and undo brings it straight back"*, which is a
+promise the code keeps, so New's button stopped being red (§7.5).
+
+### The guard, which is why B1 did not do this on its own
+
+`lib/agent/session.ts` collapses an agent session into one command by comparing
+the before and after documents. It checked **dimensions** and **layer shape**,
+and nothing else. A *same-size* `new_document` — 32×32 over 32×32 — passes both:
+a blank canvas has the same single layer as the document it replaced. The
+session would therefore collapse to an `ai_edit` carrying pixels only, undo
+would restore the artwork **under the new id**, and the old draft would be
+orphaned.
+
+That is the same silent-corruption class as the `ai_edit` palette bug in
+`14-layers.md §0.2`, which is why B1 refused to fork the id until this line
+existed:
+
+```ts
+if (current.id !== this.before.id) return replaceDoc()
+```
+
+Pinned by `session.test.ts`, "a same-size new_document still falls back, because
+the id changed" — the test fails without the guard, which is the only reason to
+trust it.
+
+---
+
+## 7.12 The probe rot this unit caused, and what now catches it
+
+B1 renamed `Example — face` into an `Examples` submenu and silently broke
+`tools/probe-layers.ts` and `tools/probe-zoom.ts`. Neither is about the File
+menu; both drove it by label to reach a known starting document. Neither runs
+under `npm test`, because every browser probe needs a dev server. Both failed
+only when somebody happened to run them.
+
+Two things now stand between that and the next unit:
+
+1. **`lib/__tests__/probe-handles.test.ts`** — a static scan asserting that
+   every `#id` selector in `tools/` still exists in the app. The File menu's
+   handles are *built* by `menuItemDomId` / `exampleDomId` / `CONFIRM_DOM_ID` in
+   `lib/editor/file-menu.ts`, and the same functions feed the test's allow-list,
+   so the component and the check cannot drift. Renaming a handle now fails
+   `npm test` and names each orphaned probe. Verified by breaking it on purpose.
+2. **`npm run probes`** (`tools/run-probes.ts`) — runs every browser probe
+   against one server, in one command. The old protocol said "run the probes
+   your unit touched", which requires knowing the blast radius; nobody would
+   have chosen to run `probe-zoom` for a menu rename.
+
+The runner found two more things on its first real run, both pre-existing:
+
+- **`probe-agent-ui` and `e2e-agent` need `AI_PROVIDER=mock` on the *dev
+  server*, not on the probe process.** The agent runs server-side, so setting it
+  on the probe leaves the server reading `.env.local` with a real key — the
+  probe quietly spends the project's 5-per-minute budget and then fails on
+  wording it never asked the model for. Exactly the confusion HANDOFF §11 had
+  recorded for the E2E script and nobody had closed. The runner now **skips**
+  those two unless `MOCK_SERVER=1` says the server is in mock mode, because
+  skipping loudly beats spending quota by accident.
+- **`e2e-agent` had never actually passed in mock mode.** It ignored `APP_URL`
+  (every other probe honours it), and its `Stop` click raced the agent panel's
+  own aria-live log — "element is not stable", then "intercepts pointer events",
+  then "detached from the DOM", then a 30-second timeout that took the script
+  down. Both fixed, and the block now asserts the run really stopped rather than
+  passing vacuously when the click was swallowed.

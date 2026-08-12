@@ -13,7 +13,8 @@
     "inspect:newt": "tsx tools/inspect-newt.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "probes": "tsx tools/run-probes.ts"
   },
   "dependencies": {
     "@google/genai": "^1.52.0",

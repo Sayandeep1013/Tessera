@@ -62,9 +62,18 @@ docs/          SPEC.md, WORKFLOW.md, specs/, research/, shots/
 npm run dev         # localhost:3000
 npm test            # vitest
 npm run typecheck
+npm run probes      # EVERY browser probe, one server, one command — see below
 npm run spike       # AI probe matrix (uses real quota, paces at 5 rpm)
 npx tsx tools/shoot.ts      # screenshot the running app
 npx tsx tools/shoot-ai.ts   # end-to-end AI proposal flow
+```
+
+`npm run probes` needs a dev server, and the agent runs **server-side**, so the
+mock goes on the server or two probes spend real quota and fail confusingly:
+
+```
+AI_PROVIDER=mock npx next dev --turbopack -p 3100
+MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
 ```
 
 ## Current state
@@ -92,7 +101,7 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
 npx tsx tools/check-responsive.ts   # overflow + target size at 5 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts     # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts       # 42 assertions on the layer panel, both themes
-npx tsx tools/probe-file-menu.ts    # 80 checks on the File menu, both themes and two phones
+npx tsx tools/probe-file-menu.ts    # 84 checks on the File menu, both themes and two phones
 npx tsx tools/e2e-agent.ts          # agent flow end to end (wants AI_PROVIDER=mock)
 npx tsx tools/render-probe.ts       # render the last AI probe result and LOOK at it
 ```

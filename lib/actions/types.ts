@@ -68,6 +68,16 @@ export type ActionCtx = {
     toggleGrid: (on?: boolean) => void
     state: () => EditorSnapshot
   }
+  /**
+   * A fresh document id.
+   *
+   * Injected rather than generated in the catalogue for the same reason
+   * `createDoc` takes one: an action that mints its own id is untestable, and
+   * artwork-core stays pure. `new_document` is the only caller today — it forks
+   * to a new draft so the previous drawing survives in IndexedDB rather than
+   * being autosaved over. See docs/specs/17-file-menu.md §7.11.
+   */
+  newId: () => string
   undo: () => void
   redo: () => void
   historyDepth: () => { undo: number; redo: number }

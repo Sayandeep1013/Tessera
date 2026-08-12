@@ -57,6 +57,7 @@ function harness() {
     doc: () => doc,
     frame: () => 0,
     layer: () => layer,
+    newId: () => 'forked-id',
     setLayer: (i) => {
       layer = clampLayer(doc, 0, i)
     },

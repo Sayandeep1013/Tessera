@@ -4,10 +4,11 @@
 branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 376 tests across 24 files · production build clean · 6 viewports
-clean · `probe-file-menu` 80/80 · `probe-canvas-size` 70/70 · `probe-layers`
-42/42 · `probe-tooltip` 23/23 · `probe-agent-ui` 18/18 · `probe-crisp` 4/4 ·
-`probe-tools-ui` · `probe-zoom` · zero runtime errors.
+**Green:** 385 tests across 25 files · production build clean · 6 viewports
+clean · and **every** browser probe in one run (`npm run probes`) —
+`probe-file-menu` 84/84, `probe-canvas-size` 70/70, `probe-layers` 42/42,
+`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
+`probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
 
 ---
 
@@ -36,10 +37,10 @@ The next unit is **B2 — Open recent**. Paste this:
 > `lib/agent/session.ts` in the same change, because it compares dimensions and
 > layer shape but not ids.
 >
-> Verify with `npm test`, `npm run typecheck`, `npm run build`,
-> `npx tsx tools/check-responsive.ts`, `npx tsx tools/probe-file-menu.ts`, and
-> screenshot both themes and look at it. Then follow the finishing protocol in
-> `docs/UNITS.md §0`.
+> Verify with `npm test`, `npm run typecheck`, `npm run build` and
+> `npm run probes` (see `UNITS.md §0` for the exact invocation — the agent runs
+> server-side, so the mock goes on the server), then screenshot both themes and
+> look at it. Then follow the finishing protocol in `docs/UNITS.md §0`.
 
 Before writing code, read `CLAUDE.md` and **§5 of this file** (traps). Every
 entry in §5 has already cost this repo an hour and none of them announce what
@@ -206,14 +207,24 @@ Every one of these has already cost time in this repo.
   layer above this one' })` times out against a button whose label is `Add`. And prefer
   `exact: true` — `{ name: 'Layer 2' }` also matches the eye button labelled "Hide Layer 2", which
   is a strict-mode violation rather than a wrong click, so at least it fails loudly.
-- **Renaming a menu item breaks probes that have nothing to do with your unit.**
+- **Renaming a control breaks probes that have nothing to do with your unit.**
   B1 renamed `Example — face` to an `Examples` submenu, and `probe-layers` and
   `probe-zoom` both drove the File menu by that label to reach a known starting
   document. Neither mentions the File menu in its name or its purpose, neither
-  is in `npm test`, and both failed only when actually run. Before renaming or
-  restructuring any control, `grep` the label across `tools/` — and run every
-  probe, not only the ones for your unit. The two callers now use the stable
-  `#file-examples` / `#file-example-<name>` ids instead of labels.
+  is in `npm test`, and both failed only when actually run. **Two guards exist
+  now, use them:** `lib/__tests__/probe-handles.test.ts` fails `npm test` if a
+  probe names an `#id` the app no longer renders, and **`npm run probes`** runs
+  every browser probe in one command so you never have to guess your blast
+  radius. Prefer an `id` to a label as a probe handle — and for the File menu
+  build it with `menuItemDomId` / `exampleDomId`, which also feed the guard's
+  allow-list, so the two cannot drift.
+- **`AI_PROVIDER=mock` has to be set on the DEV SERVER, not on the probe.** The
+  agent runs server-side, so `AI_PROVIDER=mock npx tsx tools/probe-agent-ui.ts`
+  sets it on the wrong process: the server still reads `.env.local`, still has a
+  real key, and the probe quietly spends the 5-per-minute budget before failing
+  on wording it never asked the model for. This wasted a run and some quota.
+  `npm run probes` now **skips** those probes unless `MOCK_SERVER=1` says the
+  server is in mock mode. The right invocation is at the top of `UNITS.md §0`.
 - **`check-responsive.ts` never opens a popover.** It measures the app in its
   resting state, so a panel, menu or submenu can hang 66px off a 390px screen
   while all six viewports report clean — which is exactly what the Settings panel
@@ -351,9 +362,13 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 253 tests (3 skip without a .next build)
+npm test                          # vitest — 385 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
+
+# EVERY browser probe, one server, one command. This is the one to run.
+AI_PROVIDER=mock npx next dev --turbopack -p 3100
+MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
 
 npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
@@ -448,18 +463,24 @@ Recorded so they are not rediscovered as surprises.
 - ~~`openFile()` does not re-fit the viewport.~~ **Fixed in B1**, which owns that
   function. `refitViewport` after `setDoc`, one line, recorded in
   `17-file-menu.md §7.9`.
-- **`New…` reuses the document's id**, so the blank canvas autosaves over the
-  previous draft and only in-session undo brings the drawing back. Spec 17 §2
-  promises it "stays in recent" and that is not true yet; B1's confirm says so
-  honestly instead. The fix is three lines in `catalogue.ts` **plus** a guard in
-  `lib/agent/session.ts`, which collapses a session by comparing dimensions and
-  layer shape but not ids — a same-size `new_document` inside an agent session
-  would otherwise collapse to an `ai_edit` that silently drops the id change.
-  Handed to B2, where Open recent makes the difference visible.
+- ~~`New…` reuses the document's id.~~ **Fixed in B1's follow-up.** New,
+  Examples and Duplicate all fork to a fresh id, so the previous drawing keeps
+  its own draft — with a guard in `lib/agent/session.ts` so an agent session
+  cannot silently drop the id change. `17-file-menu.md §7.11`.
+- ~~The E2E script has never been exercised on the mock path.~~ **Done, and it
+  did not pass.** It ignored `APP_URL`, and its `Stop` click raced the agent
+  panel's aria-live log into a 30s timeout. Both fixed in B1's follow-up; it is
+  in `npm run probes` now, so it stays exercised.
 - **The header's filename input still does not write back to the document.** It
   is uncontrolled and remounts on `doc.name`, so it *displays* correctly; typing
   in it changes nothing. Duplicate therefore copies whatever name the document
-  loaded with. Pre-existing, and noted in `Chrome.tsx` at the input.
+  loaded with, and most drafts are unnamed — which B2 will feel, because Open
+  recent lists documents by name. Pre-existing, noted in `Chrome.tsx`.
+- **Four hand-built `ActionCtx` objects.** `lib/actions/__tests__/harness.ts`,
+  `session.test.ts`, `run.test.ts` and `tools/probe-agent.ts` each construct one
+  by hand. Adding a required field to `ActionCtx` means editing all four — which
+  is how B1's follow-up found them. They should share the harness; left alone so
+  that change did not also become an agent-test refactor.
 - **`components/Layers.tsx` has no outside-click closer**, deliberately: the panel is a working
   surface you click away from constantly. Escape and the toolbar button close it. If that turns out
   to be wrong, the fix is `mousedown`, never `click` — see §5.
