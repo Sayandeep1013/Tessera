@@ -18,6 +18,7 @@ import {
   MAX_SCALE, MIN_SCALE, clampScale, fitViewport, isInside, screenToDoc, zoomAt,
 } from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
+import { mirrored } from '@/lib/editor/symmetry'
 import { floodFillPoints, linePoints, rectPoints } from '@/lib/artwork-core/ops'
 import { compositeAt } from '@/lib/artwork-core/layers'
 import { densityFor, ditherPasses, gradientCells } from '@/lib/editor/dither'
@@ -119,7 +120,7 @@ export function Canvas() {
 
       const { doc, frame } = useDocStore.getState()
       if (!doc) return
-      const { viewport, showGrid, cursor, brushSize, tool } = useEditorStore.getState()
+      const { viewport, gridMode, transparencyGrid, cursor, brushSize, tool } = useEditorStore.getState()
       const ai = useAiStore.getState()
 
       // During review the canvas shows the PREVIEW, never the document — the
@@ -128,7 +129,7 @@ export function Canvas() {
       const showAfter = reviewing && ai.view === 'after'
       const shown = showAfter ? ai.proposal!.preview : doc
 
-      renderDoc(ctx, shown, frame, viewport, theme, { showGrid })
+      renderDoc(ctx, shown, frame, viewport, theme, { gridMode, transparencyGrid })
 
       if (showAfter) {
         renderDiffOverlay(ctx, ai.proposal!.diff, viewport, theme)
@@ -164,18 +165,26 @@ export function Canvas() {
 
     const density = densityFor(useEditorStore.getState().dither)
 
+    const symmetry = useEditorStore.getState().symmetry
+
     for (const [dx, dy] of brushMask(brushShape, brushSize)) {
-      const cx = x + dx
-      const cy = y + dy
-      if (!isInside(cx, cy, doc)) continue // ignore, never clamp — clamping smears along the edge
-      // Ordered dither: the pattern is anchored to document coordinates, so two
-      // strokes over the same area interlock instead of showing a seam.
-      if (!ditherPasses(cx, cy, density)) continue
-      const key = cy * doc.w + cx
-      const existing = buf.get(key)
-      const before = existing ? existing[2] : px[key]!
-      buf.set(key, [cx, cy, before, value])
-      px[key] = value // immediate feedback; the document is committed on pointerup
+      /**
+       * Symmetry expands each brush cell into up to four, into the SAME stroke
+       * buffer. That is what keeps a mirrored stroke one undo, and the Map key
+       * is what makes a stroke down the centre of an odd canvas paint once
+       * rather than twice. See docs/specs/16-settings.md §3.
+       */
+      for (const [cx, cy] of mirrored(x + dx, y + dy, doc.w, doc.h, symmetry)) {
+        if (!isInside(cx, cy, doc)) continue // ignore, never clamp — clamping smears along the edge
+        // Ordered dither: the pattern is anchored to document coordinates, so two
+        // strokes over the same area interlock instead of showing a seam.
+        if (!ditherPasses(cx, cy, density)) continue
+        const key = cy * doc.w + cx
+        const existing = buf.get(key)
+        const before = existing ? existing[2] : px[key]!
+        buf.set(key, [cx, cy, before, value])
+        px[key] = value // immediate feedback; the document is committed on pointerup
+      }
     }
     dirty.current = true
   }, [])
@@ -198,11 +207,18 @@ export function Canvas() {
     for (const [bx, by, before] of buf.values()) px[by * doc.w + bx] = before
     buf.clear()
 
-    for (const [cx, cy] of cells) {
-      if (cx < 0 || cy < 0 || cx >= doc.w || cy >= doc.h) continue
-      const key = cy * doc.w + cx
-      buf.set(key, [cx, cy, px[key]!, value])
-      px[key] = value
+    // Shapes mirror too — rect and gradient go through here, and a symmetry
+    // setting that applied to the brush but not to the rectangle tool would be
+    // a setting the user has to remember the scope of.
+    const symmetry = useEditorStore.getState().symmetry
+    for (const [ox, oy] of cells) {
+      for (const [cx, cy] of mirrored(ox, oy, doc.w, doc.h, symmetry)) {
+        if (cx < 0 || cy < 0 || cx >= doc.w || cy >= doc.h) continue
+        const key = cy * doc.w + cx
+        if (buf.has(key)) continue // keep the first `before` for this cell
+        buf.set(key, [cx, cy, px[key]!, value])
+        px[key] = value
+      }
     }
     dirty.current = true
   }, [])
@@ -327,9 +343,22 @@ export function Canvas() {
 
       if (ed.tool === 'fill') {
         const target = ed.colorIndex
+        /**
+         * Symmetry mirrors the SEEDS, not the result. Mirroring the filled
+         * region would paint wherever the reflection landed regardless of what
+         * was there — across a boundary the fill itself would have respected.
+         * Filling from each mirrored seed keeps every region bounded by its own
+         * edges, which is what the tool means. See spec 16 §3.2.
+         */
+        const seen = new Set<number>()
         const cells: PaintCell[] = []
-        for (const [fx, fy] of floodFillPoints(px, doc.w, doc.h, x, y)) {
-          cells.push([fx, fy, px[fy * doc.w + fx]!, target])
+        for (const [sx, sy] of mirrored(x, y, doc.w, doc.h, ed.symmetry)) {
+          for (const [fx, fy] of floodFillPoints(px, doc.w, doc.h, sx, sy)) {
+            const key = fy * doc.w + fx
+            if (seen.has(key)) continue
+            seen.add(key)
+            cells.push([fx, fy, px[key]!, target])
+          }
         }
         const ds = useDocStore.getState()
         ds.commit(paintCommand('Fill', ds.frame, ds.layer, cells))

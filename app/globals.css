@@ -76,6 +76,10 @@
      the gap BETWEEN tiles, so it is lighter than --art-bg in dark and darker
      than it in light. */
   --art-grid: #303038;
+  /* The darker square of the transparency checkerboard. Translucent so it sits
+     ON the ground rather than replacing it, and low-contrast on purpose — its
+     job is to say "nothing here", not to compete with the artwork. */
+  --art-checker: #ffffff0f;
   /* The canvas grid is composited with `difference`, so this is a MAGNITUDE of
      inversion rather than a colour. It cannot be shared between themes any more:
      difference against a backdrop it nearly equals is a no-op, and #262626 on
@@ -123,6 +127,7 @@
      but the edge of the artwork stops looking like a cut-out. */
   --art-bg: #ffffffe0;
   --art-grid: #ededed;
+  --art-checker: #00000010;
   --grid-ink: #262626;
   --art-edge-tl: #0000002e;
   --art-edge-br: #0000003c;

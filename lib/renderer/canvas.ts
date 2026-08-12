@@ -18,8 +18,10 @@ export type Viewport = {
 }
 
 export type ThemeColors = {
-  /** artwork background — flat and opaque, never a checkerboard */
+  /** artwork background — flat unless the transparency grid is on */
   artBg: string
+  /** the darker square of the transparency checkerboard */
+  checker: string
   grid: string
   /** artwork border, top + left edges */
   edgeTL: string
@@ -32,7 +34,10 @@ export type ThemeColors = {
 }
 
 export type RenderOptions = {
-  showGrid?: boolean
+  /** 'auto' defers to GRID_MIN_SCALE, 'on' overrides it, 'off' never draws. */
+  gridMode?: 'auto' | 'on' | 'off'
+  /** A checkerboard behind transparent pixels. Spec 16 §2. */
+  transparencyGrid?: boolean
 }
 
 /**
@@ -51,6 +56,7 @@ export function readTheme(el: HTMLElement): ThemeColors {
   const v = (n: string) => s.getPropertyValue(n).trim()
   return {
     artBg: v('--art-bg'),
+    checker: v('--art-checker'),
     // Not --art-grid: that one is a backdrop colour for the boot loader. This is
     // an inversion magnitude, composited with `difference`.
     grid: v('--grid-ink'),
@@ -111,7 +117,7 @@ export function renderDoc(
   theme: ThemeColors,
   opts: RenderOptions = {},
 ): void {
-  const showGrid = opts.showGrid ?? true
+  const gridMode = opts.gridMode ?? 'auto'
 
   const cssW = ctx.canvas.width / (ctx.getTransform().a || 1)
   const cssH = ctx.canvas.height / (ctx.getTransform().d || 1)
@@ -126,9 +132,23 @@ export function renderDoc(
   const aw = doc.w * vp.scale
   const ah = doc.h * vp.scale
 
-  // 2. artwork backdrop — flat and opaque, never a checkerboard
+  /**
+   * 2. artwork backdrop.
+   *
+   * Flat by default — never a checkerboard unless asked. The original note here
+   * said "never a checkerboard" full stop, and that was a deliberate call: a
+   * checkerboard under pixel art is noise competing with the artwork. What
+   * argued it back to an option is that a flat ground cannot distinguish a
+   * TRANSPARENT pixel from one painted the same colour as the ground, and in a
+   * format whose first principle is that "." is transparent that ambiguity is
+   * real. Off by default; see docs/specs/16-settings.md §2.
+   */
   ctx.fillStyle = theme.artBg
   ctx.fillRect(ax, ay, aw, ah)
+
+  if (opts.transparencyGrid) {
+    drawTransparencyGrid(ctx, ax, ay, aw, ah, vp.scale, theme)
+  }
 
   // 3. layers, bottom to top, with horizontal run merging
   const paletteCss = doc.palette.map((p) => p.c)
@@ -140,8 +160,12 @@ export function renderDoc(
     }
   }
 
-  // 4. grid — 1px at the cell pitch, no majors
-  if (showGrid && vp.scale >= GRID_MIN_SCALE) {
+  // 4. grid — 1px at the cell pitch, no majors.
+  //
+  // 'auto' is the behaviour that was always here: below GRID_MIN_SCALE the grid
+  // would have more lines than artwork, so it is suppressed. 'on' is a
+  // deliberate override for someone who wants it anyway.
+  if (gridMode !== 'off' && (gridMode === 'on' || vp.scale >= GRID_MIN_SCALE)) {
     drawGrid(ctx, ax, ay, doc.w, doc.h, vp.scale, theme)
   }
 
@@ -153,6 +177,40 @@ export function renderDoc(
   ctx.fillStyle = theme.edgeBR
   ctx.fillRect(ax - 1, ay + ah, aw + 2, 1) // bottom
   ctx.fillRect(ax + aw, ay - 1, 1, ah + 2) // right
+}
+
+/**
+ * The classic two-tone checkerboard, behind everything the artwork draws.
+ *
+ * Cell size is fixed in CSS pixels rather than tied to the document grid: at 46x
+ * a per-pixel checker would be enormous squares that read as artwork, and at 2x
+ * it would be a grey haze. 8px is small enough to read as "nothing here" and
+ * large enough not to shimmer.
+ *
+ * Clipped to the artwork rectangle, because its whole job is to say where the
+ * document is transparent — bleeding outside it would say the opposite.
+ */
+function drawTransparencyGrid(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number,
+  aw: number,
+  ah: number,
+  _scale: number,
+  theme: ThemeColors,
+): void {
+  const CELL = 8
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(ax, ay, aw, ah)
+  ctx.clip()
+  ctx.fillStyle = theme.checker
+  for (let y = 0; y < ah; y += CELL) {
+    for (let x = ((y / CELL) % 2) * CELL; x < aw; x += CELL * 2) {
+      ctx.fillRect(ax + x, ay + y, Math.min(CELL, aw - x), Math.min(CELL, ah - y))
+    }
+  }
+  ctx.restore()
 }
 
 function drawLayer(

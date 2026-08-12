@@ -23,12 +23,18 @@ export const viewport: Viewport = {
 }
 
 /**
- * Theme is resolved before paint to avoid a flash. Default is light — matching
- * the reference, whose `:root` is dark with a `.light` class layered on top.
+ * Theme is resolved before paint to avoid a flash.
+ *
+ * Three stored states now, not two — 'dark', 'light' and 'auto' (spec 16 §1),
+ * with anything else, including nothing stored, meaning auto. The previous
+ * version read `s ? s === 'dark' : system`, which was correct while the only
+ * stored values were 'dark' and 'light' but silently resolved a stored 'auto'
+ * to LIGHT, ignoring the system it exists to follow.
  */
 const themeScript = `(function(){try{
 var s=localStorage.getItem('tessera-theme');
-var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;
+var m=window.matchMedia('(prefers-color-scheme: dark)').matches;
+var d=s==='dark'?true:s==='light'?false:m;
 document.documentElement.classList.add(d?'dark':'light');
 }catch(e){document.documentElement.classList.add('light')}})()`
 

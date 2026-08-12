@@ -29,7 +29,7 @@ export function buildCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
       setViewport: (vp) => useEditorStore.getState().setViewport(vp),
       toggleGrid: (on) => {
         const e = useEditorStore.getState()
-        if (on === undefined || on !== e.showGrid) e.toggleGrid()
+        if (on === undefined || on !== (e.gridMode !== 'off')) e.toggleGrid()
       },
       state: () => {
         const e = useEditorStore.getState()
@@ -39,7 +39,7 @@ export function buildCtx(overrides: Partial<ActionCtx> = {}): ActionCtx {
           brushSize: e.brushSize,
           brushShape: e.brushShape,
           viewport: e.viewport,
-          showGrid: e.showGrid,
+          showGrid: e.gridMode !== 'off',
         }
       },
     },

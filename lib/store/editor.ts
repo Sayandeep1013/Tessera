@@ -15,6 +15,11 @@ import { clampLayer } from '../artwork-core/layers'
 import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
+
+/** Spec 16 §1. Auto follows the zoom, as the renderer always has. */
+export type GridMode = 'auto' | 'on' | 'off'
+/** Spec 16 §3. Which axes a painted cell is mirrored across. */
+export type Symmetry = 'off' | 'h' | 'v' | 'both'
 import { saveDraft } from '../persist/idb'
 
 export type Tool =
@@ -179,7 +184,20 @@ type EditorState = {
   brushShape: BrushShape
   viewport: Viewport
   cursor: { x: number; y: number } | null
-  showGrid: boolean
+  /**
+   * Auto means "show it where it helps" — the renderer already suppresses the
+   * grid below GRID_MIN_SCALE, so Auto is a NAME for behaviour that has always
+   * been there rather than a new rule. On overrides that and draws it at every
+   * zoom. See docs/specs/16-settings.md §1.
+   */
+  gridMode: GridMode
+  /** A checkerboard under transparent pixels. Off by default — spec 16 §2. */
+  transparencyGrid: boolean
+  /**
+   * Mirrors painted cells as you draw. View state, not document state: a
+   * document does not remember it was drawn symmetrically. Spec 16 §3.
+   */
+  symmetry: Symmetry
   panning: boolean
   dither: DitherMode
   /** Document-space rectangle, or null. Set by the marquee, moved by select. */
@@ -190,6 +208,7 @@ type EditorState = {
    * the panel itself is in <main>, so it cannot be component-local.
    */
   layersOpen: boolean
+  settingsOpen: boolean
 
   setTool: (t: Tool) => void
   setColorIndex: (i: number) => void
@@ -198,10 +217,14 @@ type EditorState = {
   setViewport: (vp: Viewport) => void
   setCursor: (c: { x: number; y: number } | null) => void
   toggleGrid: () => void
+  setGridMode: (m: GridMode) => void
+  setTransparencyGrid: (on: boolean) => void
+  setSymmetry: (s: Symmetry) => void
   setPanning: (p: boolean) => void
   setDither: (d: DitherMode) => void
   setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
   setLayersOpen: (open: boolean) => void
+  setSettingsOpen: (open: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -212,11 +235,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   brushShape: 'square',
   viewport: { scale: 16, offsetX: 0, offsetY: 0 },
   cursor: null,
-  showGrid: true,
+  gridMode: 'auto',
+  transparencyGrid: false,
+  symmetry: 'off',
   panning: false,
   dither: 'solid',
   selection: null,
   layersOpen: false,
+  settingsOpen: false,
 
   setTool: (t) => set({ tool: t, prevTool: get().tool }),
   setColorIndex: (i) => set({ colorIndex: i }),
@@ -224,9 +250,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setBrushShape: (s) => set({ brushShape: s }),
   setViewport: (vp) => set({ viewport: vp }),
   setCursor: (c) => set({ cursor: c }),
-  toggleGrid: () => set({ showGrid: !get().showGrid }),
+  /**
+   * The G key. Two states, not three: a keyboard toggle that cycles through
+   * three is a toggle you have to watch to use. Auto counts as on, so one press
+   * from the default turns it off.
+   */
+  toggleGrid: () => set({ gridMode: get().gridMode === 'off' ? 'auto' : 'off' }),
+  setGridMode: (m) => set({ gridMode: m }),
+  setTransparencyGrid: (on) => set({ transparencyGrid: on }),
+  setSymmetry: (s) => set({ symmetry: s }),
   setPanning: (p) => set({ panning: p }),
   setDither: (d) => set({ dither: d }),
   setSelection: (sel) => set({ selection: sel }),
   setLayersOpen: (open) => set({ layersOpen: open }),
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
 }))

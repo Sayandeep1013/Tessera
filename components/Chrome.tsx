@@ -23,6 +23,7 @@ import {
   PaintBucket, PixelPerfect, Plus, Selection, Sliders, Square, Stack,
 } from './icons'
 import { Tooltip, type Placement } from './Tooltip'
+import { SettingsPanel } from './Settings'
 import { SharePopover } from './SharePopover'
 
 type IconCmp = typeof PaintBrush
@@ -134,7 +135,7 @@ export function TopBar() {
   const colorIndex = useEditorStore((s) => s.colorIndex)
   const brushSize = useEditorStore((s) => s.brushSize)
   const shape = useEditorStore((s) => s.brushShape)
-  const showGrid = useEditorStore((s) => s.showGrid)
+  const showGrid = useEditorStore((s) => s.gridMode !== 'off')
   const layersOpen = useEditorStore((s) => s.layersOpen)
   const setLayersOpen = useEditorStore((s) => s.setLayersOpen)
 
@@ -143,22 +144,9 @@ export function TopBar() {
   const [ditherOpen, setDitherOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const dither = useEditorStore((s) => s.dither)
-  const [dark, setDark] = useState(false)
+  const settingsOpen = useEditorStore((s) => s.settingsOpen)
+  const setSettingsOpen = useEditorStore((s) => s.setSettingsOpen)
   const c = chromeFor(useTier())
-
-  useEffect(() => setDark(document.documentElement.classList.contains('dark')), [])
-
-  const toggleTheme = () => {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    document.documentElement.classList.toggle('light', !next)
-    try {
-      localStorage.setItem('tessera-theme', next ? 'dark' : 'light')
-    } catch {
-      /* private mode */
-    }
-  }
 
   // token-exempt: an artwork colour is document data, not a design token
   const swatch = doc?.palette[colorIndex]?.c ?? '#000000'
@@ -199,7 +187,16 @@ export function TopBar() {
         {fileOpen && <FileMenu onClose={() => setFileOpen(false)} />}
       </div>
 
-      <GlyphBtn title="Settings" Icon={Sliders} icon={20} onClick={toggleTheme} />
+      <div style={{ position: 'relative' }}>
+        <GlyphBtn
+          title="Settings"
+          Icon={Sliders}
+          icon={20}
+          active={settingsOpen}
+          onClick={() => setSettingsOpen(!settingsOpen)}
+        />
+        {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+      </div>
 
       {/* Colour — 36x36 with a 24x24 swatch */}
       <div style={{ position: 'relative', marginLeft: 2 }}>

@@ -35,6 +35,18 @@ const DELAY_IN = 400
 const GROUP_WINDOW = 500
 
 let lastClosedAt = 0
+/**
+ * Module scope, not a ref, and that is the whole point.
+ *
+ * A per-instance ref was the first attempt and it did not work: clicking a
+ * control that opens a popover re-renders the button, React remounts the
+ * wrapper, pointerenter fires again on the fresh instance, and the group window
+ * means it reopens with no delay — landing the Settings tooltip on top of the
+ * Settings panel's own title. Only one tooltip can be open at a time, so one
+ * module-level flag is the right shape, and it survives the remount that a ref
+ * cannot.
+ */
+let suppressedUntilLeave = false
 
 /** 8px from the trigger, and never closer than this to the viewport edge. */
 const GAP = 8
@@ -112,6 +124,11 @@ export function Tooltip({
   }, [open])
 
   const openNow = useCallback(() => {
+    // Dismissing on pointerdown is not enough on its own: the pointer is still
+    // over the trigger afterwards, so the timer restarts and the tooltip comes
+    // straight back over whatever the click opened. Once you have clicked a
+    // control you know what it does.
+    if (suppressedUntilLeave) return
     window.clearTimeout(timer.current)
     const wait = Date.now() - lastClosedAt < GROUP_WINDOW ? 0 : DELAY_IN
     timer.current = window.setTimeout(() => setOpen(true), wait)
@@ -134,16 +151,34 @@ export function Tooltip({
     }
     // Any press anywhere dismisses: a tooltip left hanging over the thing you
     // just clicked is the most annoying failure this component has.
-    const onDown = () => close()
+    const onScroll = () => close()
     window.addEventListener('keydown', onKey)
-    window.addEventListener('pointerdown', onDown, true)
-    window.addEventListener('scroll', onDown, true)
+    window.addEventListener('scroll', onScroll, true)
     return () => {
       window.removeEventListener('keydown', onKey)
-      window.removeEventListener('pointerdown', onDown, true)
-      window.removeEventListener('scroll', onDown, true)
+      window.removeEventListener('scroll', onScroll, true)
     }
   }, [open, close])
+
+  /**
+   * Suppression is registered unconditionally, NOT gated on `open`.
+   *
+   * Gating it was the bug: a click that lands during the 400ms delay never saw
+   * a pointerdown listener at all, so nothing was suppressed and the pending
+   * timer opened the tooltip a moment later — on top of the panel the click had
+   * just opened. The press has to be heard whether or not the tooltip is
+   * showing yet.
+   */
+  useEffect(() => {
+    const onDown = () => {
+      suppressedUntilLeave = true
+      window.clearTimeout(timer.current)
+      setOpen(false)
+      setPos(null)
+    }
+    window.addEventListener('pointerdown', onDown, true)
+    return () => window.removeEventListener('pointerdown', onDown, true)
+  }, [])
 
   useEffect(() => () => window.clearTimeout(timer.current), [])
 
@@ -155,7 +190,10 @@ export function Tooltip({
         ref={wrapRef}
         style={{ display: 'contents' }}
         onPointerEnter={(e) => e.pointerType === 'mouse' && openNow()}
-        onPointerLeave={close}
+        onPointerLeave={() => {
+          suppressedUntilLeave = false
+          close()
+        }}
         onFocus={(e) => {
           // focus-visible only: clicking a button focuses it, and a tooltip
           // that appears on every click is noise.
