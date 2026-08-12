@@ -56,8 +56,11 @@ async function main() {
     await p.goto(APP, { waitUntil: 'networkidle' })
     await p.waitForTimeout(2000)
 
+    // The starters moved into an Examples submenu in B1, so this is two clicks
+    // now. The ids are stable handles; the labels are what B1 put under test.
     await p.getByRole('button', { name: 'File — new, open, export' }).click()
-    await p.getByRole('menuitem', { name: 'Example — face' }).click()
+    await p.locator('#file-examples').click()
+    await p.locator('#file-example-face').click()
     await p.waitForTimeout(500)
 
     await p.getByRole('button', { name: 'Layers' }).click()

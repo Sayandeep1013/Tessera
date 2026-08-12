@@ -75,10 +75,10 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
   tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
   loop, one-undo sessions, bring-your-own-key), and layers (#46). Both units scored **9/10**.
 - **Next:** whatever `docs/UNITS.md` marks `NEXT` — it is the ledger and this line is not. As of
-  A2 that is **B1, the File menu**, with the code panel, exporters, layers phase 2 and animation
-  behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9` before the
-  animation unit: layers are per-frame, and whether a layer belongs to one frame or all of them is
-  the decision that unit left open.
+  B1 that is **B2, Open recent**, with paste-image, the code panel, exporters, layers phase 2 and
+  animation behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9`
+  before the animation unit: layers are per-frame, and whether a layer belongs to one frame or all
+  of them is the decision that unit left open.
 - **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent
   loop and at 32x32 produces recognisable, correctly-placed edits that damage nothing, but the
   output is still not artist-grade. Recorded in `docs/PHASE-0-FINDINGS.md`. The remaining gap is
@@ -92,6 +92,7 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
 npx tsx tools/check-responsive.ts   # overflow + target size at 5 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts     # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts       # 42 assertions on the layer panel, both themes
+npx tsx tools/probe-file-menu.ts    # 80 checks on the File menu, both themes and two phones
 npx tsx tools/e2e-agent.ts          # agent flow end to end (wants AI_PROVIDER=mock)
 npx tsx tools/render-probe.ts       # render the last AI probe result and LOOK at it
 ```

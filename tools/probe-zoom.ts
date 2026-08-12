@@ -158,8 +158,10 @@ async function main() {
   await p.waitForTimeout(2000)
 
   // A known starting point, and one with enough pixels that low scales matter.
+  // Two clicks since B1 — the starters live in an Examples submenu.
   await p.getByRole('button', { name: 'File — new, open, export' }).click()
-  await p.getByRole('menuitem', { name: 'Example — face' }).click()
+  await p.locator('#file-examples').click()
+  await p.locator('#file-example-face').click()
   await p.waitForTimeout(600)
 
   const start = (await p.evaluate(VP)) as Viewport

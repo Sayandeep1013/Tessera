@@ -1,13 +1,13 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `3e06f6a` (unit **A2**, the Canvas tab
-size UI) · branch `main`, pushed.
+**Written:** 12 Aug 2026 · last commit unit **B1**, the File menu · branch
+`main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 327 tests across 21 files · production build clean · 6 viewports
-clean · `probe-canvas-size` 70/70 · `probe-layers` 42/42 · `probe-tooltip` 23/23 ·
-`probe-agent-ui` 18/18 · `probe-crisp` 4/4 · `probe-tools-ui` · zero runtime
-errors.
+**Green:** 376 tests across 24 files · production build clean · 6 viewports
+clean · `probe-file-menu` 80/80 · `probe-canvas-size` 70/70 · `probe-layers`
+42/42 · `probe-tooltip` 23/23 · `probe-agent-ui` 18/18 · `probe-crisp` 4/4 ·
+`probe-tools-ui` · `probe-zoom` · zero runtime errors.
 
 ---
 
@@ -18,24 +18,28 @@ next, and carries a ready-to-use prompt for every remaining unit. It also
 carries the protocol that keeps the chain unbroken: what an agent must do when
 it finishes, so the next one can start without asking anything.
 
-The next unit is **B1 — the File menu**. Paste this:
+The next unit is **B2 — Open recent**. Paste this:
 
-> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md`, then build unit **B1**:
-> the File menu structure, the Examples submenu, Duplicate, and Clear.
+> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md` (§2 and §7), then build
+> unit **B2**: Open recent.
 >
-> No account items — Dashboard, Explore and publish-to-community are out of
-> scope permanently. Clear empties the frame through `commit` so it is undoable,
-> is red, and confirms. New… confirms when the document has painted pixels,
-> because it replaces the document and cannot be undone. Duplicate forks to a
-> new draft with a fresh id.
+> `listDrafts()` exists and nothing calls it. Surface it as a submenu — newest
+> first, capped at 10, name and relative date, a real empty state, and a record
+> that no longer parses shown disabled rather than dropped. Add the row to
+> `FILE_MENU` in `lib/editor/file-menu.ts`; the menu renders from that array and
+> the handler table is exhaustive, so the compiler will name what you missed.
+> Reuse the Examples disclosure rather than building a flyout, and extend
+> `tools/probe-file-menu.ts` rather than writing a second probe.
 >
-> Call `refitViewport` after anything that changes the document's dimensions, and
-> open the menu at 390 and 320 in a probe — `check-responsive.ts` does not open
-> popovers and will report clean while your menu hangs off the screen.
+> Decide, in writing, whether `New…` should take a fresh document id so that
+> "the old drawing stays in recent" becomes true — and if it should, fix
+> `lib/agent/session.ts` in the same change, because it compares dimensions and
+> layer shape but not ids.
 >
 > Verify with `npm test`, `npm run typecheck`, `npm run build`,
-> `npx tsx tools/check-responsive.ts`, and screenshot both themes and look at
-> it. Then follow the finishing protocol in `docs/UNITS.md §0`.
+> `npx tsx tools/check-responsive.ts`, `npx tsx tools/probe-file-menu.ts`, and
+> screenshot both themes and look at it. Then follow the finishing protocol in
+> `docs/UNITS.md §0`.
 
 Before writing code, read `CLAUDE.md` and **§5 of this file** (traps). Every
 entry in §5 has already cost this repo an hour and none of them announce what
@@ -139,7 +143,8 @@ looked fine in a screenshot until magnified.
 | Document model (`lib/artwork-core/`) | Complete. Codec, ops, commands, diff, fixtures. Imports nothing but zod. |
 | Renderer (`lib/renderer/`) | Full-viewport canvas, DPR capped at 2, difference-blended grid, selection overlay, sprite→SVG. |
 | Editor input | 8 tools all working: brush, eraser, fill, shapes, gradient, marquee, select/move, eyedropper. Dither (Bayer 4×4). Scroll pans, pinch zooms. |
-| Chrome | Top bar, tool rail, zoom bar, palette popover, File menu (New/Open/Export JSON/Export PNG), dither menu. |
+| Chrome | Top bar, tool rail, zoom bar, palette popover, File menu, dither menu. |
+| File menu | New… (confirms when there is work at stake), Open…, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. **Scored 9/10** — `docs/specs/17-file-menu.md §7`. |
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
@@ -201,6 +206,14 @@ Every one of these has already cost time in this repo.
   layer above this one' })` times out against a button whose label is `Add`. And prefer
   `exact: true` — `{ name: 'Layer 2' }` also matches the eye button labelled "Hide Layer 2", which
   is a strict-mode violation rather than a wrong click, so at least it fails loudly.
+- **Renaming a menu item breaks probes that have nothing to do with your unit.**
+  B1 renamed `Example — face` to an `Examples` submenu, and `probe-layers` and
+  `probe-zoom` both drove the File menu by that label to reach a known starting
+  document. Neither mentions the File menu in its name or its purpose, neither
+  is in `npm test`, and both failed only when actually run. Before renaming or
+  restructuring any control, `grep` the label across `tools/` — and run every
+  probe, not only the ones for your unit. The two callers now use the stable
+  `#file-examples` / `#file-example-<name>` ids instead of labels.
 - **`check-responsive.ts` never opens a popover.** It measures the app in its
   resting state, so a panel, menu or submenu can hang 66px off a 390px screen
   while all six viewports report clean — which is exactly what the Settings panel
@@ -346,6 +359,7 @@ npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
+npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
 npx tsx tools/probe-zoom.ts       # measures the zoom gesture; run it before changing zoom
@@ -431,11 +445,21 @@ Recorded so they are not rediscovered as surprises.
   and tested, and it reuses an escape hatch that already existed rather than inventing a multi-layer
   command — but the undo entry is the whole document. Worth revisiting only if the agent starts
   working across layers routinely.
-- **`openFile()` in `Chrome.tsx` does not re-fit the viewport.** A file opened
-  from disk can be any size, and the view is still fitted to the previous
-  document — the same defect A2 fixed for resize and `loadExample`.
-  `refitViewport(doc)` from `lib/editor/refit.ts` is the whole fix; it was left
-  out of A2 so the commit stayed one unit.
+- ~~`openFile()` does not re-fit the viewport.~~ **Fixed in B1**, which owns that
+  function. `refitViewport` after `setDoc`, one line, recorded in
+  `17-file-menu.md §7.9`.
+- **`New…` reuses the document's id**, so the blank canvas autosaves over the
+  previous draft and only in-session undo brings the drawing back. Spec 17 §2
+  promises it "stays in recent" and that is not true yet; B1's confirm says so
+  honestly instead. The fix is three lines in `catalogue.ts` **plus** a guard in
+  `lib/agent/session.ts`, which collapses a session by comparing dimensions and
+  layer shape but not ids — a same-size `new_document` inside an agent session
+  would otherwise collapse to an `ai_edit` that silently drops the id change.
+  Handed to B2, where Open recent makes the difference visible.
+- **The header's filename input still does not write back to the document.** It
+  is uncontrolled and remounts on `doc.name`, so it *displays* correctly; typing
+  in it changes nothing. Duplicate therefore copies whatever name the document
+  loaded with. Pre-existing, and noted in `Chrome.tsx` at the input.
 - **`components/Layers.tsx` has no outside-click closer**, deliberately: the panel is a working
   surface you click away from constantly. Escape and the toolbar button close it. If that turns out
   to be wrong, the fix is `mousedown`, never `click` — see §5.

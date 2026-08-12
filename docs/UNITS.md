@@ -68,8 +68,8 @@ works; it is done when the next agent can start without asking anything.
 | — | Settings panel (theme, grids, symmetry) | DONE | 9 | [16](./specs/16-settings.md) |
 | **A1** | Resize transform + command | **DONE** | 9 | [16 §4](./specs/16-settings.md) |
 | **A2** | Canvas tab size UI | **DONE** | 9 | [16 §4.1](./specs/16-settings.md) |
-| **B1** | File menu, Examples, Duplicate, Clear | **NEXT** | — | [17](./specs/17-file-menu.md) |
-| **B2** | Open recent | TODO | — | [17 §2](./specs/17-file-menu.md) |
+| **B1** | File menu, Examples, Duplicate, Clear | **DONE** | 9 | [17](./specs/17-file-menu.md) |
+| **B2** | Open recent | **NEXT** | — | [17 §2](./specs/17-file-menu.md) |
 | **B3** | Paste image | TODO | — | [17 §2](./specs/17-file-menu.md) |
 | **C** | Code panel | TODO | — | [07](./specs/07-code-panel.md) |
 | **D** | Exporters ×6 | TODO | — | [08](./specs/08-exporters.md) |
@@ -166,59 +166,87 @@ because the thing that did not fit was its placement, not its content.
 
 ---
 
-## B1 — File menu · NEXT
+## B1 — File menu · DONE
 
-### Context handed over
+**12 Aug 2026 · `PENDING` · 9/10**
 
-- Spec `17-file-menu.md` is written and the account items are already excluded —
-  do not add Dashboard, Explore or publish-to-community.
-- The menu lives in `components/Chrome.tsx`, in the logo button's popover.
-- **Clear must go through `commit`** as a paint command across the frame's
-  layers, so `⌘Z` restores it. New… replaces the document and therefore cannot
-  be undone — that is why it confirms instead.
-- `listStarters()` already returns `['face', 'bird']`; the Examples submenu
-  should read from it rather than hard-coding.
-- Outside-click closers use `mousedown`, never `click` — `HANDOFF §5`.
+`lib/artwork-core/clear.ts` (`paintedCellCount`, `clearFrameCommand`),
+`lib/artwork-core/duplicate.ts` (`copyName`, `duplicateDoc`),
+`lib/editor/file-menu.ts` (the menu as data, `needsNewConfirm`, both confirm
+strings), a rewritten `FileMenu` in `components/Chrome.tsx`, and
+`tools/probe-file-menu.ts` — 49 unit tests and 80 browser checks across both
+themes and two phone widths. Corrections are recorded in `17-file-menu.md §7`.
 
-**From A2, four things this unit will otherwise rediscover:**
+**Three things in the spec were wrong and are now fixed there, not routed
+around** (rule 10):
 
-- **`refitViewport(doc)` in `lib/editor/refit.ts` is the one line to call after
-  anything that changes the document's dimensions.** New…, Examples and
-  Duplicate all do. `loadExample` already calls it. Without it the artwork is
-  left at the old scale and offset, off the corner of the screen, which reads as
-  the command having destroyed it rather than as a scroll position.
-- **`check-responsive.ts` does not open popovers**, so it will report six clean
-  viewports while your menu runs off a 320px screen. A2's Settings panel had
-  been doing exactly that. Open the menu at 390 and 320 in a probe and measure
-  its bounding box; the fix that worked is `position: fixed` with an 8px inset
-  on the mobile tier — `components/Settings.tsx` has the pattern and the comment
-  explaining why `fixed` resolves against the header.
-- **Say the cost before the action, not after.** The Canvas tab tells you how
-  many painted pixels a crop will drop *while you are still deciding*, and that
-  is the shape rule 7 wants. Clear is destructive-but-undoable like a crop, so it
-  can follow the same pattern rather than needing a modal; New… genuinely cannot
-  be undone, which is the distinction that earns it a confirm.
-- **Give a probe a handle that is not the accessible name.** `#canvas-size-apply`
-  is an `id` on the apply button precisely because its *label* is the thing under
-  test, and an `aria-label` would have overridden the visible name (`HANDOFF §5`).
-  A menu item whose text changes needs the same treatment.
+1. **`Examples ›` cannot be a flyout.** The menu is 232px anchored at x=12, so a
+   flyout needing 160px ends at 404 — off a 390px phone — and flipping it left
+   lands on its own parent. It is a disclosure that expands in place, one code
+   path at every tier. §5's "Escape closes one level at a time" still holds and
+   is still tested.
+2. **New… *is* undoable.** §2 says it is not. `new_document` commits a
+   `replace_doc` carrying the whole previous document, so Ctrl+Z restores the
+   drawing exactly. What is not recoverable is a **reload** — the blank canvas
+   keeps the same document id, autosave writes over the draft, and history is
+   memory-only. The confirm says that and no more.
+3. **§2's "the old drawing stays in recent" is not true today**, for the same
+   reason. See the note handed to B2 below; the fix belongs there and is not
+   safe here.
 
-### Prompt
+**Four decisions the spec did not contain**, all in §7: the shortcut column
+shows `Ctrl S` only, because that is the only key wired and a hint is a promise;
+Clear is *disabled* on an empty frame rather than confirming its way to a no-op;
+both confirms are inline and replace the menu's body, because this repo has no
+dialog component and B1 is not the unit to invent one; and Duplicate awaits
+`flushSave()` before switching, without which a duplicate within 500ms of a
+stroke saves the stroke to the *copy* and not to the original.
 
-> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md`, then build unit **B1**:
-> the File menu structure, the Examples submenu, Duplicate, and Clear.
->
-> No account items — Dashboard, Explore and publish-to-community are out of
-> scope permanently. Clear empties the frame through `commit` so it is undoable,
-> is red, and confirms. New… confirms when the document has painted pixels,
-> because it replaces the document and cannot be undone. Duplicate forks to a
-> new draft with a fresh id.
->
-> Then follow the finishing protocol in `docs/UNITS.md §0`.
+**The handover was wrong about `refitViewport` and measuring found it.** It said
+New…, Examples and Duplicate all change the document's dimensions. Only Examples
+does. New… is "at the current size" by §2, and a duplicate is the same picture —
+re-fitting it would throw away the pan and zoom of somebody mid-detail-work and
+buy nothing. Examples and New… re-fit because they are a *different artwork*;
+Duplicate does not. §7.3 is the table.
+
+**One debt item closed on the way:** `openFile()` now re-fits the viewport
+(`HANDOFF §11`). It is one line, it is the same defect A2 fixed elsewhere, and
+this is the unit that owns that function.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Every item in §6 step 1 is built, three spec errors corrected and seven gaps filled in §7. Not 10: the menu on screen is not yet the menu §1 draws — Open recent and Paste image are absent by §6's own ordering, and the shortcut hints §1 shows are withheld until step 3 wires the keys. |
+| 2 | Correctness | 9 | F-M1 handled both ways; Clear is one batch, undoes byte-exactly, clears hidden layers and leaves other frames alone; Duplicate's flush-then-fork verified against real IndexedDB records. The coarse edge, stated rather than hidden: New reuses the document id, so the previous drawing does not survive a reload. The confirm says so; the fix is B2's, and §7.2 of this table says why it is not safe here. |
+| 3 | Tests | 9 | 49 unit tests on the three new modules, 80 browser checks on the wiring, in both themes and at 390 and 320. Still the repo-wide condition: the probe needs a dev server, so `npm test` cannot guard menu wiring — which is exactly how the rename silently broke two unrelated probes. |
+| 4 | Integration | 9 | `commit()` is still the only writer of the open document; `setDoc` is used only where `openFile` already used it, for "a different document is now open"; artwork-core still imports nothing but zod; the menu is data plus an exhaustive `Record<FileMenuItemId, …>`, so a new item cannot render dead; tokens only. One new read on the dev-only `window.__tessera`. |
+| 5 | Design fidelity | 9 | Read in both themes and at both phone widths, with the submenu expanded and with the confirm open. The one divergence from §1 is the disclosure instead of the flyout, and it is a divergence because the flyout does not fit — measured, §7.1. |
+| 6 | No regressions | 9 | 376 tests, clean build, six viewports, `probe-layers`, `probe-tools-ui`, `probe-tooltip`, `probe-canvas-size` 70/70 and `probe-zoom` all green. Two probes the rename broke are fixed in this same change, and a `HANDOFF §11` debt item is gone. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **Open recent and Paste image.** B2 and B3 by §6's own ordering. Their rows are
+  absent rather than disabled — a control that looks live and is not is worse
+  than no control, which is the same rule that keeps the account items out.
+- **`⌘N`, `⌘O`, `⌘V`.** Step 3 of §6. Two of them are the browser's own and need
+  §3's conditional `preventDefault`, which is the whole reason shortcuts are a
+  separate step.
+- **Giving New… a fresh document id.** It would make §2's "stays in recent" true,
+  and it is three lines — but `lib/agent/session.ts` collapses a session by
+  comparing dimensions and layer shape, *not* ids, so a same-size
+  `new_document` inside an agent session would collapse to an `ai_edit` that
+  silently drops the id change. B2 is where the fix pays off and where the guard
+  can move with it.
+- **Renaming the document from the header.** The filename input still does not
+  write back (a pre-existing gap, noted in `Chrome.tsx`), so Duplicate copies
+  whatever name the document loaded with — `untitled copy` for a fresh canvas.
 
 ---
 
-## B2 — Open recent · TODO
+## B2 — Open recent · NEXT
 
 ### Context handed over
 
@@ -228,14 +256,62 @@ because the thing that did not fit was its placement, not its content.
   reason this unit matters more than its size suggests.
 - A corrupt record must be shown disabled and **kept**, never deleted.
 
+**From B1 — the menu you are adding to already exists and has a shape:**
+
+- **Add a row by adding it to `FILE_MENU` in `lib/editor/file-menu.ts`, not to
+  the JSX.** The menu renders from that array, and the handler table in
+  `Chrome.tsx` is an exhaustive `Record<FileMenuItemId, () => void>` — add an id
+  and the compiler names the missing handler rather than letting the row render
+  dead. `open-recent` belongs in the first group, after `open`.
+  `file-menu.test.ts` will hold you to no-empty-groups and unique ids.
+- **The submenu pattern is already built and is a disclosure, not a flyout.**
+  `Examples` expands in place with `aria-expanded` and a rotated `CaretDownSmall`;
+  §7.1 explains why a flyout does not fit a 390px phone at this anchor. Open
+  recent is a longer list, so reuse it rather than reopening the question — and
+  the menu already has `maxHeight` + `overflowY`, so ten rows will scroll rather
+  than run off the bottom.
+- **Every row has an `id` of the form `file-<itemId>`, and the starters are
+  `file-example-<name>`.** That is deliberate (`HANDOFF §5`): a probe needs a
+  handle that is not the label when the label is the thing under test. Give the
+  recent rows the same treatment — their labels carry a *relative date*, which
+  changes.
+- **`tools/probe-file-menu.ts` is the probe to extend**, not to duplicate. It
+  reads IndexedDB directly (the `DRAFTS` constant) to prove Duplicate leaves the
+  original behind; the same read is what you need to seed and assert a recent
+  list. It also covers the 390/320 geometry that `check-responsive` cannot see.
+- **B1 already proved two drafts survive a Duplicate**, so there is real data to
+  list on day one.
+
+**The decision this unit should make, which B1 deliberately did not:**
+
+- **Should `New…` mint a fresh document id?** §2 promises "the old drawing stays
+  in recent" and it does not: `new_document` reuses `doc.id`, so autosave writes
+  over the previous draft and only in-session undo brings it back. B1's confirm
+  is honest about that rather than papering over it (`§7`, `newConfirm`). The fix
+  is three lines in `lib/actions/catalogue.ts` — **but do not make it without
+  also fixing `lib/agent/session.ts`**, which collapses a session by comparing
+  dimensions and layer shape and *not* ids. A same-size `new_document` inside an
+  agent session would otherwise collapse to an `ai_edit` that silently drops the
+  id change. That is the silent-corruption class the whole command design exists
+  to avoid, so it is a guard plus a test, not a one-liner.
+
 ### Prompt
 
-> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md §2`, then build unit
-> **B2**: Open recent.
+> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md` (§2 and §7), then build
+> unit **B2**: Open recent.
 >
 > `listDrafts()` exists and nothing calls it. Surface it as a submenu — newest
 > first, capped at 10, name and relative date, a real empty state, and a record
-> that no longer parses shown disabled rather than dropped.
+> that no longer parses shown disabled rather than dropped. Add the row to
+> `FILE_MENU` in `lib/editor/file-menu.ts`; the menu renders from that array and
+> the handler table is exhaustive, so the compiler will name what you missed.
+> Reuse the Examples disclosure rather than building a flyout, and extend
+> `tools/probe-file-menu.ts` rather than writing a second probe.
+>
+> Decide, in writing, whether `New…` should take a fresh document id so that
+> "the old drawing stays in recent" becomes true — and if it should, fix
+> `lib/agent/session.ts` in the same change, because it compares dimensions and
+> layer shape but not ids.
 >
 > Then follow the finishing protocol in `docs/UNITS.md §0`.
 

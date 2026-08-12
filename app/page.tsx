@@ -98,6 +98,13 @@ export default function EditorPage() {
         const d = useDocStore.getState().doc
         return d ? { w: d.w, h: d.h } : null
       },
+      // Duplicate's whole contract is "a fresh id, and the original survives".
+      // Neither half is visible on screen — the header shows the name and
+      // nothing shows the id — so the File menu probe reads it here.
+      identity: () => {
+        const d = useDocStore.getState().doc
+        return d ? { id: d.id, name: d.name } : null
+      },
       viewport: () => useEditorStore.getState().viewport,
     }
     return () => {

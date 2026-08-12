@@ -21,6 +21,8 @@ export const TRANSPARENT_CHAR = '.'
 /** 1 (transparent) + 9 (digits 1-9) + 26 (a-z) = 36. */
 export const MAX_PALETTE = 36
 export const MAX_DIM = 256
+/** Artwork name. Named rather than inlined because `copyName` has to fit inside it. */
+export const MAX_NAME = 128
 export const MIN_FRAME_MS = 10
 export const MAX_FRAME_MS = 10_000
 
@@ -91,7 +93,7 @@ export const serializedFrameSchema = z.object({
 export const serializedDocSchema = z.object({
   v: z.literal(FORMAT_VERSION),
   id: z.string().min(1).max(64),
-  name: z.string().max(128),
+  name: z.string().max(MAX_NAME),
   w: z.number().int().min(1).max(MAX_DIM),
   h: z.number().int().min(1).max(MAX_DIM),
   palette: z.array(paletteEntrySchema).min(1).max(MAX_PALETTE),

@@ -9,11 +9,18 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { nanoid } from 'nanoid'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
 import { refitViewport } from '@/lib/editor/refit'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/artwork-core/create'
+import { clearFrameCommand, paintedCellCount } from '@/lib/artwork-core/clear'
+import { duplicateDoc } from '@/lib/artwork-core/duplicate'
+import {
+  CLEAR_ACTION, FILE_MENU, NEW_ACTION, clearConfirm, needsNewConfirm, newConfirm,
+  starterLabel, type FileMenuItem, type FileMenuItemId,
+} from '@/lib/editor/file-menu'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
 import { spriteRects } from '@/lib/renderer/sprite-svg'
@@ -440,25 +447,44 @@ function Logo({ size = 24 }: { size?: number }) {
 }
 
 /**
- * File menu.
+ * File menu. See docs/specs/17-file-menu.md, and §7 for what B1 decided.
  *
- * New / Open / Export were all already implemented — download lives in the page's
- * Ctrl+S handler, parseDoc reads a file, new_document is a registry action — but
- * nothing on screen reached any of them. A control that looks like a menu and does
- * nothing is worse than no control.
+ * Everything that decides anything is in lib/editor/file-menu.ts — the shape of
+ * the menu, whether New has to ask, and every sentence either confirm says — so
+ * that `npm test` can hold it. What is left here is markup and the calls that
+ * mutate.
  *
- * "New" goes through the registry so it inherits the destructive-action rule the
- * agent is held to: it asks first.
+ * The handler table is a `Record<FileMenuItemId, …>` on purpose: the menu is
+ * rendered from data, and an exhaustive record is what makes the compiler name a
+ * new item that nobody wired rather than letting it render as a dead row.
  */
 function FileMenu({ onClose }: { onClose: () => void }) {
   const doc = useDocStore((s) => s.doc)
+  const frame = useDocStore((s) => s.frame)
   const ref = useRef<HTMLDivElement>(null)
+  const tier = useTier()
+
+  const [examplesOpen, setExamplesOpen] = useState(false)
+  /** Which item is mid-confirm. The confirm replaces the menu's body — §7.5. */
+  const [confirming, setConfirming] = useState<'new' | 'clear' | null>(null)
+
+  const painted = doc ? paintedCellCount(doc, frame) : 0
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
     }
-    const esc = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
+    /**
+     * One level at a time — spec §5. A confirm backs out to the menu, an open
+     * submenu collapses, and only a menu with neither of those open closes.
+     * Escaping out of a confirm should not also cost you the menu you were in.
+     */
+    const esc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (confirming) setConfirming(null)
+      else if (examplesOpen) setExamplesOpen(false)
+      else onClose()
+    }
     // `mousedown`, not `click`: the click that OPENS the menu is still
     // propagating when this effect runs, so a click listener sees it, decides
     // the target is outside the menu, and closes it in the same gesture — the
@@ -470,28 +496,54 @@ function FileMenu({ onClose }: { onClose: () => void }) {
       document.removeEventListener('mousedown', away)
       document.removeEventListener('keydown', esc)
     }
-  }, [onClose])
+  }, [onClose, confirming, examplesOpen])
 
-  const item = (label: string, hint: string, run: () => void) => (
-    <button
-      key={label}
-      role="menuitem"
-      onClick={() => {
-        run()
-        onClose()
-      }}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-        padding: '7px 10px', borderRadius: 'var(--r-md)', font: 'var(--t-label)',
-        color: 'var(--fg)', textAlign: 'left',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-    >
-      <span style={{ flex: 1 }}>{label}</span>
-      <span className="tabular" style={{ color: 'var(--faint)' }}>{hint}</span>
-    </button>
-  )
+  const startNew = () => {
+    const r = runUi('new_document', { width: doc?.w ?? 16, height: doc?.h ?? 16 })
+    if (!r.ok) {
+      window.alert(r.error)
+      return
+    }
+    // A blank canvas is a different artwork, so it is shown fitted and centred
+    // rather than under whatever pan the last drawing was left at. The size is
+    // unchanged by construction, so this is about the artwork, not the
+    // dimensions — §7.3.
+    const after = useDocStore.getState().doc
+    if (after) refitViewport(after)
+    onClose()
+  }
+
+  const clearFrame = () => {
+    const d = useDocStore.getState().doc
+    if (!d) return
+    const cmd = clearFrameCommand(d, frame, 'Clear frame')
+    // One batch, so Ctrl+Z is one press however many layers the frame has.
+    if (cmd) useDocStore.getState().commit(cmd)
+    onClose()
+  }
+
+  const run: Record<FileMenuItemId, () => void> = {
+    new: () => (needsNewConfirm(doc, frame) ? setConfirming('new') : startNew()),
+    open: () => { openFile(); onClose() },
+    duplicate: () => { void duplicateCurrent(); onClose() },
+    // The one item that does not close the menu: it IS the menu, one level down.
+    examples: () => setExamplesOpen((v) => !v),
+    download: () => {
+      const d = useDocStore.getState().doc
+      if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
+      onClose()
+    },
+    png: () => {
+      const d = useDocStore.getState().doc
+      if (d) downloadPng(d)
+      onClose()
+    },
+    clear: () => setConfirming('clear'),
+  }
+
+  /** Nothing painted, nothing to clear. A confirm that leads to a no-op is worse
+   *  than a disabled row — §7.4. */
+  const disabled: Partial<Record<FileMenuItemId, boolean>> = { clear: painted === 0 }
 
   return (
     <div
@@ -500,33 +552,210 @@ function FileMenu({ onClose }: { onClose: () => void }) {
       aria-label="File"
       style={{
         position: 'absolute', left: 0, top: 'calc(100% + 6px)', width: 232, padding: 4,
+        // The menu grew from six rows to eight plus a submenu. 232 still clears
+        // a 320px screen from the logo's x=12 — measured by tools/probe-file-menu.ts,
+        // because check-responsive never opens a popover (HANDOFF §5) — but the
+        // two caps mean a shorter viewport scrolls the menu instead of running
+        // it off the bottom.
+        maxWidth: 'calc(100vw - 24px)',
+        maxHeight: `calc(100dvh - ${chromeFor(tier).headerHeight + 16}px)`,
+        overflowY: 'auto',
         background: 'var(--panel)', borderRadius: 'var(--r-lg)',
         boxShadow: 'var(--shadow-lg)', zIndex: 60,
       }}
     >
-      {item('New', '', () => {
-        const r = runUi('new_document', { width: doc?.w ?? 16, height: doc?.h ?? 16 })
-        if (!r.ok) window.alert(r.error)
-      })}
-      {item('Open…', '', () => openFile())}
+      {confirming === 'new' && (
+        <MenuConfirm
+          id="file-confirm-new"
+          message={newConfirm(doc?.w ?? 16, doc?.h ?? 16)}
+          action={NEW_ACTION}
+          onCancel={() => setConfirming(null)}
+          onConfirm={startNew}
+        />
+      )}
+      {confirming === 'clear' && (
+        <MenuConfirm
+          id="file-confirm-clear"
+          message={clearConfirm(painted)}
+          action={CLEAR_ACTION}
+          onCancel={() => setConfirming(null)}
+          onConfirm={clearFrame}
+        />
+      )}
 
-      {/* Examples. The editor opens blank, so the starters had to become
-          something you reach for. Routed through commit() like everything else:
-          one undo step, and the drawing you had is on the stack rather than
-          gone. */}
-      <div style={{ height: 1, margin: '4px 6px', background: 'var(--line)' }} />
-      {listStarters().map((s) => item(`Example — ${s}`, '', () => loadExample(s)))}
-
-      {item('Export .tessera.json', 'Ctrl S', () => {
-        const d = useDocStore.getState().doc
-        if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
-      })}
-      {item('Export PNG', '', () => {
-        const d = useDocStore.getState().doc
-        if (d) downloadPng(d)
-      })}
+      {!confirming && FILE_MENU.map((group, g) => (
+        // role="none" on the layout wrappers, so the menuitems are still direct
+        // children of the menu as far as assistive tech is concerned. A plain
+        // div here silently breaks a menu's required-owned-elements rule.
+        <div key={g} role="none">
+          {g > 0 && (
+            <div role="none" style={{ height: 1, margin: '4px 6px', background: 'var(--line)' }} />
+          )}
+          {group.map((it) => (
+            <div key={it.id} role="none">
+              <MenuItem
+                item={it}
+                expanded={it.submenu ? examplesOpen : undefined}
+                disabled={disabled[it.id]}
+                onClick={run[it.id]}
+              />
+              {/* The submenu, expanded in place. §7.1: a flyout at this anchor
+                  runs off a 390px phone, and flipping it left lands on its own
+                  parent. `listStarters()` is the source — the rows are never
+                  hard-coded, so adding a starter adds a row. */}
+              {it.submenu && examplesOpen && (
+                <div role="group" aria-label="Examples">
+                  {listStarters().map((s) => (
+                    <button
+                      key={s}
+                      id={`file-example-${s}`}
+                      role="menuitem"
+                      onClick={() => { loadExample(s); onClose() }}
+                      style={{ ...ROW, paddingLeft: 28, color: 'var(--muted)' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <span style={{ flex: 1 }}>{starterLabel(s)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
     </div>
   )
+}
+
+/** Shared row geometry — the menu, the submenu and the confirm's buttons agree. */
+const ROW: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+  padding: '7px 10px', borderRadius: 'var(--r-md)', font: 'var(--t-label)',
+  color: 'var(--fg)', textAlign: 'left',
+}
+
+function MenuItem({
+  item, expanded, disabled, onClick,
+}: {
+  item: FileMenuItem
+  expanded?: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      // An id, not an aria-label. Clear's label is plain text but the confirm it
+      // opens is labelled with a COUNT, and a probe reading a label needs a
+      // handle that is not the label — HANDOFF §5, the trap A2 hit.
+      id={`file-${item.id}`}
+      role="menuitem"
+      aria-haspopup={item.submenu ? 'true' : undefined}
+      aria-expanded={item.submenu ? expanded : undefined}
+      disabled={disabled}
+      onClick={onClick}
+      style={{
+        ...ROW,
+        color: disabled
+          ? 'var(--disabled)'
+          : item.destructive
+            ? 'var(--diff-remove)'
+            : 'var(--fg)',
+      }}
+      onMouseEnter={(e) => !disabled && (e.currentTarget.style.background = 'var(--hover)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      <span style={{ flex: 1 }}>{item.label}</span>
+      {item.hint && <span className="tabular" style={{ color: 'var(--faint)' }}>{item.hint}</span>}
+      {item.submenu && (
+        <span
+          aria-hidden
+          style={{
+            display: 'grid', placeItems: 'center', color: 'var(--faint)',
+            // No CaretRight in the generated icon set, and icons.tsx must not be
+            // hand-edited. A rotated CaretDown is the same glyph the header uses
+            // and it animates between the two states for free.
+            transform: expanded ? 'none' : 'rotate(-90deg)',
+            transition: `transform var(--dur-2) var(--ease-out)`,
+          }}
+        >
+          <CaretDownSmall size={12} />
+        </span>
+      )}
+    </button>
+  )
+}
+
+/**
+ * A confirm that replaces the menu's body rather than opening a dialog. §7.5.
+ *
+ * This repo has no modal component and B1 is not the unit to invent one. The
+ * menu is already a popover with a focus context and an Escape handler, so the
+ * cheapest honest confirm is to put the question where the item was. Cancel
+ * returns to the menu — backing out of a confirm should not also close the menu
+ * you were reading.
+ */
+function MenuConfirm({
+  id, message, action, onCancel, onConfirm,
+}: {
+  id: string
+  message: string
+  action: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <div role="alertdialog" aria-label={action} style={{ padding: 6, display: 'grid', gap: 10 }}>
+      <p id={`${id}-message`} style={{ margin: 0, font: 'var(--t-copy-sm)', color: 'var(--fg)' }}>
+        {message}
+      </p>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button
+          onClick={onCancel}
+          style={{ height: 30, padding: '0 12px', font: 'var(--t-label-sm)', color: 'var(--muted)' }}
+        >
+          Cancel
+        </button>
+        <button
+          id={id}
+          autoFocus
+          onClick={onConfirm}
+          style={{
+            height: 30, padding: '0 14px', borderRadius: 'var(--r-md)',
+            font: 'var(--t-label-sm)',
+            background: 'var(--diff-remove)', color: 'var(--onaccent)',
+          }}
+        >
+          {action}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Fork the open document into a new draft and switch to it. Spec §2, §7.3, §7.7.
+ *
+ * `setDoc`, not `commit`: this is not a mutation of the open document, it is a
+ * different document being opened — the same path `openFile` takes. Rule 4 is
+ * about who writes the document, and nothing here writes one; the original is
+ * untouched and sits in IndexedDB under its own id, which is the escape hatch
+ * rule 7 asks for.
+ *
+ * The flush is load-bearing. Autosave is debounced 500ms, so duplicating within
+ * half a second of a stroke would switch away before the ORIGINAL was written —
+ * the copy would carry the stroke and the original would not.
+ *
+ * No `refitViewport`: a duplicate is the same picture at the same size, so
+ * re-fitting would throw away the pan and zoom of somebody mid-detail-work and
+ * buy nothing (§7.3).
+ */
+async function duplicateCurrent() {
+  const store = useDocStore.getState()
+  const doc = store.doc
+  if (!doc) return
+  await store.flushSave()
+  store.setDoc(duplicateDoc(doc, { id: nanoid() }))
 }
 
 /**
@@ -562,6 +791,11 @@ function openFile() {
         return
       }
       useDocStore.getState().setDoc(parsed.value)
+      // A file from disk can be any size, and the view is still fitted to the
+      // document that was open. Recorded as debt in HANDOFF §11 when A2 fixed
+      // the same defect for resize and loadExample; this is the unit that owns
+      // this function, so it is fixed here rather than carried further.
+      refitViewport(parsed.value)
     } catch {
       window.alert('That file is not valid JSON.')
     }
