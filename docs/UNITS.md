@@ -324,7 +324,7 @@ draft, and regressions carried two probes broken by a rename.
 
 ## B2 — Open recent, rename, shortcuts · DONE
 
-**12 Aug 2026 · `PENDING-B2` · 9/10**
+**12 Aug 2026 · `793a8b8` · 9/10**
 
 `lib/artwork-core/doc-name.ts` (`cleanDocName`, `copyName`, `renameCommand`),
 the `doc_rename` command, `listRecent()` in `lib/persist/idb.ts`,
