@@ -57,8 +57,15 @@ function skipWs(t: string, i: number): number {
   return i
 }
 
-/** `i` at the opening quote; returns the index just past the closing one, or -1. */
-function skipString(t: string, i: number): number {
+/**
+ * `i` at the opening quote; returns the index just past the closing one, or -1.
+ *
+ * Exported for `json-tokens.ts`, which walks the same text for a different
+ * reason. One implementation of "where does this string end" — two would drift,
+ * and they would drift on escape handling, which is the part that is easy to
+ * get subtly wrong.
+ */
+export function skipString(t: string, i: number): number {
   if (t[i] !== '"') return -1
   i++
   while (i < t.length) {

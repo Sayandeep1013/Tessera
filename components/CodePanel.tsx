@@ -30,7 +30,11 @@ import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
 import { isTyping } from '@/lib/editor/keys'
 import { pxRowRanges, locate, type Range } from '@/lib/editor/json-locate'
 import {
-  CODE_DOM_ID, CODE_STATUS_DOM_ID, CODE_TEXT_DOM_ID, CODE_WIDTH_KEY, DOC_TO_TEXT_MS, EDIT_LABEL,
+  pieces, tokenizeJson, type Marked as Marked_, type TokenKind,
+} from '@/lib/editor/json-tokens'
+import {
+  CODE_DOM_ID, CODE_REVERTED, CODE_STATUS_DOM_ID, CODE_TEXT_DOM_ID, CODE_WIDTH_KEY,
+  DOC_TO_TEXT_MS, EDIT_LABEL,
   GO_TO_ERROR, MAX_MARK, PANEL_TITLE, SHEET_DONE, STATUS_VALID, TEXT_TO_DOC_MS,
   caretCell, caretLine, cellRange, errorLine, lineAt, readCodeWidth,
   shouldCoalesce, type SyncOrigin,
@@ -127,41 +131,61 @@ function CodePanelBody() {
   }, [doc?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── text → document, debounced (§2) ───────────────────────────────────────
+  /** The buffer, readable from a cleanup closure that would otherwise see stale state. */
+  const textRef = useRef(text)
+  textRef.current = text
+
+  /** Parse and commit, now. The debounce calls it; so does closing the panel. */
+  const applyNow = useCallback((next: string) => {
+    const before = useDocStore.getState().doc
+    if (!before) return
+    const parsed = parseDoc(next)
+    if (!parsed.ok) {
+      // §3: nothing is applied and nothing is lost. The canvas keeps rendering
+      // the last valid document and the autosave of THAT document carries on —
+      // the invalid text is never persisted.
+      setError(parsed.error)
+      return
+    }
+    setError(null)
+    const now = Date.now()
+    // Identical bytes are not an edit. Typing and deleting a character would
+    // otherwise leave an undo step that undoes to itself.
+    if (serializeDoc(before) !== serializeDoc(parsed.value)) {
+      useDocStore.getState().commit(
+        { type: 'replace_doc', label: EDIT_LABEL, before, after: parsed.value },
+        shouldCoalesce(lastEdit.current, now),
+      )
+      lastEdit.current = now
+    }
+    // Released only after the commit, so the subscription above ignores this
+    // document's own round trip and leaves the caret alone.
+    origin.current = 'canvas'
+  }, [])
+
   const onChange = useCallback((next: string) => {
     origin.current = 'panel'
     setText(next)
     if (parseTimer.current) clearTimeout(parseTimer.current)
-    parseTimer.current = setTimeout(() => {
-      const before = useDocStore.getState().doc
-      if (!before) return
-      const parsed = parseDoc(next)
-      if (!parsed.ok) {
-        // §3: nothing is applied and nothing is lost. The canvas keeps
-        // rendering the last valid document and the autosave of THAT document
-        // carries on — the invalid text is never persisted.
-        setError(parsed.error)
-        return
-      }
-      setError(null)
-      const now = Date.now()
-      // Identical bytes are not an edit. Typing and deleting a character would
-      // otherwise leave an undo step that undoes to itself.
-      if (serializeDoc(before) !== serializeDoc(parsed.value)) {
-        useDocStore.getState().commit(
-          { type: 'replace_doc', label: EDIT_LABEL, before, after: parsed.value },
-          shouldCoalesce(lastEdit.current, now),
-        )
-        lastEdit.current = now
-      }
-      // Released only after the commit, so the subscription above ignores this
-      // document's own round trip and leaves the caret alone.
-      origin.current = 'canvas'
-    }, TEXT_TO_DOC_MS)
-  }, [])
+    parseTimer.current = setTimeout(() => applyNow(next), TEXT_TO_DOC_MS)
+  }, [applyNow])
 
+  /**
+   * §7: "Done dismisses it and applies any pending valid edit."
+   *
+   * Without this, closing the panel within 300ms of the last keystroke drops
+   * that keystroke — the debounce is still counting and the component goes
+   * away with it. Typing a character and immediately reaching for Close is not
+   * an unusual thing to do, and losing the edit silently is exactly what rule 7
+   * is about. Runs on unmount too, so Escape and ⌘/ get it as well as the
+   * button.
+   */
   useEffect(() => () => {
-    if (parseTimer.current) clearTimeout(parseTimer.current)
-  }, [])
+    if (!parseTimer.current) return
+    clearTimeout(parseTimer.current)
+    parseTimer.current = null
+    applyNow(textRef.current)
+  }, [applyNow])
 
   /**
    * The caret, from `selectionchange` rather than from React's `onSelect`.
@@ -201,6 +225,29 @@ function CodePanelBody() {
     if (!undo && !redo) return
     e.preventDefault()
     if (parseTimer.current) clearTimeout(parseTimer.current)
+
+    /**
+     * While the buffer does not parse, the first ⌘Z undoes **the typing**, not
+     * the document. See §9.8.
+     *
+     * It used to go straight to the document and then rewrite the buffer from
+     * it, so text somebody had typed vanished with no message — the one place
+     * in the app where that could happen. Undoing an edit that was never
+     * applied is also what ⌘Z plainly means here: the unapplied edit is the
+     * most recent thing that happened. The document's own history is one more
+     * press away, and the notice says which one you just got.
+     */
+    if (undo && error) {
+      const d = useDocStore.getState().doc
+      if (d) {
+        setText(serializeDoc(d))
+        setError(null)
+        useEditorStore.getState().setNotice(CODE_REVERTED)
+      }
+      origin.current = 'canvas'
+      lastEdit.current = null
+      return
+    }
     // The document is about to change from somewhere that is not this panel, so
     // the buffer must be rewritten from it — including when it was mid-edit.
     origin.current = 'canvas'
@@ -449,11 +496,31 @@ function CodePanelBody() {
 // ─── the overlay's marks ─────────────────────────────────────────────────────
 
 /**
- * The text, with at most two ranges wrapped.
+ * How each token kind is painted.
  *
- * Slices rather than spans-per-character. A 256×256 document serialises to
- * ~70KB; one span each would be 70,000 DOM nodes rebuilt whenever the cursor
- * moved a pixel. This is five nodes at most, whatever the document.
+ * Chosen for THIS document rather than for JSON in general (§9.1). The file is
+ * a short header, a palette, and then a wall of pixel rows — so the scaffolding
+ * recedes to the base colour and the artwork is the most legible thing on the
+ * screen, which is the opposite of what a generic JSON theme would do.
+ */
+const INK: Record<TokenKind, string> = {
+  key: 'var(--muted)',
+  string: 'var(--fg)',
+  number: 'var(--fg)',
+  literal: 'var(--fg)',
+  /** The content. Everything else in the file exists to hold these up. */
+  pixels: 'var(--fg)',
+  /** Text stays legible; the colour itself is shown by the underline below. */
+  colour: 'var(--fg)',
+}
+
+/**
+ * The text, coloured, with at most two ranges marked.
+ *
+ * One span per *token*, and punctuation and whitespace get none — so a 256×256
+ * document is a few hundred nodes rather than the seventy thousand §9.1
+ * originally assumed a span per character would cost. `pieces` does the cutting;
+ * this only decides what each run looks like.
  */
 function Marked({
   text, error, cursor,
@@ -462,44 +529,71 @@ function Marked({
   error: Range | null
   cursor: Range | null
 }) {
-  // Non-overlapping, in order. The error wins where they collide: a red mark
-  // and a blue one on the same character would just be a muddy character, and
-  // the error is the one that needs answering.
-  const marks = [
-    error && { r: error, kind: 'error' as const },
-    cursor && (!error || cursor.to <= error.from || cursor.from >= error.to)
-      ? { r: cursor, kind: 'cursor' as const }
-      : null,
-  ]
-    .filter((m): m is { r: Range; kind: 'error' | 'cursor' } => !!m)
-    .sort((a, b) => a.r.from - b.r.from)
+  const tokens = useMemo(() => tokenizeJson(text), [text])
 
-  if (!marks.length) return <>{text}</>
+  // The error wins where the two overlap: a red wash and a blue one on the same
+  // character is a muddy character, and the error is the one that needs an
+  // answer.
+  const marks: Marked_[] = []
+  if (error) marks.push({ from: error.from, to: error.to, kind: 'error' })
+  if (cursor && (!error || cursor.to <= error.from || cursor.from >= error.to)) {
+    marks.push({ from: cursor.from, to: cursor.to, kind: 'cursor' })
+  }
 
-  const out: React.ReactNode[] = []
-  let at = 0
-  marks.forEach((m, i) => {
-    if (m.r.from > at) out.push(text.slice(at, m.r.from))
-    out.push(
-      <mark
-        key={i}
-        style={{
-          background: m.kind === 'error'
+  const runs = useMemo(() => pieces(text.length, tokens, marks), [text, tokens, JSON.stringify(marks)]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <>
+      {runs.map((p, i) => {
+        const body = text.slice(p.from, p.to)
+        if (!p.kind && !p.mark) return body
+        const style: React.CSSProperties = {
+          color: p.kind ? INK[p.kind] : 'inherit',
+        }
+        if (p.colour) {
+          // The palette, drawn in its own colours — the thing that makes this
+          // read as an artwork file rather than as configuration.
+          //
+          // A BAR UNDER the text rather than the text colour, for two reasons
+          // that both matter. The palette's near-black ink as text on a dark
+          // panel is unreadable, and any colour a document happens to hold
+          // could be; the text stays `--fg` and the swatch carries the colour.
+          // (No hex literal in that sentence on purpose — `tokens.test.ts`
+          // scans this file for them and cannot tell prose from a value, which
+          // is the right way round for a guard to be wrong.) And it is
+          // layout-safe,
+          // which the overlay absolutely requires — anything that changed a
+          // glyph's advance would slide every mark off its character.
+          //
+          // An inset box-shadow rather than `text-decoration`, so a hairline can
+          // go beneath it: a colour close to the panel's own is a swatch you
+          // cannot find, and each theme has a whole end of the palette like
+          // that. The hairline says "there is a swatch here" and the swatch
+          // still tells the truth about the colour.
+          style.boxShadow = [
+            // token-exempt: an artwork colour is document data, not a design token
+            `inset 0 -2px 0 ${p.colour}`,
+            'inset 0 -3px 0 var(--line-strong)',
+          ].join(', ')
+        }
+        if (p.mark) {
+          style.background = p.mark === 'error'
             ? 'color-mix(in srgb, var(--diff-remove) 32%, transparent)'
-            : 'var(--accent-soft)',
-          color: 'inherit',
-          // A mark that is one character wide is easy to miss on a wall of
-          // dots, so it gets an outline as well as a wash.
-          outline: m.kind === 'error' ? '1px solid var(--diff-remove)' : '1px solid var(--accent)',
-        }}
-      >
-        {text.slice(m.r.from, m.r.to)}
-      </mark>,
-    )
-    at = m.r.to
-  })
-  out.push(text.slice(at))
-  return <>{out}</>
+            : 'var(--accent-soft)'
+          // A one-character mark is easy to miss on a wall of dots, so it gets
+          // an outline as well as a wash.
+          style.outline = p.mark === 'error'
+            ? '1px solid var(--diff-remove)'
+            : '1px solid var(--accent)'
+        }
+        return p.mark ? (
+          <mark key={i} style={style}>{body}</mark>
+        ) : (
+          <span key={i} style={style}>{body}</span>
+        )
+      })}
+    </>
+  )
 }
 
 // ─── the divider ─────────────────────────────────────────────────────────────

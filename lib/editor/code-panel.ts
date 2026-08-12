@@ -126,6 +126,18 @@ export function shouldCoalesce(lastEditAt: number | null, now: number): boolean 
 
 export const STATUS_VALID = 'Valid'
 export const GO_TO_ERROR = 'Go to error'
+
+/**
+ * What ⌘Z says when the buffer does not parse. See §9.8.
+ *
+ * The panel used to send that key straight to the document and then rewrite the
+ * buffer from it, so text somebody had typed disappeared with no message — the
+ * only place in the app where that could happen, and a rule-7 problem with no
+ * error to give it away. Now the first press undoes the typing, which is what
+ * ⌘Z plainly means when the most recent thing that happened was typing, and
+ * this says which of the two undos you just got.
+ */
+export const CODE_REVERTED = "That edit couldn't be applied, so undo put the document's text back. Undo again to undo the document."
 export const PANEL_TITLE = 'Code'
 /** §7's sheet dismisses with a button rather than an outside click. */
 export const SHEET_DONE = 'Done'

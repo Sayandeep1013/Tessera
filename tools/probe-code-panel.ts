@@ -214,6 +214,23 @@ async function run(p: Page, theme: string) {
   })
   check(t('…which selects the offending character'), sel === '@', JSON.stringify(sel))
 
+  // ── undo while invalid undoes the TYPING, and says so — §9.8 ─────────────
+  // This was the one place in the app where text a user typed disappeared with
+  // no message: ⌘Z went straight to the document and the buffer was rewritten
+  // from it.
+  await area(p).focus()
+  await p.keyboard.press('Control+z')
+  await p.waitForTimeout(500)
+  check(t('undo while invalid puts the document text back (§9.8)'),
+    (await text(p)) === (await source(p)) && (await statusText(p)).startsWith('Valid'))
+  check(t('…and says so rather than discarding it in silence'),
+    (await p.getByRole('status').innerText()).includes("couldn't be applied"),
+    await p.getByRole('status').innerText())
+  check(t('…leaving the document itself untouched'),
+    JSON.stringify(await layers(p)) === goodDoc)
+  await p.getByRole('status').click()
+  await p.waitForTimeout(200)
+
   // Put it back, and the error clears.
   await p.evaluate(setText(goodText))
   await p.waitForTimeout(800)
@@ -266,6 +283,41 @@ async function run(p: Page, theme: string) {
   check(t('…with the overlay still covering the whole field, not riding up it'),
     geometry.boxes[0] === geometry.boxes[1] && geometry.boxes[2] === geometry.boxes[3],
     JSON.stringify(geometry.boxes))
+
+  // The two layers agree at every scroll position, not only at the ends.
+  // C's first pass checked the ends alone and recorded the gap; adding coloured
+  // spans is exactly the change that gap was recorded against — a span with a
+  // different font, weight or letter-spacing would slide every mark off its
+  // character and both end checks would still pass.
+  const drift = await p.evaluate(`(() => {
+    const a = document.getElementById('code-text')
+    const pre = document.querySelector('#code-panel pre')
+    const out = []
+    for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
+      a.scrollTop = Math.round((a.scrollHeight - a.clientHeight) * frac)
+      a.dispatchEvent(new Event('scroll', { bubbles: true }))
+      out.push(Math.round(a.scrollTop) - Math.round(pre.scrollTop))
+    }
+    return out
+  })()`) as number[]
+  check(t('…and at every scroll position between, not only at the ends'),
+    drift.every((d) => Math.abs(d) <= 1), JSON.stringify(drift))
+
+  // Colouring must not change a glyph's advance. If a coloured span were even
+  // fractionally wider, the marks would drift along the line.
+  const widths = await p.evaluate(`(() => {
+    const pre = document.querySelector('#code-panel pre')
+    const spans = Array.from(pre.querySelectorAll('span, mark'))
+    return spans.map((s) => {
+      const r = s.getBoundingClientRect()
+      const n = (s.textContent || '').length
+      return n > 0 ? r.width / n : 0
+    }).filter((w) => w > 0)
+  })()`) as number[]
+  const advance = widths[0] ?? 0
+  check(t('every coloured run keeps the monospace advance (§9.1)'),
+    widths.length > 5 && widths.every((w) => Math.abs(w - advance) < 0.05),
+    `${widths.length} runs, spread ${Math.max(...widths) - Math.min(...widths)}`)
   await p.screenshot({ path: join(OUT, `probe-code-panel-${theme}-end.png`) })
 
   await p.evaluate(`(() => {
@@ -304,6 +356,54 @@ async function run(p: Page, theme: string) {
     await p.keyboard.press('Control+/')
     await p.waitForTimeout(250)
   }
+
+  // ── colouring — §9.1, which was wrong about its own cost ─────────────────
+  const ink = await p.evaluate(`(() => {
+    const hex = (rgb) => {
+      const m = /rgb\\((\\d+),\\s*(\\d+),\\s*(\\d+)\\)/.exec(rgb)
+      if (!m) return null
+      return '#' + [1, 2, 3].map((i) => Number(m[i]).toString(16).padStart(2, '0')).join('')
+    }
+    const pre = document.querySelector('#code-panel pre')
+    const spans = Array.from(pre.querySelectorAll('span'))
+    const swatched = spans.filter((s) => getComputedStyle(s).boxShadow !== 'none')
+    return {
+      spans: spans.length,
+      chars: (pre.textContent || '').length,
+      // What each swatch NAMES, against what it is actually painted.
+      pairs: swatched.map((s) => [
+        (s.textContent || '').replace(/"/g, ''),
+        hex(getComputedStyle(s).boxShadow),
+      ]),
+    }
+  })()`) as { spans: number; chars: number; pairs: Array<[string, string | null]> }
+
+  check(t('the text is coloured, not a single flat block'), ink.spans > 20, String(ink.spans))
+  check(t('…at one span per token, not one per character'),
+    ink.spans < ink.chars / 8, `${ink.spans} spans over ${ink.chars} characters`)
+  check(t('…and the palette carries a swatch per entry'),
+    ink.pairs.length >= 4 && ink.pairs.every(([name]) => /^#[0-9a-f]{6}$/.test(name)),
+    JSON.stringify(ink.pairs.map((x) => x[0])))
+  // The assertion worth having: each swatch is painted the colour it names.
+  check(t('…painted in exactly the colour it names'),
+    ink.pairs.every(([name, painted]) => painted === name), JSON.stringify(ink.pairs))
+
+  // ── closing applies a pending edit — §7 ──────────────────────────────────
+  // The debounce is 300ms; reaching for Close inside it used to drop the
+  // keystroke, which is a silent loss of something the user typed.
+  const beforeClose = await text(p)
+  const flushed = beforeClose.slice(0, firstQuote + 1) + '3' + beforeClose.slice(firstQuote + 2)
+  await p.evaluate(setText(flushed))
+  await p.waitForTimeout(60) // well inside TEXT_TO_DOC_MS
+  await p.getByRole('button', { name: 'Close' }).click()
+  await p.waitForTimeout(700)
+  check(t('closing applies an edit that was still in the debounce (§7)'),
+    (await source(p)).includes(flushed.slice(firstQuote + 1, firstQuote + 17)),
+    (await source(p)).slice(firstQuote, firstQuote + 20))
+  await openPanel(p)
+  await p.waitForTimeout(300)
+  check(t('…and reopening shows the document that edit produced'),
+    (await text(p)) === (await source(p)))
 
   // ── the divider — §1 ─────────────────────────────────────────────────────
   const wide = await panel(p).boundingBox()

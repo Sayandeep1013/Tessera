@@ -205,12 +205,21 @@ Four reasons, in order of weight:
 **What replaces the syntax highlighting is better aimed.** An overlay `<pre>`
 sits behind the transparent textarea holding the *same string*, and marks the
 ranges that mean something right now: the parse error, and the character under
-the canvas cursor. It renders as three text nodes and two marks — not one span
-per character — so a 256×256 document costs the same as a 16×16 one.
+the canvas cursor.
 
-**The honest cost:** there is no syntax colouring, and there never will be
-without reversing this. If that is ever wanted, the overlay is where it goes,
-and the price is a span per token on a 70KB string.
+> **Corrected the same day, under rule 10.** This section originally ended
+> "there is no syntax colouring, and there never will be without reversing
+> this… the price is a span per token on a 70KB string", and treated that price
+> as prohibitive. **The number was never checked and it is wrong by two orders
+> of magnitude.** A pixel row is a *single string token*, so the largest
+> document this editor makes — 256×256 — tokenizes to about 400 spans, and a
+> 32×32 one to under a hundred. Colouring was cheap all along and the sentence
+> that said otherwise was arithmetic nobody did. It is built:
+> `lib/editor/json-tokens.ts`, and §9.9 is what it does.
+
+**The honest cost that remains:** there is no *generic JSON* colouring, and
+there should not be. §9.9 explains what is coloured instead and why braces and
+quotes are not it.
 
 ### 9.2 The status line replaces the inline diagnostic — §3 amended
 
@@ -308,9 +317,71 @@ the caret that says it is one. So `showWordmark` is false on a phone.
 It is the same rule that keeps the dead controls out of a narrow header, applied
 one step further: **a live control does not lose its place to a word.**
 
-### 9.8 What C deliberately did not build
+### 9.8 Colouring, aimed at this document rather than at JSON
 
-- **JSON syntax colouring.** §9.1. The overlay is where it would go.
+`lib/editor/json-tokens.ts` tokenizes the buffer and `pieces()` cuts it at every
+token *and* mark boundary, so a one-character error mark inside a pixel row
+splits that row without either one nesting inside the other.
+
+What is coloured is chosen for a file that is a short header, a palette, and
+then a wall of pixel rows:
+
+| | |
+|---|---|
+| punctuation, whitespace | **no span at all** — the overlay's base colour |
+| keys | `--muted`, so the scaffolding recedes |
+| strings, numbers, literals | `--fg` |
+| **pixel rows** | `--fg` — they are the artwork, and the most legible thing on screen |
+| **palette colours** | `--fg` text, with a 2px bar under it in the colour itself |
+
+Emitting nothing for punctuation is what keeps the span count low enough to
+rebuild on a keystroke, and it is also the right emphasis: colouring braces
+tells the reader nothing they did not know.
+
+**The palette draws itself**, which is the detail that makes this read as an
+artwork file rather than as configuration. Three things forced the exact
+treatment:
+
+1. **A bar, not the text colour.** The palette's near-black ink as *text* on a
+   dark panel is unreadable, and every theme has a whole end of the palette that
+   would vanish into it. The text stays `--fg`; the swatch carries the colour.
+2. **An inset `box-shadow`, not `text-decoration`** — so a hairline of
+   `--line-strong` can sit beneath the bar. A colour close to the panel's own is
+   a swatch you cannot *find*; the hairline says one is there, and the bar still
+   tells the truth about the colour. Both themes were read before and after.
+3. **Nothing that changes a glyph's advance.** The overlay sits under a
+   transparent textarea, so a span even fractionally wider than the text it
+   covers would slide every mark off its character. The probe measures the
+   per-character advance of every coloured run and fails if any of them differs.
+
+A token is only a pixel row if it is an element of the **`px` array**, and only
+a colour if it is the value of **`c` in an object** — the container is tested,
+not just the key. A string value directly under a `px` key is a malformed
+document mid-edit, and painting it like artwork would be a small lie about what
+it is.
+
+### 9.9 Two silent losses, closed
+
+Both were recorded as honest gaps in C's first pass and both are fixed.
+
+**⌘Z while the buffer does not parse now undoes the typing, not the document.**
+It used to go straight to the document and rewrite the buffer from it, so text
+somebody had typed disappeared with no message — the only place in the app where
+that could happen, and a rule-7 problem with no error to give it away. Undoing an
+edit that was never applied is also what ⌘Z plainly means when the most recent
+thing that happened was typing. The document's own history is one more press
+away, and the notice says which of the two you just got.
+
+**Closing the panel now applies a pending valid edit**, which is what §7 asked
+for and what the first pass did not do. The debounce is 300ms; typing a
+character and immediately reaching for Close dropped it, because the component
+went away with the timer still counting. It flushes on unmount, so Escape and
+⌘/ get it as well as the button.
+
+### 9.10 What C deliberately did not build
+
+- **Generic JSON colouring.** What is coloured is chosen for this document
+  (§9.8); braces and quotes are deliberately not it.
 - **Editing anything but the whole document.** The panel is `serializeDoc(doc)`
   and nothing else — §1's equality with `Download .tessera.json` is asserted by
   a test, and a "just the pixels" view would be a second representation, which
@@ -318,9 +389,11 @@ one step further: **a live control does not lose its place to a word.**
 - **A `Format` button.** The text is already canonical every time the document
   writes it; a button that re-canonicalises the user's in-progress typing is a
   button that moves their caret.
-- **Undo of a code edit while the buffer is invalid.** ⌘Z works, on the
-  document, exactly as everywhere else — but the panel is showing text that does
-  not parse, so it is rewritten from the restored document and the invalid text
-  is lost. It was never applied and never saved, so nothing that existed is
-  gone; it is still the one place where something a user typed can disappear
-  without a message. Recorded in `HANDOFF §11`.
+- **Restoring an unapplied edit after it has been undone.** ⌘Z on an invalid
+  buffer now reverts the typing and says so (§9.9), which is what undo means —
+  but there is no redo of it. The text is gone once you have undone it, on
+  purpose, exactly as an undone brush stroke is.
+- **A per-scroll-position alignment guard for every future change.** The probe
+  now measures the two layers at five scroll positions and the advance of every
+  coloured run, which is what C's first pass said would be needed the moment
+  anything touched the overlay. It is a spot check, not a proof.

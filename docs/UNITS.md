@@ -655,7 +655,7 @@ real browser, palette included.
 
 ## C — Code panel · DONE
 
-**12 Aug 2026 · `437b66b` · 9/10**
+**12 Aug 2026 · `437b66b` + `TBD` (the follow-up) · 9/10**
 
 `lib/editor/json-locate.ts` (a position-tracking JSON scanner),
 `lib/editor/code-panel.ts` (widths, debounces, the coalescing policy, the caret
@@ -734,23 +734,75 @@ bottom edge rose with the content and `overflow: hidden` clipped the last three
 pixel rows of a 16×16 document while the gutter cheerfully numbered them. The
 screenshot found it; the probe now has three geometry checks that would.
 
+### The follow-up — the two gaps C first shipped as caveats, and one arithmetic error
+
+C's first pass recorded two honest gaps and moved on. Both are closed now, in
+the same unit, because a caveat handed forward is a caveat nobody owns — the
+same reason B1's follow-up exists. Recorded in `07-code-panel.md §9.8` and
+`§9.9`.
+
+**1. §9.1 was wrong about its own cost, and rule 10 applies to a spec written an
+hour earlier.** It said colouring would price "a span per token on a 70KB
+string" and treated that as prohibitive. **The number was never checked and it
+is wrong by two orders of magnitude:** a pixel row is a *single string token*,
+so a 256×256 document — the largest this editor makes — tokenizes to about 400
+spans, and a 32×32 one to under a hundred. Colouring was cheap all along.
+
+It is built, and aimed at this document rather than at JSON in general.
+Punctuation and whitespace get no span at all, keys recede to `--muted`, and the
+pixel rows are `--fg` — the artwork is the most legible thing on the screen,
+which is the opposite of what a generic JSON theme does. **The palette draws
+itself:** each colour value carries a 2px bar in its own colour. Three
+constraints forced the exact treatment — the near-black end of a palette is
+unreadable *as text* on a dark panel, a colour close to the panel's own is a
+swatch you cannot find (hence a hairline beneath the bar), and nothing may
+change a glyph's advance or every mark slides off its character. The probe
+measures that advance across every coloured run and fails if any differs.
+
+**2. ⌘Z on an invalid buffer no longer discards what was typed in silence.** The
+first press now undoes *the typing* — which is what ⌘Z plainly means when the
+most recent thing that happened was typing — and says so through the notice
+channel. The document's history is one more press away. That was the only place
+in the app where text a user typed could vanish without a message.
+
+**3. Closing the panel applies a pending valid edit**, which §7 asks for and the
+first pass did not do. The debounce is 300ms, so typing a character and reaching
+straight for Close dropped it. It flushes on unmount, so Escape and ⌘/ get it as
+well as the button.
+
+**And the alignment guard C said it would need.** Its first pass checked the two
+layers only at the top and the bottom of the buffer and recorded the gap
+"worth doing if anything ever touches `TEXT_BOX`". Adding coloured spans is
+exactly that change, so the probe now checks five scroll positions and the
+per-character advance of every run — 74 checks became **96**.
+
+**Rule 8's guard caught the one mistake this follow-up made:** a hex literal in
+a *comment* explaining why a near-black colour would be unreadable as text.
+`tokens.test.ts` cannot tell prose from a value, which is the right way round
+for a guard to be wrong; the sentence lost its literal.
+
 ### Score — six dimensions, overall is the lowest
+
+Scored after the follow-up. The first pass scored the same 9 overall on weaker
+lines — spec conformance carried a missing feature, correctness carried a silent
+loss of typed text, and tests carried an alignment gap the unit had named itself.
 
 | # | Dimension | Score | Why not higher |
 |---|---|---|---|
-| 1 | Spec conformance | 9 | Everything §1–§7 asks the panel to *do* is built, and every item in §8's test list exists. Four of the mechanisms it names are replaced and four gaps filled, in §9. Not 10: §1's JSON syntax colouring is genuinely gone, not deferred — that is the price of §9.1 and it is a real subtraction from what the spec drew. |
-| 2 | Correctness | 9 | Both sync directions, the origin guard, an invalid buffer that changes nothing, a one-character mark on the one wrong character, coalescing that undoes to the start of a burst, and ⌘Z ownership settled. Not 10: undoing while the buffer is invalid discards what was typed — it was never applied and never saved, so nothing that existed is lost, but it is the one place text a user typed can vanish without a message. `HANDOFF §11`. |
-| 3 | Tests | 9 | 68 unit tests, including `locate` driven by the paths `parseDoc` really emits rather than paths I invented, and 74 browser checks covering both sync directions, the error mark, the coalesced undo, the sheet and the overlay's geometry. Not 10: the geometry checks were written *after* a screenshot found the bug they now catch, and there is no guard that the overlay and the textarea agree at every scroll position — only at the two ends. |
-| 4 | Integration | 9 | `commit()` is still the only writer; artwork-core untouched but for one path made more specific; the panel's decisions are all in two pure modules; ids come from the module that feeds `probe-handles.test.ts`, which caught them missing; tokens only. Not 10: `codeWidth` and `codeCell` live in the editor store because `<main>` and the renderer need them — correct, and it is two more fields on a store that is getting long. |
-| 5 | Design fidelity | 9 | Read in both themes, at both phone widths as a sheet, and with the caret in a pixel row so both directions of §4 are visible at once. Six viewports clean after the wordmark change. Not 10: the gutter, the overlay and the textarea agree because they share one style object and one font, which is a convention rather than a mechanism — a future edit to one of them can still drift. |
-| 6 | No regressions | 9 | 564 tests, clean build, six viewports, all eleven probes green in one run. Two pre-existing things are better: the window-resize drift, and `palette_range`'s path, which named a whole array while its own message named a pixel. |
+| 1 | Spec conformance | 9 | Everything §1–§8 asks for is built, including §1's colouring and §7's "Done applies any pending valid edit", which the first pass missed. Four mechanisms replaced and six gaps filled, in §9. Not 10: what is coloured is chosen for this document rather than being generic JSON highlighting — a deliberate divergence from §1, recorded, but a divergence. |
+| 2 | Correctness | 9 | Both sync directions, the origin guard, an invalid buffer that changes nothing, a one-character mark on the one wrong character, coalescing that undoes to the start of a burst, ⌘Z ownership settled, and neither of the two silent losses left. Not 10: an unapplied edit that has been undone cannot be redone — deliberate, and it still means a keystroke sequence exists that loses text a user typed, just not a silent one. |
+| 3 | Tests | 9 | 92 unit tests and 96 browser checks. `locate` is driven by the paths `parseDoc` really emits; the swatch check asserts each bar is painted *exactly the colour it names*; the alignment check measures five scroll positions and every run's advance. Not 10: those alignment checks are spot checks, and they were written after a screenshot found the bug rather than before. |
+| 4 | Integration | 9 | `commit()` is still the only writer; artwork-core untouched but for one path made more specific; every decision is in three pure modules; `skipString` is shared rather than reimplemented so the two scanners cannot disagree about escapes; ids feed `probe-handles.test.ts`; tokens only, with the one artwork colour marked `token-exempt` as `Chrome.tsx` already does. Not 10: `codeWidth` and `codeCell` are two more fields on an editor store that is getting long. |
+| 5 | Design fidelity | 9 | Read in both themes before and after the swatch change, at both phone widths as a sheet, and with the caret in a pixel row so both directions of §4 show at once. Six viewports clean. Not 10: the three layers agree because they share one style object and one font — a convention with a spot check under it, not a mechanism. |
+| 6 | No regressions | 9 | 588 tests, clean build, six viewports, all eleven probes green in one run. Three pre-existing things are better: the window-resize drift, `palette_range`'s path, and the header at 320. |
 
 **Overall: 9/10.**
 
 ### Deliberately left out
 
-- **JSON syntax colouring.** §9.1. The overlay is where it would go, and the
-  price is a span per token on a 70KB string.
+- **Generic JSON colouring.** Braces and quotes tell the reader nothing they did
+  not know about a file that is 90% pixel rows. What is coloured is chosen for
+  this document — `07 §9.8`.
 - **A `Format` button.** The text is canonical every time the document writes
   it; a button that re-canonicalises somebody's in-progress typing is a button
   that moves their caret.
@@ -759,10 +811,9 @@ screenshot found it; the probe now has three geometry checks that would.
 - **Column-accurate `Go to error` scrolling.** It scrolls to the line and lets
   the browser keep the caret visible, which is right for a 16-wide row and
   approximate for a 256-wide one.
-- **A guard that the two layers agree at every scroll position.** They are
-  checked at the top and at the very bottom. A mid-scroll drift would need
-  measuring a character's box in both layers, which is worth doing if anything
-  ever touches `TEXT_BOX`.
+- **Redo of an unapplied edit.** ⌘Z on an invalid buffer reverts the typing and
+  says so; there is no way back to it, on purpose, exactly as with an undone
+  brush stroke.
 
 ---
 

@@ -4,9 +4,9 @@
 branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 564 tests across 33 files · production build clean · 6 viewports
+**Green:** 588 tests across 34 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 134/134, `probe-code-panel` 74/74, `probe-canvas-size` 70/70,
+`probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
 `probe-layers` 42/42, `probe-tooltip` 23/23, `probe-agent-ui` 18/18,
 `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime
 errors.
@@ -142,7 +142,7 @@ looked fine in a screenshot until magnified.
 | File menu | Complete — it is now exactly the menu `17 §1` draws. New… (confirms when there is work at stake), Open recent, Open…, Paste image, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘V`/`⌘S` wired. **Scored 9/10** three times — `17-file-menu.md §7`, `§8` and `§9`. |
 | Paste image | Clipboard or file → fitted (box-average down, integer nearest-neighbour up, centred) → median-cut to ≤36 palette entries, reusing existing ones within a redmean distance of 24 → one undoable command. Reports the colour count. **Scored 9/10** — `17-file-menu.md §9`. |
 | Status line | One `role="status"` notice, `useEditorStore.notice` / `setNotice(text, sticky?)`. 6s and click to dismiss; `sticky` for anything about work that could be lost. |
-| Code panel | A split (a sheet on a phone) showing `serializeDoc(doc)` byte for byte, editable, both sync directions with an origin guard, a one-character mark on a parse error, `row 12 · char 7 → pixel (7, 12)`, click-to-locate both ways, and one ⌘Z per burst of typing. A `<textarea>` and an overlay — **no CodeMirror**, `07 §9.1` says why. **Scored 9/10.** |
+| Code panel | A split (a sheet on a phone) showing `serializeDoc(doc)` byte for byte, editable, both sync directions with an origin guard, a one-character mark on a parse error, `row 12 · char 7 → pixel (7, 12)`, click-to-locate both ways, and one ⌘Z per burst of typing. Coloured for *this* document — the pixel rows are the most legible thing on screen and each palette entry carries a swatch in its own colour. A `<textarea>` and an overlay — **no CodeMirror**, `07 §9.1` says why. **Scored 9/10.** |
 | Naming | The header input renames the document through `doc_rename`, on blur and on Enter. It used to display the name and silently discard what you typed. |
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
@@ -397,7 +397,7 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 564 tests (3 skip without a .next build)
+npm test                          # vitest — 588 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
 
@@ -409,7 +409,7 @@ npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
-npx tsx tools/probe-code-panel.ts  # 74 checks: both sync directions, errors, coalescing, the sheet
+npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
@@ -515,15 +515,17 @@ Recorded so they are not rediscovered as surprises.
   `recentRows` (pure) and `probe-file-menu` (real browser), so the behaviour is
   held at both ends — but the function in the middle is only exercised by the
   probe. Same shape as every other persistence path here.
-- **Undoing while the code panel's buffer is invalid discards what was typed.** ⌘Z works on the
-  document like everywhere else, and the panel is then rewritten from the restored document — so
-  text that did not parse is gone. It was never applied and never saved, so nothing that *existed*
-  is lost, but it is the one place in the app where something a user typed disappears without a
-  message. `07-code-panel.md §9.8`.
-- **The code panel's three layers agree by convention, not by mechanism.** The gutter, the overlay
-  and the textarea share one `TEXT_BOX` style object and one font, and the probe checks they agree
-  at the top of the buffer and at the very bottom. A mid-scroll drift would need measuring a
-  character's box in both layers. Worth doing if anything ever edits `TEXT_BOX`.
+- ~~Undoing while the code panel's buffer is invalid discards what was typed.~~ **Fixed in C's
+  follow-up.** The first ⌘Z now undoes *the typing* and says so; the document's history is one more
+  press away. `07-code-panel.md §9.9`.
+- ~~The code panel's three layers agree by convention, not by mechanism.~~ **Guarded in C's
+  follow-up**, which is what that note said to do "if anything ever edits `TEXT_BOX`" — adding
+  coloured spans was exactly that. The probe measures the two layers at five scroll positions and
+  the per-character advance of every coloured run. Still a spot check rather than a proof.
+- **The code panel's overlay must never change a glyph's advance.** Anything added to a span there —
+  a weight, a letter-spacing, a font — slides every mark off the character it marks. Colour,
+  `box-shadow` and `outline` are safe; almost nothing else is. `probe-code-panel` fails on it now,
+  which is the only reason this is a note rather than a trap.
 - **F-M5's first rung has never executed.** `lib/editor/clipboard.ts` falls back to a file picker
   when `navigator.clipboard.read()` is missing or refused, which is the Firefox case. Every probe
   here is Chromium, where `read()` exists, so that branch has run in neither CI nor a probe. Faking
