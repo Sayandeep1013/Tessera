@@ -655,7 +655,7 @@ real browser, palette included.
 
 ## C — Code panel · DONE
 
-**12 Aug 2026 · `437b66b` + `TBD` (the follow-up) · 9/10**
+**12 Aug 2026 · `437b66b` + `9e1f983` (the follow-up) · 9/10**
 
 `lib/editor/json-locate.ts` (a position-tracking JSON scanner),
 `lib/editor/code-panel.ts` (widths, debounces, the coalescing policy, the caret
