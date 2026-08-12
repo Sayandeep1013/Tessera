@@ -105,7 +105,7 @@ missing.
 
 ## A2 — Canvas tab size UI · DONE
 
-**12 Aug 2026 · 9/10**
+**12 Aug 2026 · `3e06f6a` · 9/10**
 
 `lib/editor/canvas-size.ts` (presets, parsing, the pending-size state machine,
 the wording), the Canvas tab in `components/Settings.tsx`,

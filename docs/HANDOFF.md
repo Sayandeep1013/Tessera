@@ -1,7 +1,7 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last unit **A2**, the Canvas tab size UI · branch
-`main`.
+**Written:** 12 Aug 2026 · last commit `3e06f6a` (unit **A2**, the Canvas tab
+size UI) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
 **Green:** 327 tests across 21 files · production build clean · 6 viewports
