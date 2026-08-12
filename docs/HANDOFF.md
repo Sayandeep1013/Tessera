@@ -1,12 +1,12 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `793a8b8` (unit **B2** — Open recent,
-rename, shortcuts) · branch `main`, pushed.
+**Written:** 12 Aug 2026 · last commit `TBD` (unit **B3** — Paste image) ·
+branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 419 tests across 27 files · production build clean · 6 viewports
+**Green:** 496 tests across 31 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 112/112, `probe-canvas-size` 70/70, `probe-layers` 42/42,
+`probe-file-menu` 134/134, `probe-canvas-size` 70/70, `probe-layers` 42/42,
 `probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
 `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
 
@@ -27,7 +27,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **B3 — Paste image**. Its prompt is in `UNITS.md`, in the B3
+The next unit is **C — the code panel**. Its prompt is in `UNITS.md`, in the C
 block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
@@ -138,7 +138,9 @@ looked fine in a screenshot until magnified.
 | Renderer (`lib/renderer/`) | Full-viewport canvas, DPR capped at 2, difference-blended grid, selection overlay, sprite→SVG. |
 | Editor input | 8 tools all working: brush, eraser, fill, shapes, gradient, marquee, select/move, eyedropper. Dither (Bayer 4×4). Scroll pans, pinch zooms. |
 | Chrome | Top bar, tool rail, zoom bar, palette popover, File menu, dither menu. |
-| File menu | New… (confirms when there is work at stake), Open recent, Open…, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘S` wired. **Scored 9/10** twice — `17-file-menu.md §7` and `§8`. |
+| File menu | Complete — it is now exactly the menu `17 §1` draws. New… (confirms when there is work at stake), Open recent, Open…, Paste image, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘V`/`⌘S` wired. **Scored 9/10** three times — `17-file-menu.md §7`, `§8` and `§9`. |
+| Paste image | Clipboard or file → fitted (box-average down, integer nearest-neighbour up, centred) → median-cut to ≤36 palette entries, reusing existing ones within a redmean distance of 24 → one undoable command. Reports the colour count. **Scored 9/10** — `17-file-menu.md §9`. |
+| Status line | One `role="status"` notice, `useEditorStore.notice` / `setNotice(text, sticky?)`. 6s and click to dismiss; `sticky` for anything about work that could be lost. |
 | Naming | The header input renames the document through `doc_rename`, on blur and on Enter. It used to display the name and silently discard what you typed. |
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
@@ -153,7 +155,7 @@ looked fine in a screenshot until magnified.
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: the Code and
 Timeline buttons are the last dead controls, Share is built but parked
-(`DEFERRED.md`), and units B1 through F remain.
+(`DEFERRED.md`), and units C through F remain.
 
 Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
 below 1100px, so a dead control never costs a live one its place. When you build
@@ -230,6 +232,23 @@ Every one of these has already cost time in this repo.
   shout using `note !== null`; an empty string is not null, so clearing the width
   field replaced the helper line with a blank red paragraph. If a `??` chain
   feeds a nullish test, normalise with `|| null` at the boundary.
+- **A synthetic `paste` event must be dispatched on `document.activeElement`, not on `window`.**
+  `probe-file-menu` drives ⌘V by constructing a `ClipboardEvent` with a `DataTransfer`, which is
+  the honest way to test it — the app listens for `paste`, not for a keydown. But dispatching on
+  `window` makes `e.target` the window, which is not an `HTMLElement`, so the `isTyping` guard
+  returns false for *every* paste and the "typing in the filename field" case silently cannot be
+  tested. Dispatch on the focused element, as a real ⌘V does.
+- **An LCG modulo a power of two has almost no entropy in its low bits.** A test generator using
+  `(s * 1103515245 + 12345) % 2**31` and then `s % 200` produced **32** distinct colours out of 200,
+  so a "reduce 200 colours" test was passing without ever reducing anything. Take the high bits:
+  `Math.floor(s / 65536) % n`. Any test that generates data owes itself an assertion that the data
+  is what it asked for — that is the only reason this was caught.
+- **`Math.trunc(-0.5)` is `-0`, and `Object.is(-0, 0)` is false.** Already recorded for A1's resize
+  offset; noted again because `fit-image.ts` reuses `resizeOffset` for exactly that reason and the
+  next person to write a centring calculation will reach for `Math.floor`.
+- **An interactive element must not carry `role="status"`.** A `<button role="status">` loses its
+  button semantics, so a screen reader announces the text and never mentions it is clickable. Put
+  the live region on a wrapper and the button inside it.
 - **An outside-click closer must use `mousedown`, not `click`.** The click that opens a menu is
   still propagating when the effect registers, so a `click` listener closes it in the same gesture
   and the menu never appears.
@@ -356,7 +375,7 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 419 tests (3 skip without a .next build)
+npm test                          # vitest — 496 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
 
@@ -473,6 +492,22 @@ Recorded so they are not rediscovered as surprises.
   `recentRows` (pure) and `probe-file-menu` (real browser), so the behaviour is
   held at both ends — but the function in the middle is only exercised by the
   probe. Same shape as every other persistence path here.
+- **F-M5's first rung has never executed.** `lib/editor/clipboard.ts` falls back to a file picker
+  when `navigator.clipboard.read()` is missing or refused, which is the Firefox case. Every probe
+  here is Chromium, where `read()` exists, so that branch has run in neither CI nor a probe. Faking
+  it with a stub would only prove the stub works; it needs a Firefox run, which this repo has never
+  had. Same shape as `listRecent`: held at both ends and untested in the middle.
+- **The decoded image is capped at 1024 on the long edge** (`MAX_SOURCE_EDGE`), so a 6000px photo is
+  pre-reduced by the *browser's* resampler before the pure pipeline sees it. `fit-image` and
+  `quantise` are deterministic given their input; the input for a very large image is not
+  cross-browser identical. It removes a real `getImageData` failure and costs nothing measurable at
+  a 256px destination, but "deterministic" has that footnote.
+- **`pasteImageCommand` takes a fifth parameter that exists only because of the cap above** — the
+  size the user actually copied, so the message does not quote our own plumbing back at them. It is
+  documented at both ends and it is still coupling between a pure module and a browser one.
+- **`openFile` is now the only thing that uses `window.alert`.** There is a status channel
+  (`setNotice`) and every other failure path goes through it. Worth converting the next time
+  something touches that function — not converted here, because B3 does not own it.
 - **`copyName` has two import paths.** It lives in `lib/artwork-core/doc-name.ts`
   and `duplicate.ts` re-exports it, so nothing broke when it moved. Pick one
   when something next touches either file.

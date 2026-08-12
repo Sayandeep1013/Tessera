@@ -29,6 +29,11 @@ import {
 import {
   RECENT_CORRUPT, RECENT_EMPTY, RECENT_LIMIT, recentRows, type RecentRow,
 } from '@/lib/editor/recent'
+import { pasteImageCommand } from '@/lib/artwork-core/paste-image'
+import { PASTE_FAILURE, PASTE_NO_CLIPBOARD, pasteReport } from '@/lib/editor/paste'
+import {
+  imageFromClipboardOrFile, imageFromPaste, type ImageResult,
+} from '@/lib/editor/clipboard'
 import { listRecent } from '@/lib/persist/idb'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
@@ -185,8 +190,8 @@ export function TopBar() {
    * to show its confirm. The `isTyping` guard is imported rather than rewritten,
    * which is what §3 actually asks for: one rule, not one handler.
    *
-   * Ctrl+V is deliberately absent. Paste image is B3, and a key that does
-   * nothing is the same broken promise as a hint for a key that does nothing.
+   * Ctrl+V is NOT here, and that is the design rather than an omission — see
+   * the paste listener below and spec §9.5.
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -209,6 +214,33 @@ export function TopBar() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  /**
+   * `⌘V` — spec 17 §9.5.
+   *
+   * A `paste` listener, NOT a keydown handler, and the difference is the whole
+   * argument. The event carries `clipboardData` on the gesture itself: no
+   * Clipboard API, no permission prompt, no missing implementation in Firefox,
+   * and no conditional `preventDefault` — the browser already routes ⌘V inside
+   * a text field to that field. §3 made conditional preventDefault the reason
+   * shortcuts were their own step; this removes the question instead of
+   * answering it.
+   *
+   * `isTyping` is still checked, for the one case the browser cannot decide for
+   * us: pasting *text* into the filename input must never be read as pasting an
+   * *image* into the canvas.
+   */
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      if (isTyping(e.target)) return
+      // Not preventDefault'd: there is nothing else on this page that a paste
+      // could land in, and swallowing the event would make a future text
+      // surface silently stop working.
+      void imageFromPaste(e).then(applyPaste)
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
   }, [])
 
   return (
@@ -659,6 +691,10 @@ function FileMenu({
     new: () => (needsNewConfirm(doc, frame) ? setConfirming('new') : startNew()),
     recent: () => toggle('recent'),
     open: () => { openFile(); onClose() },
+    // Closed first, deliberately: the Clipboard API can raise a permission
+    // prompt and the file picker is a modal of its own, and neither should
+    // arrive with a menu still open behind it.
+    paste: () => { onClose(); void pasteFromClipboard() },
     duplicate: () => { void duplicateCurrent(); onClose() },
     examples: () => toggle('examples'),
     download: () => {
@@ -1086,6 +1122,59 @@ function loadExample(name: StarterName) {
   const after = { ...loadStarter(name), id: nanoid() }
   useDocStore.getState().commit({ type: 'replace_doc', label: `Example: ${name}`, before, after })
   refitViewport(after)
+}
+
+/**
+ * Paste an image onto the active layer. See docs/specs/17-file-menu.md §9.
+ *
+ * Module scope, like `startNewDocument`, because two entry points reach it —
+ * the menu row and the `paste` event — and a shortcut that took a different
+ * route from its menu item is a divergence waiting to happen (§8.4).
+ *
+ * Everything it decides is decided elsewhere: `pasteImageCommand` builds the
+ * command, `pasteReport` writes the sentence. What is left here is `commit`,
+ * which is still the only thing that writes the document.
+ */
+function applyPaste(r: ImageResult) {
+  const notice = useEditorStore.getState().setNotice
+  if (!r.ok) {
+    // Closing a file dialog you opened needs no announcement — see ImageResult.
+    if (r.reason === 'cancelled') return
+    // F-M2 and F-M5 otherwise: never silence. A ⌘V with text on the clipboard
+    // is an ordinary mistake and deserves a sentence, not nothing happening.
+    notice(PASTE_FAILURE[r.reason])
+    return
+  }
+
+  const store = useDocStore.getState()
+  const doc = store.doc
+  if (!doc) return
+
+  const { cmd, result } = pasteImageCommand(
+    doc,
+    store.frame,
+    store.layer,
+    r.image.rgba,
+    // The decode is capped at 1024 (clipboard.ts), so the pixels are not
+    // necessarily the size that was copied — and the message quotes the size
+    // that was copied.
+    r.image.source,
+  )
+  // Null when nothing would change. commit() ignores null anyway; the report is
+  // sent either way, because "nothing happened" is also an answer (§9.6).
+  store.commit(cmd)
+  notice(pasteReport(result))
+}
+
+/** The menu row's path: the Clipboard API, then a file picker (§9.5). */
+async function pasteFromClipboard() {
+  applyPaste(
+    await imageFromClipboardOrFile(() =>
+      // Said *before* the picker opens, so a file dialog appearing when the
+      // user asked for a paste is explained rather than mysterious. F-M5.
+      useEditorStore.getState().setNotice(PASTE_NO_CLIPBOARD),
+    ),
+  )
 }
 
 /** Reads a .tessera.json from disk. A failed parse surfaces — never silently discarded. */

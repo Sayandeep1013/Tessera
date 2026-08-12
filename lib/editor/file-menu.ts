@@ -22,6 +22,7 @@ export type FileMenuItemId =
   | 'new'
   | 'recent'
   | 'open'
+  | 'paste'
   | 'duplicate'
   | 'examples'
   | 'download'
@@ -36,8 +37,12 @@ export type FileMenuItem = {
    *
    * A hint is a promise about a key (§7.2). B1 shipped `Ctrl S` alone because
    * that was all that existed; B2 wired `Ctrl N` and `Ctrl O` and they appeared
-   * in the same change. `Ctrl V` is still absent because Paste image is B3 —
-   * `file-menu.test.ts` holds that line by asserting the hinted set exactly.
+   * in the same change; B3 wired `Ctrl V` and added it in the same change too.
+   * `file-menu.test.ts` holds that line by asserting the hinted set exactly, so
+   * a hint added ahead of its key fails the suite rather than the user.
+   *
+   * `Ctrl V` is honoured by a `paste` listener rather than a keydown handler
+   * (§9.5) — the promise is about the key, not about how it is caught.
    */
   hint?: string
   /** Expands in place instead of running. §7.1 says why it is not a flyout. */
@@ -51,9 +56,8 @@ export type FileMenuItem = {
  * empty one — spec §0: "a divider that exists only to separate an empty group is
  * worse than no divider".
  *
- * Paste image (B3) belongs in the first group and is not here yet. It is absent
- * rather than disabled for the same reason the account items are: a row that
- * looks like a control and does nothing is worse than no row.
+ * The first group is now complete: §1 draws New, Open recent, Open…, Paste
+ * image and Duplicate, and all five are here.
  */
 export const FILE_MENU: readonly (readonly FileMenuItem[])[] = [
   [
@@ -63,6 +67,9 @@ export const FILE_MENU: readonly (readonly FileMenuItem[])[] = [
     // something.
     { id: 'recent', label: 'Open recent', submenu: true },
     { id: 'open', label: 'Open…', hint: 'Ctrl O' },
+    // …and paste sits under Open for the same reason: both bring somebody
+    // else's picture in, one from a file and one from the clipboard.
+    { id: 'paste', label: 'Paste image', hint: 'Ctrl V' },
     { id: 'duplicate', label: 'Duplicate' },
   ],
   [{ id: 'examples', label: 'Examples', submenu: true }],

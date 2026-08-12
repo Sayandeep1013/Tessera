@@ -209,6 +209,29 @@ type EditorState = {
    */
   layersOpen: boolean
   settingsOpen: boolean
+  /**
+   * One line of status, shown over the canvas. Null when there is nothing to
+   * say. See docs/specs/17-file-menu.md §9.6.
+   *
+   * This used to be local state in `app/page.tsx`, reachable only by the
+   * corrupt-draft notice it was written for. Paste image is its second caller —
+   * F-M2, F-M3 and F-M5 are all "never go silent" requirements and a blocking
+   * `window.alert` after a *successful* paste is not an acceptable way to meet
+   * them. Lifting it here rather than adding a second mechanism keeps one
+   * channel for "the app has something to tell you".
+   *
+   * `seq` exists because two identical messages in a row are a real case —
+   * pressing ⌘V twice with text on the clipboard — and a string that does not
+   * change cannot restart a dismissal timer.
+   *
+   * `sticky` stays until it is dismissed. The corrupt-draft notice this channel
+   * was born as had no timer at all, and quietly giving it one would have
+   * weakened a rule-7 surface as a side effect of a paste feature: "your last
+   * drawing is still saved" is not a message to take away from someone after
+   * six seconds. Transient is the default because most messages are; permanent
+   * is available because some are about lost work.
+   */
+  notice: { text: string; seq: number; sticky: boolean } | null
 
   setTool: (t: Tool) => void
   setColorIndex: (i: number) => void
@@ -225,6 +248,8 @@ type EditorState = {
   setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
   setLayersOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
+  /** `null` dismisses. Any string replaces whatever was there. */
+  setNotice: (text: string | null, sticky?: boolean) => void
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -243,6 +268,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selection: null,
   layersOpen: false,
   settingsOpen: false,
+  notice: null,
 
   setTool: (t) => set({ tool: t, prevTool: get().tool }),
   setColorIndex: (i) => set({ colorIndex: i }),
@@ -264,4 +290,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelection: (sel) => set({ selection: sel }),
   setLayersOpen: (open) => set({ layersOpen: open }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setNotice: (text, sticky = false) =>
+    set({ notice: text === null ? null : { text, sticky, seq: (get().notice?.seq ?? 0) + 1 } }),
 }))

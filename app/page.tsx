@@ -15,10 +15,10 @@ import { fitViewport, stepScale } from '@/lib/editor/viewport'
 // Shared with Chrome.tsx, which owns the File menu's own shortcuts. Spec 17 §3:
 // one guard for "is the user typing", not one per handler.
 import { isTyping } from '@/lib/editor/keys'
+import { NOTICE_MS } from '@/lib/editor/paste'
 import { serializeDoc } from '@/lib/artwork-core/codec'
 
 export default function EditorPage() {
-  const [notice, setNotice] = useState<string | null>(null)
   const doc = useDocStore((s) => s.doc)
   const layersOpen = useEditorStore((s) => s.layersOpen)
   // The panel is withheld on a phone (see breakpoint.ts). Gating here as well as
@@ -57,8 +57,11 @@ export default function EditorPage() {
           return
         }
         if (found && 'corrupt' in found) {
-          // Never delete work we cannot read — keep it and say so.
-          setNotice("Couldn't open your last drawing. It's still saved.")
+          // Never delete work we cannot read — keep it and say so, and do not
+          // take the saying-so away on a timer.
+          useEditorStore
+            .getState()
+            .setNotice("Couldn't open your last drawing. It's still saved.", true)
         }
       } catch {
         /* IndexedDB unavailable (private mode) — fall through to a starter */
@@ -108,6 +111,10 @@ export default function EditorPage() {
         const d = useDocStore.getState().doc
         return d ? { id: d.id, name: d.name } : null
       },
+      // Paste image's whole contract is "reduced to N colours, and the palette
+      // is still legal". Neither half is on screen, and the palette popover
+      // shows swatches rather than a count.
+      palette: () => useDocStore.getState().doc?.palette.map((p) => p.c) ?? null,
       viewport: () => useEditorStore.getState().viewport,
     }
     return () => {
@@ -218,19 +225,59 @@ export default function EditorPage() {
           </div>
         )}
       </main>
-      {notice && (
-        <div
-          role="status"
-          style={{
-            position: 'absolute', left: '50%', top: 60, transform: 'translateX(-50%)',
-            background: 'var(--panel)', color: 'var(--fg)', fontSize: 12,
-            padding: '8px 14px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-lg)',
-            zIndex: 50,
-          }}
-        >
-          {notice}
-        </div>
-      )}
+      <Notice />
+    </div>
+  )
+}
+
+/**
+ * The app's one status line. See docs/specs/17-file-menu.md §9.6.
+ *
+ * Its own component so that a message arriving does not re-render the editor,
+ * and so the dismissal timer lives with the thing it dismisses. It reads
+ * `notice.seq` rather than the text, because two identical messages in a row is
+ * a real case — pressing ⌘V twice with text on the clipboard — and a string
+ * that does not change cannot restart a timer.
+ *
+ * Dismissable by click as well as by time: the one thing a status line must
+ * never do is sit over the artwork it is describing.
+ */
+function Notice() {
+  const notice = useEditorStore((s) => s.notice)
+  const setNotice = useEditorStore((s) => s.setNotice)
+  const seq = notice?.seq
+  const sticky = notice?.sticky
+
+  useEffect(() => {
+    if (seq === undefined || sticky) return
+    const t = setTimeout(() => useEditorStore.getState().setNotice(null), NOTICE_MS)
+    return () => clearTimeout(t)
+  }, [seq, sticky])
+
+  if (!notice) return null
+  return (
+    // The live region is the wrapper, not the button. `role="status"` on the
+    // button itself would replace its button semantics, leaving a control that
+    // a screen reader cannot tell is a control — and this one is clickable.
+    // Polite by definition, so it never interrupts, which is right for
+    // something that has already happened.
+    <div
+      role="status"
+      style={{
+        position: 'absolute', left: '50%', top: 60, transform: 'translateX(-50%)',
+        maxWidth: 'min(520px, calc(100vw - 32px))', zIndex: 50,
+      }}
+    >
+      <button
+        onClick={() => setNotice(null)}
+        style={{
+          width: '100%', textAlign: 'center',
+          background: 'var(--panel)', color: 'var(--fg)', font: 'var(--t-copy-sm)',
+          padding: '8px 14px', borderRadius: 'var(--r-md)', boxShadow: 'var(--shadow-lg)',
+        }}
+      >
+        {notice.text}
+      </button>
     </div>
   )
 }

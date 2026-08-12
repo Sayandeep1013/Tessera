@@ -109,6 +109,15 @@ of ours. Unchanged.
 a wiring job.** An image on the clipboard is not pixel art: it is arbitrary RGBA
 at an arbitrary size, and the document format holds at most 36 palette indices.
 
+> **Corrected and filled in while building — see §9.** Two sentences below are
+> wrong. "Nearest-neighbour" is right for enlarging and wrong for reducing
+> (§9.2), and "`⌘V` … fall back to a paste event" has the ladder upside down —
+> the paste event is the *primary* path and needs no permission at all (§9.5).
+> Four things the section does not decide — what "close enough" means, what
+> happens to semi-transparent pixels, whether a paste erases what it does not
+> cover, and what the message says — are decided in §9 rather than left to the
+> code.
+
 So it is three steps, and each can fail visibly:
 
 1. **Read** — `navigator.clipboard.read()`, which needs a user gesture and a
@@ -165,7 +174,7 @@ rather than writing a second one.
 | `F-M2` | Clipboard unreadable or empty | *"No image on the clipboard."* — never silence |
 | `F-M3` | Pasted image needs more than 36 colours | Quantised, and the count is reported |
 | `F-M4` | A recent draft no longer parses | Row shown, disabled, labelled — the record is kept, never deleted |
-| `F-M5` | Clipboard API unavailable | Falls back to the paste event, then to a file picker |
+| `F-M5` | Clipboard API unavailable | Falls back to a file picker — see §9.5, the paste event is the *primary* path, not the fallback |
 
 ---
 
@@ -509,3 +518,240 @@ click cannot diverge.
   is how you get back to the problem.
 - **Renaming from the recent list.** The header renames the open document. A
   second rename affordance is a second source of truth for a name.
+
+---
+
+## 9. Unit B3 — Paste image
+
+**Scoped 12 Aug 2026.** Step 4 of §6, and the only item in this menu that is an
+algorithm rather than a wiring job. §2 sketches three stages and stops; this
+section decides the four questions it leaves open, and corrects the two things
+it gets wrong.
+
+The shape is the same one A2 and B1 landed on: **everything that decides
+anything lives outside the `.tsx`**, because `npm test` runs in node and the
+browser probes need a dev server (HANDOFF §11).
+
+| Module | Holds | Pure? |
+|---|---|---|
+| `lib/artwork-core/fit-image.ts` | where the image lands and how it is resampled | yes |
+| `lib/artwork-core/quantise.ts` | colour distance, median cut, palette reuse | yes |
+| `lib/artwork-core/paste-image.ts` | the two above, composed into one command | yes |
+| `lib/editor/paste.ts` | every sentence the feature says | yes |
+| `lib/editor/clipboard.ts` | the three ways an image arrives; the decode | browser |
+| `components/Chrome.tsx` | the menu row, the paste listener, the `commit` call | — |
+
+### 9.1 The pipeline, and what each stage may not do
+
+```
+    a Blob                 RGBA + size            RGBA at w×h            indices
+clipboard.ts  ──decode──▶  fit-image.ts ──fit──▶  quantise.ts ──map──▶  paste-image.ts
+                                                                             │
+                                                     one EditorCommand ◀─────┘
+```
+
+Three constraints hold across all of it:
+
+- **The document is never resized.** §2 says so and it is the right call: the
+  canvas is the artist's decision and an image on the clipboard has no standing
+  to overrule it. The image is fitted to the document, never the reverse.
+- **The palette is the hard constraint, not the pixels.** 36 entries total,
+  index 0 permanently transparent, so **35 opaque colours is the ceiling** —
+  and the open document may already be using 15 of them.
+- **One command, so it is one undo.** `paint` when no colour was added,
+  `batch[palette_add, paint]` when one was. The `batch` inverse already
+  reverses its children, so undo repaints the old pixels *and then* pops the
+  palette — the ordering that `invertCommand('ai_edit')` got wrong once and
+  which is recorded in `14-layers.md §0.2` as silent artwork corruption.
+
+### 9.2 Fit — §2's "nearest-neighbour" is half wrong (rule 10)
+
+§2 says *"scale to the current canvas, nearest-neighbour, preserving aspect and
+centring"*. Centring and aspect stand. Nearest-neighbour does not, in one
+direction:
+
+- **Reducing.** A 1000×500 photo into a 32×16 document is a 31:1 reduction.
+  Nearest-neighbour keeps one source pixel in every 961 and discards the rest,
+  so the result is a sample of noise rather than a small version of the picture
+   — and which noise depends on where the grid happens to land. **Reduction
+  box-averages** every source pixel that falls in the destination cell.
+- **Enlarging.** Averaging here would invent colours that are not in the source
+  and blur edges that pixel art draws deliberately. **Enlargement is
+  nearest-neighbour**, and it is exact, because of the next rule.
+
+**Enlargement is by a whole number or not at all.** A 16×16 image into a 32×32
+canvas is drawn at 2×. A 13×13 image into a 32×32 canvas is drawn at 2× — 26×26,
+centred — and *not* at 2.46×, because a fractional nearest-neighbour enlargement
+gives some source pixels three destination rows and their neighbours two. That
+unevenness reads as a rendering bug, and it is the single most recognisable way
+a pasted image announces that software mangled it. Reduction has no such choice
+available: the image does not fit, so something must be resampled.
+
+So the scale rule is:
+
+| Source vs canvas | Scale | Sampling |
+|---|---|---|
+| larger in either axis | fractional, `min(W/w, H/h)` | box average |
+| fits, `k = floor(min(W/w, H/h)) ≥ 1` | integer `k` | nearest neighbour |
+
+Both centre the result with `resizeOffset` — the same odd-function truncation
+A1 wrote for canvas resize, reused rather than rewritten so an odd spare pixel
+lands the same way in both features.
+
+**Averaging is premultiplied.** Averaging RGB without weighting by alpha makes
+the transparent side of an edge contribute its (often black, often arbitrary)
+colour to the visible side, which is the dark halo every naïve image resizer
+has. Accumulate `r·a, g·a, b·a, a`; divide the colour sums by the alpha sum, not
+by the pixel count. Where the alpha sum is zero the cell is transparent and its
+colour is not asked about.
+
+### 9.3 Quantise — median cut, and what "close enough" means
+
+The source is reduced to at most **35** representative colours by median cut:
+repeatedly take the box with the widest single channel, sort its colours along
+that channel, and split at the population-weighted median. The representative of
+a box is the population-weighted mean of the colours in it. Weighted by
+population throughout, so a colour covering half the image is not outvoted by a
+hundred stray anti-aliasing pixels.
+
+**Determinism is a requirement, not a nicety** (§5), so every choice has an
+explicit tie-break: widest channel breaks r → g → b, box selection breaks by
+population and then by the order boxes were created, and the colour histogram is
+walked in packed-RGB order rather than in Map insertion order.
+
+Each representative is then placed in the document's palette by three rules, in
+this order:
+
+1. **Reuse if it is close enough.** An existing entry within `REUSE_MAX` is used
+   as-is. Reuse is what stops a paste from filling the palette with colours the
+   artist cannot tell apart from ones they already have.
+2. **Otherwise take a free slot**, up to 36 entries total.
+3. **When there are no free slots, snap to the nearest existing entry**, at any
+   distance. The palette is the hard constraint; this is the branch that honours
+   it, and the message says so.
+
+**Distance is redmean, not plain RGB.** Plain Euclidean distance in sRGB says
+that two blues differing by 40 are as different as two greens differing by 40,
+which the eye flatly contradicts. Redmean is the cheap standard approximation
+that fixes the worst of it, needs no colour-space conversion, and keeps
+`artwork-core` importing nothing but zod:
+
+```
+r̄ = (r₁+r₂)/2
+d² = (2 + r̄/256)·Δr² + 4·Δg² + (2 + (255−r̄)/256)·Δb²
+```
+
+Its range is 0 (identical) to ≈765 (black against white).
+
+**`REUSE_MAX = 24`**, which is about eight levels per channel — `#808080`
+against `#888888` is exactly 24. That is the decision §2 asks for and does not
+make, and the number is deliberately small: reuse silently changes the image the
+user pasted, so it may only happen where the change is not visible. A generous
+threshold would give better palette economy and a worse picture, and the picture
+is the thing that was pasted.
+
+**Alpha is a cutoff, not a channel.** A source pixel with `a < 128` is
+transparent (index 0); at 128 or above it is opaque and its RGB is quantised.
+The format has no per-pixel alpha — it has palette entries, which *can* be
+`#rrggbbaa`, so honouring partial alpha would mean one palette entry per
+(colour, alpha) pair and would spend the 36-slot budget on the soft edge of a
+PNG. §2 says only that fully transparent pixels map to index 0; this is the rest
+of that sentence.
+
+### 9.4 What a paste writes, and what it leaves alone
+
+**Transparent cells are skipped, not written.** The quantiser maps a transparent
+source pixel to index 0 as §2 requires, and `paste-image.ts` then declines to
+emit a cell for it. So a logo with a transparent background composites over the
+drawing instead of punching a rectangular hole in it, and a paste never destroys
+artwork it does not visibly cover. That is rule 7 applied to the one operation
+in this menu that arrives with somebody else's content.
+
+The consequence, stated so it is not a surprise: **a paste cannot erase.**
+Pasting a smaller image over a larger one leaves the larger one showing around
+it. The eraser and Clear exist for erasing, and undo is one press away.
+
+It lands on the **active layer of the current frame**, like the brush. Nothing
+else in the editor picks a layer for you, and a paste that invented its own
+would be the exception nobody would predict.
+
+### 9.5 How the image arrives — §2's ladder is upside down (rule 10)
+
+§2 says *"`navigator.clipboard.read()` … Fall back to a paste event"* and F-M5
+repeats it. Measured, it is the other way round. The paste event carries
+`clipboardData` **on the gesture itself**, so it needs no Clipboard API, no
+permission prompt, and no user-agent exceptions; `navigator.clipboard.read()`
+needs a permission the user has to grant and is the part that is missing in
+Firefox. The event is the good path. So:
+
+| Entry point | Path | Why |
+|---|---|---|
+| `⌘V` | the `paste` event's `clipboardData` | no permission, works everywhere |
+| the menu row | `navigator.clipboard.read()` | there is no event to read — nobody pressed a key |
+| either, on failure | a file picker | F-M5, and it always works |
+
+**There is no `⌘V` keydown handler**, and that is the point rather than an
+omission. §3 makes conditional `preventDefault` the whole reason shortcuts were
+their own step, and the paste event removes the question: the browser already
+routes `⌘V` in a text field to the text field. The listener still checks
+`isTyping` so that pasting *text* into the filename input is never interpreted
+as pasting an *image* into the canvas, which is the one case the browser cannot
+disambiguate for us.
+
+The hint therefore says `Ctrl V` and it is true — §7.2's rule is that a hint is
+a promise about a key, not about a keydown handler.
+
+**The decode is bounded.** A 6000×4000 photo is 96MB of `ImageData` and a
+`getImageData` large enough to fail. `clipboard.ts` draws through a canvas
+capped at 1024 on the long edge before reading the pixels back. At a destination
+of at most 256 that is four times more detail than the box average can use, so
+the cap costs nothing and removes the failure.
+
+### 9.6 What it says
+
+Rule 7 and F-M3: never silence, and say the cost with the action rather than
+after it. Every string is in `lib/editor/paste.ts` where a test can hold it.
+
+| Case | Message |
+|---|---|
+| pasted, colours lost | `Pasted 1000×500 as 32×16. Reduced from 214 colours to 18.` |
+| pasted, nothing lost | `Pasted 16×16 as 32×32. 7 colours.` |
+| pasted, palette was full | …plus `The palette is full, so some colours were matched to ones already in it.` |
+| the image was blank | `Pasted 8×8. Every pixel was transparent, so nothing changed.` |
+| nothing to do | `Pasted 32×32. Nothing changed — that image is already on this layer.` |
+| F-M2 | `No image on the clipboard.` |
+| F-M5 | `This browser won't hand over the clipboard — choose a file instead.` |
+| decode failed | `That image could not be read.` |
+
+The size clause names the source size **only when it differs from the placed
+size**: `Pasted 20×10` is the whole truth when nothing was scaled, and
+`Pasted 20×10 as 20×10` reads like a bug. The full-palette sentence is separate
+from the count rather than folded into it, because "the palette ran out" is a
+different fact from "colours were reduced", and it can happen after some
+colours were successfully added — an earlier draft of this table said "all
+already in the palette", which is only true when *no* slot was free.
+
+**These go to a notice, not to `window.alert`.** The alert `openFile` uses is
+tolerable for a file that failed to parse — rare, and it stops you. A blocking
+modal after a *successful* paste is not, and F-M2 fires on the perfectly ordinary
+mistake of pressing `⌘V` with text on the clipboard. `app/page.tsx` already
+renders a `role="status"` line for the corrupt-draft notice and nothing else can
+reach it; that state moves into `useEditorStore` as `notice` / `setNotice`, and
+this feature is its second caller. It dismisses on click and after
+`NOTICE_MS = 6000`, so a message is never permanent and never silent.
+
+### 9.7 What B3 does not do
+
+- **A floating paste you can drag before committing.** That is a selection
+  feature — the marquee and Select/Move already own moving pixels, and pasting
+  then moving is two undoable steps rather than a new mode.
+- **Paste at 1:1 with a scroll offset**, i.e. honouring the source size on an
+  image larger than the canvas. It would need somewhere to put the overflow, and
+  the answer would be either a crop or a resize, both of which §2 rules out.
+- **Dithered quantisation.** Floyd–Steinberg would carry more apparent colour
+  through a 16-entry palette, and it would do it by scattering pixels — which is
+  the opposite of what pixel art is. The dither brush is a deliberate tool here,
+  not a side effect of importing.
+- **Reading a URL or an `<img>` off the clipboard.** `text/html` and `text/uri-list`
+  flavours would mean fetching a cross-origin image and tainting a canvas. A
+  file, a bitmap or nothing.

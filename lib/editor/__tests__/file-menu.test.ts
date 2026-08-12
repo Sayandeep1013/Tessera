@@ -54,15 +54,23 @@ describe('the menu, as a shape', () => {
     expect(hinted.map((i) => [i.id, i.hint])).toEqual([
       ['new', 'Ctrl N'],
       ['open', 'Ctrl O'],
+      ['paste', 'Ctrl V'],
       ['download', 'Ctrl S'],
     ])
   })
 
-  /** Ctrl+V waits for B3. §8.4: a key that does nothing is the same broken
-   *  promise as a hint for a key that does nothing. */
-  it('does not promise Ctrl V while Paste image is unbuilt', () => {
-    expect(FILE_MENU_ITEMS.some((i) => i.hint?.toLowerCase().includes('v'))).toBe(false)
-    expect(FILE_MENU_ITEMS.some((i) => i.label.toLowerCase().includes('paste'))).toBe(false)
+  /**
+   * B2 asserted the opposite of this — that nothing promised `V` while Paste
+   * image was unbuilt — and said the test would move with B3 rather than being
+   * deleted. This is that move. The rule has not changed: a hint and its key
+   * ship together (§7.2, §9.5), so a hint that outlives its key fails here.
+   */
+  it('promises Ctrl V now that the key is honoured, and the row exists to honour it', () => {
+    const paste = FILE_MENU_ITEMS.find((i) => i.id === 'paste')
+    expect(paste?.label).toBe('Paste image')
+    expect(paste?.hint).toBe('Ctrl V')
+    expect(paste?.submenu).toBeUndefined()
+    expect(paste?.destructive).toBeUndefined()
   })
 
   it('marks the two disclosures as submenus, and nothing else', () => {
@@ -70,9 +78,13 @@ describe('the menu, as a shape', () => {
       .toEqual(['recent', 'examples'])
   })
 
-  /** §1 draws recent directly under New — the same question from both ends. */
-  it('puts Open recent in the first group, under New', () => {
-    expect(FILE_MENU[0]!.map((i) => i.id)).toEqual(['new', 'recent', 'open', 'duplicate'])
+  /**
+   * §1 draws recent directly under New — the same question from both ends —
+   * and paste under Open, because both bring somebody else's picture in. With
+   * B3 the first group is finally the one §1 draws.
+   */
+  it('puts the whole first group in the order §1 draws it', () => {
+    expect(FILE_MENU[0]!.map((i) => i.id)).toEqual(['new', 'recent', 'open', 'paste', 'duplicate'])
   })
 
   it('every label is real text — no placeholder or "coming soon" rows', () => {

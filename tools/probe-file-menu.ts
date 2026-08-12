@@ -58,6 +58,55 @@ const CLEAR_COLOUR = `(() => {
   return el ? getComputedStyle(el).color : null
 })()`
 
+/** The palette, so a paste's promise to add colours can be checked. */
+const PALETTE = `window.__tessera.palette()`
+
+/**
+ * Put a real image on the clipboard and press ⌘V — as a synthetic `paste`
+ * event carrying a DataTransfer, which is exactly what the browser delivers.
+ *
+ * A ClipboardEvent is the honest way to drive this: the app listens for `paste`
+ * rather than for a keydown (spec §9.5), so dispatching the event tests the
+ * code path a real ⌘V takes, and it needs no clipboard permission that
+ * headless Chromium might or might not grant.
+ *
+ * The image is drawn here rather than loaded: four quadrants of flat colour at
+ * a size that has to be reduced, so the assertions afterwards are about a known
+ * picture. Passed as a plain string per HANDOFF §5 — `page.evaluate` with a
+ * function hits `__name is not defined`.
+ */
+const pasteImage = (w: number, h: number) => `(async () => {
+  const c = document.createElement('canvas')
+  c.width = ${w}; c.height = ${h}
+  const ctx = c.getContext('2d')
+  const quad = ['#e11d48', '#0ea5e9', '#facc15', '#22c55e']
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = quad[i]
+    ctx.fillRect((i % 2) * ${w} / 2, Math.floor(i / 2) * ${h} / 2, ${w} / 2, ${h} / 2)
+  }
+  const blob = await new Promise((res) => c.toBlob(res, 'image/png'))
+  const dt = new DataTransfer()
+  dt.items.add(new File([blob], 'probe.png', { type: 'image/png' }))
+  // On the focused element, as a real ⌘V is — the app's isTyping guard reads
+  // the target, so dispatching on window would make every paste look like one
+  // aimed at the canvas and the filename-field case would never be tested.
+  const target = document.activeElement || document.body
+  target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }))
+  return true
+})()`
+
+/** A ⌘V with nothing but text on the clipboard — F-M2. */
+const PASTE_TEXT = `(() => {
+  const dt = new DataTransfer()
+  dt.setData('text/plain', 'not an image')
+  // On the focused element, as a real ⌘V is — the app's isTyping guard reads
+  // the target, so dispatching on window would make every paste look like one
+  // aimed at the canvas and the filename-field case would never be tested.
+  const target = document.activeElement || document.body
+  target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true }))
+  return true
+})()`
+
 type ProbeLayer = { n: string; hidden: boolean; px: number[] }
 type Identity = { id: string; name: string }
 
@@ -102,7 +151,7 @@ async function dotAtCentre(p: Page) {
 }
 
 const EXPECTED_ITEMS = [
-  'New…', 'Open recent', 'Open…', 'Duplicate', 'Examples',
+  'New…', 'Open recent', 'Open…', 'Paste image', 'Duplicate', 'Examples',
   'Download .tessera.json', 'Export PNG', 'Clear…',
 ]
 
@@ -125,10 +174,12 @@ async function run(p: Page, theme: string) {
   const text = (await menu(p).innerText()).toLowerCase()
   check(t('no account items'),
     !['dashboard', 'explore', 'publish', 'community'].some((w) => text.includes(w)), text)
-  check(t('three shortcuts promised, and they are the wired ones (§8.4)'),
-    (text.match(/ctrl/g) ?? []).length === 3, text)
-  check(t('…and Ctrl V is not among them, because paste is B3'),
-    !text.includes('ctrl v'), text)
+  check(t('four shortcuts promised, and they are the wired ones (§8.4, §9.5)'),
+    (text.match(/ctrl/g) ?? []).length === 4, text)
+  // B2 asserted the opposite of this and said the check would move with B3
+  // rather than be deleted. A hint and its key ship together — §7.2.
+  check(t('…including Ctrl V, now that a paste listener honours it'),
+    text.includes('ctrl v'), text)
 
   // ── a blank document: Clear has nothing to do, New has nothing to ask ─────
   check(t('Clear is disabled with nothing painted (§7.4)'),
@@ -166,12 +217,12 @@ async function run(p: Page, theme: string) {
   // Every item reachable by keyboard, submenu included — spec §5.
   await p.locator('#file-new').focus()
   const reached = new Set<string>()
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 16; i++) {
     const id = await p.evaluate(ACTIVE_ID)
     if (typeof id === 'string' && id) reached.add(id)
     await p.keyboard.press('Tab')
   }
-  const want = ['file-new', 'file-open', 'file-duplicate', 'file-examples',
+  const want = ['file-new', 'file-open', 'file-paste', 'file-duplicate', 'file-examples',
     'file-example-face', 'file-example-bird', 'file-download', 'file-png', 'file-clear']
   check(t('every item is reachable by keyboard, submenu included'),
     want.every((id) => reached.has(id)),
@@ -338,6 +389,70 @@ async function run(p: Page, theme: string) {
   await p.waitForTimeout(200)
   await closeMenu(p)
 
+  // ── Paste image — spec §9 ─────────────────────────────────────────────────
+  // The unit tests cover the algorithm exhaustively in node. What they cannot
+  // reach is the wiring: that ⌘V is really heard, that the command really goes
+  // through commit(), that the report really appears, and that one Ctrl+Z
+  // really takes the whole thing back out including the palette.
+  const beforePaste = await paintedCount(p)
+  const paletteBefore = (await p.evaluate(PALETTE)) as string[]
+  const docSize = await size(p)
+
+  await p.evaluate(pasteImage(64, 64))
+  await p.waitForTimeout(600)
+
+  const status = p.getByRole('status')
+  const report = (await status.innerText()).replace(/\s+/g, ' ')
+  check(t('Ctrl+V pastes, and says what it did (F-M3)'),
+    report.startsWith(`Pasted 64×64 as ${docSize.w}×${docSize.h}.`), report)
+  check(t('…naming the colour count rather than pretending nothing was lost'),
+    /\b4 colours\.$/.test(report), report)
+  await p.screenshot({ path: join(OUT, `probe-file-menu-${theme}-paste.png`) })
+
+  check(t('…filling the canvas, because a 64×64 halves exactly into it'),
+    (await paintedCount(p)) === docSize.w * docSize.h,
+    `${await paintedCount(p)} of ${docSize.w * docSize.h}`)
+
+  const paletteAfter = (await p.evaluate(PALETTE)) as string[]
+  check(t('…adding the four colours it needed, and no more'),
+    paletteAfter.length === paletteBefore.length + 4,
+    `${paletteBefore.length} → ${paletteAfter.length}`)
+  check(t('…and staying inside the 36 the format allows'), paletteAfter.length <= 36,
+    String(paletteAfter.length))
+
+  await status.click()
+  await p.waitForTimeout(150)
+  check(t('…the notice dismisses on click, rather than sitting over the artwork'),
+    (await p.getByRole('status').count()) === 0)
+
+  // One command, so one press — pixels AND palette. The ai_edit inverse got
+  // exactly this wrong once and shipped documents that no longer parsed
+  // (14-layers.md §0.2), which is why the palette is asserted too.
+  await p.keyboard.press('Control+z')
+  await p.waitForTimeout(400)
+  check(t('…one Ctrl+Z takes the whole paste back out'),
+    (await paintedCount(p)) === beforePaste, `${await paintedCount(p)} vs ${beforePaste}`)
+  check(t('…palette included'),
+    JSON.stringify(await p.evaluate(PALETTE)) === JSON.stringify(paletteBefore))
+
+  // F-M2: the ordinary mistake of pressing ⌘V with text on the clipboard.
+  await p.evaluate(PASTE_TEXT)
+  await p.waitForTimeout(400)
+  check(t('a ⌘V with no image says so rather than going silent (F-M2)'),
+    (await p.getByRole('status').innerText()).includes('No image on the clipboard'),
+    await p.getByRole('status').innerText())
+  await p.getByRole('status').click()
+  await p.waitForTimeout(150)
+
+  // A paste aimed at the filename field belongs to the filename field — §9.5.
+  const field = p.getByLabel('Artwork name')
+  await field.click()
+  await p.evaluate(pasteImage(64, 64))
+  await p.waitForTimeout(500)
+  check(t('…and a paste while typing in the name field is left alone'),
+    (await p.getByRole('status').count()) === 0 && (await paintedCount(p)) === beforePaste)
+  await p.evaluate(BLUR)
+
   // ── an example replaces the document and re-fits the view ─────────────────
   await openMenu(p)
   await p.locator('#file-examples').click()
@@ -412,6 +527,19 @@ async function main() {
     await p.waitForTimeout(200)
     await onScreen('the Clear confirm')
     await p.screenshot({ path: join(OUT, `probe-file-menu-${name}-confirm.png`) })
+    await closeMenu(p)
+
+    // The paste notice is the longest sentence this app says, and it appears
+    // over the artwork. check-responsive cannot see it — it measures the app at
+    // rest and nothing is showing then (HANDOFF §5) — so it is measured here,
+    // where the message is actually on screen.
+    await p.evaluate(pasteImage(64, 64))
+    await p.waitForTimeout(700)
+    const nb = await p.getByRole('status').boundingBox()
+    check(`${name}: the paste notice is fully on screen`,
+      !!nb && nb.x >= 0 && nb.x + nb.width <= width && nb.y >= 0 && nb.y + nb.height <= height,
+      JSON.stringify(nb))
+    await p.screenshot({ path: join(OUT, `probe-file-menu-${name}-paste.png`) })
 
     await ctx.close()
   }

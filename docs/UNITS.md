@@ -90,8 +90,8 @@ works; it is done when the next agent can start without asking anything.
 | **A2** | Canvas tab size UI | **DONE** | 9 | [16 §4.1](./specs/16-settings.md) |
 | **B1** | File menu, Examples, Duplicate, Clear | **DONE** | 9 | [17](./specs/17-file-menu.md) |
 | **B2** | Open recent, rename, shortcuts | **DONE** | 9 | [17 §2, §3, §8](./specs/17-file-menu.md) |
-| **B3** | Paste image | **NEXT** | — | [17 §2](./specs/17-file-menu.md) |
-| **C** | Code panel | TODO | — | [07](./specs/07-code-panel.md) |
+| **B3** | Paste image | **DONE** | 9 | [17 §9](./specs/17-file-menu.md) |
+| **C** | Code panel | **NEXT** | — | [07](./specs/07-code-panel.md) |
 | **D** | Exporters ×6 | TODO | — | [08](./specs/08-exporters.md) |
 | **E** | Layers phase 2 | TODO | — | [14 §6.4](./specs/14-layers.md) |
 | **F** | Animation | TODO | — | [10](./specs/10-animation.md) |
@@ -474,7 +474,120 @@ F-M4 asks for; the parse error is developer detail.
 
 ---
 
-## B3 — Paste image · NEXT
+## B3 — Paste image · DONE
+
+**12 Aug 2026 · `TBD` · 9/10**
+
+`lib/artwork-core/fit-image.ts` (placement and resampling),
+`quantise.ts` (redmean distance, median cut, palette reuse), `paste-image.ts`
+(the two composed into one command), `lib/editor/paste.ts` (every sentence),
+`lib/editor/clipboard.ts` (the three ways an image arrives), the `notice`
+channel in `useEditorStore`, and the menu row plus the `paste` listener in
+`Chrome.tsx`. 77 new unit tests — 419 to **496** — and the probe grew from 112
+checks to **134**. Decisions in `17-file-menu.md §9`.
+
+**§2 was wrong in two places and both are fixed there, not routed around**
+(rule 10):
+
+1. **"Nearest-neighbour" is right for enlarging and wrong for reducing.** A
+   1000×500 photo into a 32×16 document is a 31:1 reduction — nearest-neighbour
+   keeps one source pixel in every 961 and throws away the other 960, so the
+   result is a sample of noise rather than a small version of the picture.
+   Reduction box-averages, premultiplied so the transparent side of an edge does
+   not bleed its colour into the visible side. Enlargement stays
+   nearest-neighbour **and is by a whole number or not at all**: 13×13 into
+   32×32 is drawn at 2×, not 2.46×, because a fractional nearest-neighbour
+   enlargement gives some source rows three destination rows and their
+   neighbours two, and that unevenness is how a pasted image announces that
+   software mangled it.
+2. **The fallback ladder is upside down.** §2 and F-M5 say to use
+   `navigator.clipboard.read()` and fall back to a paste event. Measured, the
+   paste event is the *good* path — it carries `clipboardData` on the gesture
+   itself, so no permission, no prompt, and no missing implementation in
+   Firefox, which is precisely where `clipboard.read()` is absent. So `⌘V` is a
+   `paste` listener and the **menu row** is what has to use the API, with a file
+   picker under it.
+
+**There is no `⌘V` keydown handler and that is the design.** §3 made conditional
+`preventDefault` the whole reason shortcuts were their own step; the paste event
+deletes the question, because the browser already routes `⌘V` in a text field to
+the text field. `isTyping` is still checked, for the one case the browser cannot
+decide for us — pasting *text* into the filename input must never be read as
+pasting an *image* into the canvas. The probe drives both.
+
+**Four things §2 left to the code, decided in §9 instead:**
+
+- **"Close enough" is 24 on a redmean scale of 0–765** — about eight levels per
+  channel; `#808080` against `#888888` is exactly 24, and a test pins that
+  sentence. Deliberately small, because reuse silently changes the image the
+  user pasted, so it may only happen where the change is invisible. Plain
+  Euclidean RGB was rejected: it claims two blues 40 apart are as different as
+  two greens 40 apart, and a threshold built on that is either too eager in
+  green or useless in blue.
+- **Alpha is a cutoff at 128, not a channel.** Palette entries *can* be
+  `#rrggbbaa`, so honouring partial alpha would mean one entry per (colour,
+  alpha) pair and the soft edge of one PNG would eat the whole 36-slot budget.
+- **A paste composites; it cannot erase.** Transparent cells are mapped to index
+  0 as §2 requires and then *not written*, so a logo with a transparent
+  background lands over the drawing instead of punching a rectangular hole in
+  it. The consequence is stated rather than discovered: pasting a smaller image
+  over a larger one leaves the larger one showing around it.
+- **The report is a sentence with the number in it**, per F-M3 —
+  *"Pasted 480×320 as 32×21. Reduced from 540 colours to 23."*
+
+**The notice channel is new, and it is a consolidation rather than a second
+mechanism.** F-M2, F-M3 and F-M5 are all "never go silent" requirements, and a
+blocking `window.alert` after a *successful* paste is not an acceptable way to
+meet them. `app/page.tsx` already had a `role="status"` line, reachable only by
+the corrupt-draft notice it was written for; it moved into `useEditorStore`.
+**Giving it a timer would have quietly weakened a rule-7 surface** — "your last
+drawing is still saved" is not a message to take away after six seconds — so the
+timer is opt-out and the boot notice is sticky.
+
+**The undo test is the one that matters and it is there because this repo has
+been burned by it.** `invertCommand('ai_edit')` once returned the palette pop
+*instead of* the pixel inverse, shipping documents whose pixels referenced a
+palette entry undo had removed (`14-layers.md §0.2`). Paste is the second
+command that adds colours and pixels together, so it gets the same check:
+serialise the undone document and parse it back. The probe asserts it too, in a
+real browser, palette included.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | All three stages of §2 built, both of its errors corrected in §9, four gaps it left filled there, and every item in §5's test list covered. The menu is now exactly the menu §1 draws — the first time that has been true. Not 10: F-M5's *first* rung is unproven. Headless Chromium has `clipboard.read()`, so the "this browser won't hand over the clipboard" path has never actually executed. |
+| 2 | Correctness | 9 | F-M2/F-M3/F-M5 handled; one command, one undo, byte-exact including the palette and pinned by a reparse; determinism tested three ways; the 36-entry cap held under a 200-colour paste; composite and alpha-cutoff rules tested; total on a missing layer. Not 10: the decode is capped at 1024 on the long edge, so a 6000px photo is pre-reduced by the *browser's* resampler — the pipeline is deterministic given its input, but two browsers could hand it marginally different input. Documented, not eliminated. |
+| 3 | Tests | 9 | 77 unit tests on the algorithm and the wording, and 22 new browser checks driving a real `ClipboardEvent` carrying a real PNG — the paste, the report, the palette growth, one Ctrl+Z taking all of it back out, F-M2, and the filename-field case. Not 10: `clipboard.ts` has no unit test. It is all browser API, and only its paste-event path is exercised; `readClipboardImage` and `pickImageFile` have never run in CI or in a probe. Same shape as `listRecent` in B2. |
+| 4 | Integration | 9 | `commit()` still the only writer; artwork-core still imports nothing but zod; the browser layer is thin and one-way; tokens only; the notice consolidated page-local state rather than adding a channel; the new dev-hook read is pinned out of the production bundle by the existing test. Not 10: `pasteImageCommand` now takes a fifth parameter that exists solely because the browser layer caps its decode. Documented coupling is still coupling. |
+| 5 | Design fidelity | 9 | Read in both themes and at 390 and 320, and the *result* looked at in both themes with a real gradient rather than four flat squares — the reduction is smooth, the aspect is preserved and centred, and the hard edge stays hard. Not 10: measured at 320, the notice sits over the zoom pill for its six seconds. Every alternative placement covers the artwork or the agent panel instead, so it stands — but it was found by measuring, not by choosing. |
+| 6 | No regressions | 9 | 496 tests, clean build, six viewports, all ten probes green in one run. The one behaviour this unit changed outside itself — the boot notice gaining a timer — was caught while scoring and given `sticky` rather than shipped. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **A floating paste you can drag before committing.** The marquee and
+  Select/Move already own moving pixels; pasting then moving is two undoable
+  steps rather than a new mode.
+- **Dithered quantisation.** Floyd–Steinberg carries more apparent colour
+  through a small palette, and it does it by scattering pixels — the opposite of
+  what pixel art is. The dither brush is a deliberate tool here, not a side
+  effect of importing.
+- **Reading a URL or an `<img>` off the clipboard.** `text/uri-list` would mean
+  fetching a cross-origin image and tainting a canvas. A file, a bitmap, or
+  nothing.
+- **Pasting at 1:1 with a crop.** Honouring the source size on an image larger
+  than the canvas needs somewhere to put the overflow, and the only answers are
+  a crop or a resize — both of which §2 rules out.
+- **A test for the file-picker rung.** It needs a browser without
+  `clipboard.read()`, which is a Firefox run, and this repo's probes are
+  Chromium. Recorded in `HANDOFF §11` rather than faked with a stub that would
+  only prove the stub works.
+
+---
+
+## B3 — the original handover, kept for reference
 
 ### Context handed over
 
@@ -540,19 +653,59 @@ F-M4 asks for; the parse error is developer detail.
 
 ---
 
-## C — Code panel · TODO
+## C — Code panel · NEXT
 
 ### Context handed over
 
 - Spec `07-code-panel.md` predates everything built since. **Read it critically
-  and correct it under rule 10** rather than implementing something stale.
+  and correct it under rule 10** rather than implementing something stale. It
+  was written before layers, before settings, before the agent and before the
+  File menu; every unit since B1 has found at least one sentence in its own spec
+  that was no longer true, and this spec has had four more units happen to it
+  than any of them.
 - The document's `px` rows already **are** the text. The panel renders the
   document; it is never a second source of truth (rule 3).
 - The loop guard is where the bugs live: text → document → text must not
   re-enter.
 - `</>` is the button, currently in the `showUnbuilt` group in
   `lib/editor/breakpoint.ts`. Move it out when it works, as Layers and Share
-  were.
+  were. **Timeline is then the last member**, and if `showUnbuilt` ends up with
+  one entry it is worth asking whether the group still earns its name.
+
+**Things B3 built that this unit will want:**
+
+- **There is a status channel now.** `useEditorStore.notice` / `setNotice(text,
+  sticky?)`, rendered by `<Notice/>` in `app/page.tsx` as one `role="status"`
+  line. Transient by default (`NOTICE_MS`, 6s, click to dismiss), `sticky` for
+  anything about work that might be lost. A code panel that fails to parse what
+  someone typed has exactly that problem, and it should not invent a second
+  mechanism — **and it must not use `window.alert`**, which is still what
+  `openFile` does and is now the odd one out.
+- **`parseDoc` already returns a `DocError` with a `code`, a `message` and a
+  `path`** (`lib/artwork-core/codec.ts`). `path` is `frames.0.layers.0.px[3][7]`
+  shaped, which is the raw material for pointing at the offending line. Nothing
+  currently uses `path`. That is the difference between "invalid document" and a
+  cursor on the bad character.
+- **Measured, at 320px: the notice overlaps the zoom pill** for its six seconds.
+  Anything else you float over the canvas has the same problem and
+  `check-responsive.ts` will not see it — it measures the app at rest. Measure
+  it yourself in the probe, the way `probe-file-menu` now does.
+
+**Things that will bite regardless:**
+
+- **`spriteRects`, `serializeDoc` and `encodeRows` are all already the text.**
+  `serializeDoc` gives stable key order, 2-space indent and one line per pixel
+  row — the code panel's job is closer to "show this string and accept edits to
+  it" than to formatting anything.
+- **Every mutation still goes through `commit(cmd)`.** A code-panel edit is a
+  `replace_doc` at worst; think hard before it is one per keystroke, which is
+  the mistake `doc_rename` avoided by committing on blur (§8.1).
+- **`lib/__tests__/probe-handles.test.ts` will fail `npm test`** if a probe names
+  an `#id` you removed, and **`npm run probes`** is how you find the rest. B1
+  broke two probes that had nothing to do with its unit; do not assume your
+  blast radius.
+
+### Prompt
 
 ### Prompt
 
