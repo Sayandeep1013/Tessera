@@ -11,7 +11,7 @@ import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { createDoc } from '@/lib/artwork-core/create'
 import { nanoid } from 'nanoid'
 import { loadLatestDraft } from '@/lib/persist/idb'
-import { fitViewport, nextScale } from '@/lib/editor/viewport'
+import { fitViewport, stepScale } from '@/lib/editor/viewport'
 import { serializeDoc } from '@/lib/artwork-core/codec'
 
 export default function EditorPage() {
@@ -91,6 +91,7 @@ export default function EditorPage() {
           px: Array.from(l.px),
         })) ?? null,
       active: () => useDocStore.getState().layer,
+      viewport: () => useEditorStore.getState().viewport,
     }
     return () => {
       delete w.__tessera
@@ -140,8 +141,8 @@ export default function EditorPage() {
         case 'g': ed.toggleGrid(); break
         case '[': ed.setBrushSize(ed.brushSize - 1); break
         case ']': ed.setBrushSize(ed.brushSize + 1); break
-        case '+': case '=': ed.setViewport({ ...ed.viewport, scale: nextScale(ed.viewport.scale, 1) }); break
-        case '-': ed.setViewport({ ...ed.viewport, scale: nextScale(ed.viewport.scale, -1) }); break
+        case '+': case '=': ed.setViewport({ ...ed.viewport, scale: stepScale(ed.viewport.scale, 1) }); break
+        case '-': ed.setViewport({ ...ed.viewport, scale: stepScale(ed.viewport.scale, -1) }); break
         case '1': {
           const el = document.querySelector('canvas')
           if (el && ds.doc) {

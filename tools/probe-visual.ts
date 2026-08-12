@@ -11,7 +11,7 @@ async function main() {
   await p.screenshot({ path: 'docs/shots/probe-grid.png', clip: { x: 520, y: 160, width: 150, height: 150 } })
 
   // the File menu open, to see what it overlaps
-  await p.getByTitle('File — new, open, export').click()
+  await p.getByRole('button', { name: 'File — new, open, export' }).click()
   await p.waitForTimeout(300)
   await p.screenshot({ path: 'docs/shots/probe-filemenu.png', clip: { x: 0, y: 0, width: 700, height: 340 } })
 

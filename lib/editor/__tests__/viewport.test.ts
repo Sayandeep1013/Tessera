@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_SCALE, MIN_SCALE, ZOOM_LADDER, clampScale, fitViewport, nextScale, screenToDoc,
-  snapScale, zoomAt,
+  MAX_SCALE, MIN_SCALE, ZOOM_STEPS, clampScale, fitViewport, screenToDoc, stepScale, zoomAt,
 } from '../viewport'
 import { loadStarter } from '../../artwork-core/create'
 
@@ -48,31 +47,6 @@ describe('fit uses the largest integer scale, not the largest ladder rung', () =
   })
 })
 
-describe('the ladder still governs stepped zoom', () => {
-  it('steps up and down through the rungs', () => {
-    expect(nextScale(16, 1)).toBe(24)
-    expect(nextScale(16, -1)).toBe(12)
-  })
-
-  it('clamps at both ends', () => {
-    expect(nextScale(ZOOM_LADDER[0]!, -1)).toBe(ZOOM_LADDER[0])
-    expect(nextScale(ZOOM_LADDER[ZOOM_LADDER.length - 1]!, 1)).toBe(
-      ZOOM_LADDER[ZOOM_LADDER.length - 1],
-    )
-  })
-
-  it('steps from a free scale that fit produced', () => {
-    // fit no longer lands on a rung, so stepping must still behave from 50
-    expect(nextScale(50, 1)).toBe(64)
-    expect(nextScale(50, -1)).toBe(48)
-  })
-
-  it('snaps to the nearest rung', () => {
-    expect(snapScale(30)).toBe(32)
-    expect(snapScale(47)).toBe(48)
-  })
-})
-
 describe('zoom anchoring', () => {
   it('keeps the document pixel under the cursor', () => {
     const vp = { scale: 16, offsetX: 100, offsetY: 40 }
@@ -110,7 +84,95 @@ describe('continuous zoom, for the wheel', () => {
     for (const n of [0, 0.0001, 0.4, -1]) expect(clampScale(n)).toBeGreaterThanOrEqual(1)
   })
 
-  it('every ladder rung survives a round trip', () => {
-    for (const s of ZOOM_LADDER) expect(clampScale(s)).toBe(s)
+  it('every step the buttons can land on survives a round trip', () => {
+    for (const s of ZOOM_STEPS) expect(clampScale(s)).toBe(s)
+  })
+})
+
+/**
+ * The zoom bar's two buttons. See docs/specs/15-feedback-and-input.md §2 and
+ * §7.1 — these were stepping ZOOM_LADDER, which jumps up to 50% per click and
+ * oscillates forever between two rungs once you start from an off-rung scale.
+ */
+describe('stepScale — the zoom buttons', () => {
+  const scales = Array.from({ length: MAX_SCALE }, (_, i) => i + 1)
+
+  it('round-trips exactly from every scale it can actually land on', () => {
+    // Only ZOOM_STEPS entries are reachable after one click, so those are the
+    // scales reversibility is meaningful for. An arbitrary integer like 41 is
+    // not on the list and cannot be returned to — see the drift test below for
+    // what is promised there instead.
+    const onList = ZOOM_STEPS.filter((s) => s > MIN_SCALE && s < MAX_SCALE)
+    const broken = onList.filter(
+      (s) => stepScale(stepScale(s, -1), 1) !== s || stepScale(stepScale(s, 1), -1) !== s,
+    )
+    expect(broken).toEqual([])
+  })
+
+  it('does not drift or oscillate from an off-list scale', () => {
+    // The real complaint: click down then up and you are a long way from where
+    // you began, permanently. 41 is what fitViewport returns for the face at
+    // 1440x900, and it is not on the list.
+    let s = 41
+    s = stepScale(s, -1)
+    expect(s).toBe(40) // snapped onto the list, 2% away, not 22%
+    s = stepScale(s, 1)
+    expect(s).toBe(48)
+    // ...and from here it is stable rather than wandering further.
+    expect(stepScale(stepScale(48, -1), 1)).toBe(48)
+  })
+
+  it('always moves, in both directions, away from the clamps', () => {
+    const stuck = scales
+      .filter((s) => s > MIN_SCALE && s < MAX_SCALE)
+      .filter((s) => stepScale(s, 1) === s || stepScale(s, -1) === s)
+    expect(stuck).toEqual([])
+  })
+
+  it('clamps at both ends instead of running off', () => {
+    expect(stepScale(MIN_SCALE, -1)).toBe(MIN_SCALE)
+    expect(stepScale(MAX_SCALE, 1)).toBe(MAX_SCALE)
+  })
+
+  it('never takes a step bigger than 26%, above the integer floor', () => {
+    // The old ladder's measured worst case was 50%; the wheel's is 14%. Below
+    // scale 5 a whole pixel is a large proportion of the scale and there is no
+    // smaller step available — 1 -> 2 is 100% and nothing can be done about it
+    // short of fractional scales, which would stop cells tiling exactly.
+    const violations: Array<[number, number, number]> = []
+    for (const s of scales.filter((v) => v >= 5)) {
+      for (const dir of [1, -1] as const) {
+        const next = stepScale(s, dir)
+        if (next === s) continue
+        const jump = Math.abs(next - s) / s
+        if (jump > 0.26) violations.push([s, next, Math.round(jump * 100)])
+      }
+    }
+    expect(violations).toEqual([])
+  })
+
+  it('keeps every power of two reachable', () => {
+    // The point of the coarse ladder was landing on recognisable factors. That
+    // goal was right; one rung per click was the part that was wrong.
+    for (const p of [1, 2, 4, 8, 16, 32, 64]) expect(ZOOM_STEPS).toContain(p)
+  })
+
+  it('stays an integer, so cells still tile exactly', () => {
+    const fractional = scales
+      .flatMap((s) => [stepScale(s, 1), stepScale(s, -1)])
+      .filter((v) => !Number.isInteger(v))
+    expect(fractional).toEqual([])
+  })
+
+  it('is a real improvement on the coarse ladder it replaced', () => {
+    // Pins the regression, not just the fix. The old ZOOM_LADDER was
+    // [1,2,3,4,6,8,12,16,24,32,48,64] stepped one rung per click, so from the
+    // fitted 41 the − button went to 32 — a 22% lurch. It is deleted rather
+    // than kept around, so this asserts the new behaviour against the numbers
+    // the old one produced.
+    expect(stepScale(41, -1)).toBe(40) // 2% down, not 22%
+    expect(stepScale(41, 1)).toBe(48)
+    // Steps that the old ladder skipped entirely are now reachable.
+    for (const s of [5, 7, 10, 14, 20, 28, 40, 56]) expect(ZOOM_STEPS).toContain(s)
   })
 })

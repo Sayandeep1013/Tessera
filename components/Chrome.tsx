@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
-import { fitViewport, nextScale } from '@/lib/editor/viewport'
+import { fitViewport, stepScale } from '@/lib/editor/viewport'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/artwork-core/create'
 import { runUi } from '@/lib/store/ctx'
@@ -22,18 +22,25 @@ import {
   DotsThree, Eraser, Export, Eyedropper, FilmStrip, Gradient, Minus, PaintBrush,
   PaintBucket, PixelPerfect, Plus, Selection, Sliders, Square, Stack,
 } from './icons'
+import { Tooltip, type Placement } from './Tooltip'
 
 type IconCmp = typeof PaintBrush
 
-const TOOLS: Array<{ id: Tool; title: string; Icon: IconCmp; enabled: boolean }> = [
-  { id: 'select', title: 'Select / Move (V)', Icon: Cursor, enabled: true },
-  { id: 'brush', title: 'Brush (B)', Icon: PaintBrush, enabled: true },
-  { id: 'eraser', title: 'Eraser (E)', Icon: Eraser, enabled: true },
-  { id: 'fill', title: 'Fill (G)', Icon: PaintBucket, enabled: true },
-  { id: 'rect', title: 'Shapes (U)', Icon: Square, enabled: true },
-  { id: 'marquee', title: 'Select region (M)', Icon: Selection, enabled: true },
-  { id: 'eyedropper', title: 'Eyedropper (I)', Icon: Eyedropper, enabled: true },
-  { id: 'gradient', title: 'Gradient (H)', Icon: Gradient, enabled: true },
+/**
+ * The shortcut is a separate field rather than "(B)" inside the title: the
+ * tooltip renders it in mono, right-aligned, so a key reads as a key. The
+ * accessible name keeps the parenthetical form, because a screen reader has no
+ * typography to lean on.
+ */
+const TOOLS: Array<{ id: Tool; title: string; key: string; Icon: IconCmp; enabled: boolean }> = [
+  { id: 'select', title: 'Select / Move', key: 'V', Icon: Cursor, enabled: true },
+  { id: 'brush', title: 'Brush', key: 'B', Icon: PaintBrush, enabled: true },
+  { id: 'eraser', title: 'Eraser', key: 'E', Icon: Eraser, enabled: true },
+  { id: 'fill', title: 'Fill', key: 'G', Icon: PaintBucket, enabled: true },
+  { id: 'rect', title: 'Shapes', key: 'U', Icon: Square, enabled: true },
+  { id: 'marquee', title: 'Select region', key: 'M', Icon: Selection, enabled: true },
+  { id: 'eyedropper', title: 'Eyedropper', key: 'I', Icon: Eyedropper, enabled: true },
+  { id: 'gradient', title: 'Gradient', key: 'H', Icon: Gradient, enabled: true },
 ]
 
 // ─── primitives ──────────────────────────────────────────────────────────────
@@ -47,9 +54,16 @@ const TOOLS: Array<{ id: Tool; title: string; Icon: IconCmp; enabled: boolean }>
  * all — hovering it produces zero change.
  */
 function GlyphBtn({
-  title, Icon, size = 40, icon = 22, pad = 0, active, muted = true, lift, onClick, disabled,
+  title, tip, shortcut, place = 'bottom',
+  Icon, size = 40, icon = 22, pad = 0, active, muted = true, lift, onClick, disabled,
 }: {
+  /** The accessible name. Always set, and never replaced by the tooltip. */
   title: string
+  /** Tooltip text, when it should differ from the accessible name — a tool's
+   *  name without the "(B)" it carries for screen readers. Defaults to title. */
+  tip?: string
+  shortcut?: string
+  place?: Placement
   Icon: IconCmp
   size?: number
   icon?: number
@@ -65,9 +79,9 @@ function GlyphBtn({
   const hot = hover && !disabled && !active
 
   return (
+    <Tooltip label={tip ?? title} shortcut={shortcut} placement={place}>
     <button
       type="button"
-      title={title}
       aria-label={title}
       aria-pressed={active}
       disabled={disabled}
@@ -104,6 +118,7 @@ function GlyphBtn({
     >
       <Icon size={icon} />
     </button>
+    </Tooltip>
   )
 }
 
@@ -161,22 +176,24 @@ export function TopBar() {
     >
       {/* File / logo — 101x32 @ (12,8), r8 */}
       <div style={{ position: 'relative' }}>
-        <button
-          title="File — new, open, export"
-          aria-haspopup="menu"
-          aria-expanded={fileOpen}
-          onClick={() => setFileOpen((v) => !v)}
-          style={{
-            height: 32, display: 'flex', alignItems: 'center', gap: 6,
-            padding: '4px 6px 4px 4px', borderRadius: 'var(--r-md)', color: 'var(--fg)',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        >
-          <Logo />
-          <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
-          <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
-        </button>
+        <Tooltip label="File — new, open, export" placement="bottom">
+          <button
+            aria-label="File — new, open, export"
+            aria-haspopup="menu"
+            aria-expanded={fileOpen}
+            onClick={() => setFileOpen((v) => !v)}
+            style={{
+              height: 32, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 6px 4px 4px', borderRadius: 'var(--r-md)', color: 'var(--fg)',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <Logo />
+            <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
+            <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
+          </button>
+        </Tooltip>
         {fileOpen && <FileMenu onClose={() => setFileOpen(false)} />}
       </div>
 
@@ -184,27 +201,28 @@ export function TopBar() {
 
       {/* Colour — 36x36 with a 24x24 swatch */}
       <div style={{ position: 'relative', marginLeft: 2 }}>
-        <button
-          title="Colour"
-          aria-label="Colour"
-          onClick={() => setPaletteOpen((v) => !v)}
-          style={{
-            width: 36, height: 36, display: 'grid', placeItems: 'center',
-            borderRadius: 'var(--r-pill)',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        >
-          <span
-            style={{
-              width: 24, height: 24, borderRadius: 'var(--r-pill)',
-              background: swatch === 'transparent'
-                ? 'repeating-conic-gradient(var(--panel2) 0 25%, var(--panel) 0 50%) 0 0/8px 8px'
-                : swatch,
-              boxShadow: 'inset 0 0 0 1px var(--line)',
-            }}
-          />
-        </button>
+        <Tooltip label="Colour" placement="bottom">
+            <button
+              aria-label="Colour"
+              onClick={() => setPaletteOpen((v) => !v)}
+              style={{
+                width: 36, height: 36, display: 'grid', placeItems: 'center',
+                borderRadius: 'var(--r-pill)',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <span
+                style={{
+                  width: 24, height: 24, borderRadius: 'var(--r-pill)',
+                  background: swatch === 'transparent'
+                    ? 'repeating-conic-gradient(var(--panel2) 0 25%, var(--panel) 0 50%) 0 0/8px 8px'
+                    : swatch,
+                  boxShadow: 'inset 0 0 0 1px var(--line)',
+                }}
+              />
+            </button>
+        </Tooltip>
         {paletteOpen && <PalettePopover onClose={() => setPaletteOpen(false)} />}
       </div>
 
@@ -269,23 +287,25 @@ export function TopBar() {
         {/* Dither — 87x28 */}
         {c.showDither && (
           <div style={{ position: 'relative', alignSelf: 'center' }}>
-            <button
-              title="Dither pattern"
-              aria-haspopup="menu"
-              aria-expanded={ditherOpen}
-              onClick={() => setDitherOpen((v) => !v)}
-              style={{
-                height: 32, display: 'flex', alignItems: 'center', gap: 6,
-                padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)',
-                background: 'var(--panel2)', font: 'var(--t-label-sm)', color: 'var(--fg)',
-              }}
-            >
-              <DitherSwatch mode={dither} />
-              <span style={{ lineHeight: '16px' }}>
-                {DITHER_MODES.find((m) => m.id === dither)?.label ?? 'Solid'}
-              </span>
-              <span style={{ color: 'var(--muted)' }}><CaretDownSmall size={12} /></span>
-            </button>
+            <Tooltip label="Dither pattern" placement="bottom">
+              <button
+                aria-label="Dither pattern"
+                aria-haspopup="menu"
+                aria-expanded={ditherOpen}
+                onClick={() => setDitherOpen((v) => !v)}
+                style={{
+                  height: 32, display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '6px 8px 6px 10px', borderRadius: 'var(--r-pill)',
+                  background: 'var(--panel2)', font: 'var(--t-label-sm)', color: 'var(--fg)',
+                }}
+              >
+                <DitherSwatch mode={dither} />
+                <span style={{ lineHeight: '16px' }}>
+                  {DITHER_MODES.find((m) => m.id === dither)?.label ?? 'Solid'}
+                </span>
+                <span style={{ color: 'var(--muted)' }}><CaretDownSmall size={12} /></span>
+              </button>
+            </Tooltip>
             {ditherOpen && (
               <DitherMenu current={dither} onClose={() => setDitherOpen(false)} />
             )}
@@ -342,18 +362,20 @@ export function TopBar() {
         <GlyphBtn title="Redo (Ctrl+Shift+Z)" Icon={ArrowUturnRight} onClick={() => runUi('redo', {})} disabled={!future.length} />
 
         {c.showUnbuilt && (
-        <button
-          title="Share — export, publish"
-          disabled
-          style={{
-            height: 40, display: 'flex', alignItems: 'center', gap: 6,
-            padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
-            font: 'var(--t-label-lg)', color: 'var(--disabled)',
-          }}
-        >
-          <Export size={20} />
-          <span>Share</span>
-        </button>
+        <Tooltip label="Share — not built yet" placement="bottom">
+          <button
+            aria-label="Share — export, publish"
+            disabled
+            style={{
+              height: 40, display: 'flex', alignItems: 'center', gap: 6,
+              padding: '0 10px 0 12px', borderRadius: 'var(--r-pill)',
+              font: 'var(--t-label-lg)', color: 'var(--disabled)',
+            }}
+          >
+            <Export size={20} />
+            <span>Share</span>
+          </button>
+        </Tooltip>
         )}
 
         {/* Not built yet. They hold newt's layout on a wide screen, but they are
@@ -707,10 +729,13 @@ export function ToolRail() {
           pointerEvents: 'auto',
         }}
       >
-        {TOOLS.map(({ id, title, Icon, enabled }) => (
+        {TOOLS.map(({ id, title, key, Icon, enabled }) => (
           <GlyphBtn
             key={id}
-            title={enabled ? title : `${title} — not built yet`}
+            title={enabled ? `${title} (${key})` : `${title} — not built yet`}
+            tip={title}
+            shortcut={key}
+            place={c.railHorizontal ? 'top' : 'right'}
             Icon={Icon}
             size={c.railButton}
             icon={c.railIcon}
@@ -764,23 +789,24 @@ export function ZoomBar() {
         }}
       >
         <GlyphBtn title="Zoom out" Icon={Minus} size={36} icon={18}
-          onClick={() => runUi('set_zoom', { scale: nextScale(vp.scale, -1) })} />
-        <button
-          title="Fit to screen (1)"
-          aria-label="Fit to screen"
-          className="tabular"
-          onClick={fit}
-          style={{
-            // 16 tall was the one WCAG 2.5.8 target-size failure in the app, and it
-            // came straight from the reference. 24 is the floor.
-            minWidth: 56, height: 36, padding: '0 8px', borderRadius: 'var(--r-pill)',
-            color: 'var(--muted)',
-          }}
-        >
-          {vp.scale}×
-        </button>
+          onClick={() => runUi('set_zoom', { scale: stepScale(vp.scale, -1) })} />
+        <Tooltip label="Fit to screen" placement="top">
+          <button
+            aria-label="Fit to screen"
+            className="tabular"
+            onClick={fit}
+            style={{
+              // 16 tall was the one WCAG 2.5.8 target-size failure in the app, and it
+              // came straight from the reference. 24 is the floor.
+              minWidth: 56, height: 36, padding: '0 8px', borderRadius: 'var(--r-pill)',
+              color: 'var(--muted)',
+            }}
+          >
+            {vp.scale}×
+          </button>
+        </Tooltip>
         <GlyphBtn title="Zoom in" Icon={Plus} size={36} icon={18}
-          onClick={() => runUi('set_zoom', { scale: nextScale(vp.scale, 1) })} />
+          onClick={() => runUi('set_zoom', { scale: stepScale(vp.scale, 1) })} />
       </div>
     </div>
   )
@@ -822,9 +848,8 @@ function PalettePopover({ onClose }: { onClose: () => void }) {
     >
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4 }}>
         {doc.palette.map((entry, i) => (
+          <Tooltip key={i} label={entry.n ?? entry.c} shortcut={String(i)} placement="top">
           <button
-            key={i}
-            title={`${i}: ${entry.n ?? entry.c}`}
             aria-label={entry.n ?? entry.c}
             aria-pressed={i === colorIndex}
             onClick={() => {
@@ -841,6 +866,7 @@ function PalettePopover({ onClose }: { onClose: () => void }) {
                 : 'inset 0 0 0 1px var(--line)',
             }}
           />
+          </Tooltip>
         ))}
       </div>
     </div>

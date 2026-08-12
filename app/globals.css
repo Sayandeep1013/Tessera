@@ -149,6 +149,9 @@
   --t-title: 600 17px / 24px var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   /* Every numeral in the chrome. Mono was already loaded and used by nothing. */
   --t-mono: 500 13px / 18px var(--font-geist-mono), ui-monospace, monospace;
+  /* Keyboard shortcuts inside a tooltip. Mono so a key reads as a key rather
+     than as more prose — "Brush  B", not "Brush (B)". */
+  --t-mono-sm: 500 11px / 16px var(--font-geist-mono), ui-monospace, monospace;
 
   /* ── Motion. The governing rule is frequency, not taste: an interaction that
      happens 100+ times an hour gets no animation at all, because animation on a

@@ -15,7 +15,7 @@ import {
   MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, compositeAt, nextLayerName,
 } from '../artwork-core/layers'
 import { MAX_PALETTE, type Doc } from '../artwork-core/schema'
-import { fitViewport, snapScale } from '../editor/viewport'
+import { clampScale, fitViewport, zoomAt } from '../editor/viewport'
 import { defineAction, fail, ok, type Action, type ActionCtx } from './types'
 
 const TOOLS = [
@@ -262,13 +262,32 @@ const setZoom = defineAction({
   name: 'set_zoom',
   description:
     'Set the display zoom. This changes only what the user sees; it never alters the artwork. ' +
-    'Snapped to the nearest supported step.',
+    'Rounded to a whole number between 1 and 64, so pixels stay square.',
   input: z.object({ scale: z.number().min(1).max(64) }),
   kind: 'view',
   run: ({ scale }, ctx) => {
     const vp = ctx.editor.state().viewport
-    const next = snapScale(scale)
-    ctx.editor.setViewport({ ...vp, scale: next })
+
+    // clampScale, not snapScale. This used to snap to ZOOM_LADDER's twelve
+    // coarse rungs, which meant the zoom buttons could not land anywhere else
+    // no matter what they asked for: the − button computed 40 and this turned
+    // it into 32. Asking for 20 and silently getting 24 is the wrong contract
+    // for the agent too. See docs/specs/15-feedback-and-input.md §2.
+    const next = clampScale(scale)
+
+    // Anchor at the middle of the canvas. Setting scale while leaving the
+    // offsets alone zooms about the viewport's top-left corner, so whatever the
+    // user was looking at slides away as the artwork grows — a large part of
+    // what was reported as the zoom feeling janky. The wheel path already
+    // anchors, at the cursor; there is no cursor here, so the centre is the
+    // honest equivalent.
+    const el = typeof document !== 'undefined' ? document.querySelector('canvas') : null
+    if (!el) {
+      ctx.editor.setViewport({ ...vp, scale: next })
+      return ok({ zoom: next })
+    }
+    const r = el.getBoundingClientRect()
+    ctx.editor.setViewport(zoomAt(vp, next, r.width / 2, r.height / 2))
     return ok({ zoom: next })
   },
 })

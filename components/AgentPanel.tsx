@@ -27,20 +27,89 @@ import {
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { Elapsed, TurnMark } from './Loaders'
 import { ArrowUp, Sliders } from './icons'
+import { Tooltip } from './Tooltip'
+import { describeOutcome } from '@/lib/agent/outcome'
+
+/** 8 tools, each railButton tall, plus the rail's own 6px padding either side. */
+const railHeight = (c: ReturnType<typeof chromeFor>) => c.railButton * 8 + 12
+
+/**
+ * How far up from the bottom edge the panel has to start to clear a horizontal
+ * tool rail, measured from the rail itself.
+ *
+ * Only the phone tier needs this — everywhere else the rail is a vertical
+ * column and the maxHeight in shellFor handles it arithmetically. The rail
+ * wraps to two rows below about 364px of usable width, and nothing in
+ * chromeFor knows the viewport width, so the height cannot be derived. A
+ * ResizeObserver on the real element is the honest answer; the fallback is the
+ * single-row figure, which is what it was before and is right until it wraps.
+ */
+function useRailClearance(c: ReturnType<typeof chromeFor>): number {
+  const oneRow = c.inset + c.railButton + 12 + 8
+  const [clearance, setClearance] = useState(oneRow)
+
+  useEffect(() => {
+    if (!c.railHorizontal) return
+    const rail = document.querySelector('[role="toolbar"][aria-label="Tools"]')
+    if (!(rail instanceof HTMLElement)) return
+    const measure = () => setClearance(c.inset + rail.getBoundingClientRect().height + 8)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(rail)
+    return () => ro.disconnect()
+  }, [c.railHorizontal, c.inset])
+
+  return c.railHorizontal ? clearance : oneRow
+}
 
 /**
  * 400 wide on a large viewport; full width less the insets below that. At 390 the
  * fixed width was 2px wider than the viewport itself, which is how a panel ends
  * up causing a horizontal scrollbar on a page that must never scroll.
  */
-function shellFor(c: ReturnType<typeof chromeFor>): React.CSSProperties {
+function shellFor(c: ReturnType<typeof chromeFor>, railBottom: number): React.CSSProperties {
   return {
     position: 'absolute',
     left: c.inset,
-    // On a phone the tool rail lies along the bottom edge, so the panel sits above it.
-    bottom: c.railHorizontal ? c.inset + c.railButton + 12 + 8 : c.inset,
+    /**
+     * On a phone the tool rail lies along the bottom edge and the panel sits
+     * above it. `railBottom` is the rail's MEASURED height, not a computed one:
+     * at 320px the eight 44px buttons need 364px and only 304 are available, so
+     * the rail wraps to two rows. A static `inset + railButton + 20` assumed one
+     * row and put the panel straight through it — caught by
+     * tools/probe-agent-ui.ts at 320x568, which is exactly the viewport the
+     * wrapping was added for.
+     */
+    bottom: c.railHorizontal ? railBottom : c.inset,
     width: c.railHorizontal ? `calc(100% - ${c.inset * 2}px)` : 400,
     maxWidth: `calc(100% - ${c.inset * 2}px)`,
+    /**
+     * Capped so a long step log cannot grow up into the tool rail.
+     *
+     * Derived rather than picked: both the rail and this panel are positioned
+     * inside <main>. The rail is `top: 50%` with a -50% translate, so its
+     * bottom edge sits at `50% + railHeight/2`. This panel is anchored at
+     * `bottom: inset`, so its top edge is at `100% - inset - height`. Requiring
+     * the second to stay below the first gives
+     *
+     *     height < 50% - inset - railHeight/2
+     *
+     * and the extra 8px is breathing room rather than a touching fit. A fixed
+     * vh value was the first attempt and is wrong — it does not know how tall
+     * the rail is, and railButton changes with the tier.
+     *
+     * On a phone the rail is horizontal along the bottom and the panel already
+     * clears it via `bottom`, so there the cap only needs to stop the panel
+     * swallowing the whole canvas.
+     */
+    maxHeight: c.railHorizontal
+      ? `calc(100% - ${railBottom + c.inset + 8}px)`
+      : `calc(50% - ${c.inset + railHeight(c) / 2 + 8}px)`,
+    // The log is the part that gives way; the composer and the outcome row are
+    // pinned. A user must never have to scroll to reach Undo all or Stop.
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
     padding: 10,
     background: 'var(--panel)',
     borderRadius: 'var(--r-xl)',
@@ -58,7 +127,9 @@ export function AgentPanel() {
   const freeLeft = useAgentStore((s) => s.freeLeft)
   const [keyOpen, setKeyOpen] = useState(false)
   const [hasKey, setHasKey] = useState(false)
-  const shell = shellFor(chromeFor(useTier()))
+  const c = chromeFor(useTier())
+  const railBottom = useRailClearance(c)
+  const shell = shellFor(c, railBottom)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // localStorage is only readable after mount, so the first paint must not
@@ -94,12 +165,12 @@ export function AgentPanel() {
           e.preventDefault()
           void start()
         }}
-        style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40 }}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, flex: 'none' }}
       >
+        <Tooltip label={hasKey ? 'Your API key' : 'Use your own API key'} placement="top">
         <button
           type="button"
           onClick={() => setKeyOpen(true)}
-          title={hasKey ? 'Your API key' : 'Use your own API key'}
           aria-label={hasKey ? 'Your API key' : 'Use your own API key'}
           style={{
             width: 36, height: 36, flex: 'none', display: 'grid', placeItems: 'center',
@@ -108,6 +179,7 @@ export function AgentPanel() {
         >
           <Sliders size={20} />
         </button>
+        </Tooltip>
 
         <input
           ref={inputRef}
@@ -142,7 +214,7 @@ export function AgentPanel() {
       </form>
 
       {!hasKey && status === 'idle' && (
-        <p style={{ margin: '6px 4px 0', font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
+        <p style={{ margin: '6px 4px 0', font: 'var(--t-label-sm)', color: 'var(--muted)', flex: 'none' }}>
           {freeLeft > 0
             ? `${freeLeft} of ${FREE_SESSIONS} free tries left — then bring your own key.`
             : 'Free tries used. Add your own API key to keep going.'}
@@ -178,8 +250,19 @@ function StepLog() {
   }, [log.length])
 
   return (
-    <div style={{ padding: '2px 4px 10px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+    <div
+      style={{
+        padding: '2px 4px 10px',
+        // The panel is capped so it cannot reach the tool rail; the log is the
+        // part that gives way. minHeight 0 is what actually permits a flex
+        // child to shrink below its content.
+        flex: '1 1 auto',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flex: 'none' }}>
         <span className="tabular" style={{ color: 'var(--muted)' }}>
           Step {step} of {ofSteps}
         </span>
@@ -198,7 +281,10 @@ function StepLog() {
       <div
         role="log"
         aria-live="polite"
-        style={{ maxHeight: 168, overflowY: 'auto', display: 'grid', gap: 3 }}
+        style={{
+          flex: '1 1 auto', minHeight: 0, maxHeight: 168,
+          overflowY: 'auto', display: 'grid', gap: 3, alignContent: 'start',
+        }}
       >
         {log.map((e) => (
           <div
@@ -273,13 +359,31 @@ function Stat({ n, label, color }: { n: number; label: string; color: string }) 
 function DoneRow() {
   const summary = useAgentStore((s) => s.summary)
   const changed = useAgentStore((s) => s.changed)
+  const stoppedBy = useAgentStore((s) => s.stoppedBy)
   const counts = useAgentStore((s) => s.counts)
   const dismiss = useAgentStore((s) => s.dismiss)
   const undo = useDocStore((s) => s.undo)
 
+  /**
+   * The headline comes from the diff, not from the model. A run where the model
+   * said "I've drawn a smiley face" and called nothing used to render that
+   * sentence as the result, above three zeroed counters, and read as success.
+   * See docs/specs/15-feedback-and-input.md §3.
+   */
+  const outcome = describeOutcome(changed, stoppedBy)
+  const headlineColour =
+    outcome.tone === 'warning' ? 'var(--diff-change)' : outcome.tone === 'neutral' ? 'var(--muted)' : 'var(--fg)'
+
   return (
-    <div style={{ padding: '2px 4px 10px' }}>
-      <p style={{ margin: '0 0 8px', font: 'var(--t-copy)' }}>{summary}</p>
+    <div style={{ padding: '2px 4px 10px', flex: '0 1 auto', minHeight: 0, overflowY: 'auto' }}>
+      <p style={{ margin: '0 0 4px', font: 'var(--t-label-lg)', color: headlineColour }}>
+        {outcome.headline}
+      </p>
+      {/* The model's own words are kept — often they are the useful part, e.g.
+          "I couldn't find a face to modify" — but demoted below the verdict. */}
+      {summary && summary !== outcome.headline && (
+        <p style={{ margin: '0 0 8px', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>{summary}</p>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Stat n={counts.added} label="added" color="var(--diff-add)" />
         <Stat n={counts.changed} label="changed" color="var(--diff-change)" />
@@ -290,7 +394,7 @@ function DoneRow() {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        {changed > 0 && (
+        {outcome.undoable && (
           <button
             onClick={() => {
               undo()

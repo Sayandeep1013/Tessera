@@ -14,6 +14,7 @@
 
 import { create } from 'zustand'
 import { runAgent, type AgentStep } from '../agent/run'
+import type { SessionOutcome } from '../agent/session'
 import { diffCounts } from '../artwork-core/diff'
 import { buildContext } from '../ai/context'
 import { checkAccess, recordFreeSession } from '../agent/byok'
@@ -42,6 +43,10 @@ type AgentState = {
   ofSteps: number
   summary: string
   changed: number
+  /** Why the run ended. The panel's headline is computed from this and
+   *  `changed`, never from the model's own account of itself — see
+   *  lib/agent/outcome.ts and docs/specs/15-feedback-and-input.md §3. */
+  stoppedBy: SessionOutcome['stoppedBy'] | null
   /** The added/changed/cleared breakdown, kept because it reads far better than
    *  a single total — it says what kind of edit happened, not just how big. */
   counts: { added: number; changed: number; removed: number; palette: number }
@@ -87,6 +92,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   ofSteps: 0,
   summary: '',
   changed: 0,
+  stoppedBy: null,
   counts: ZERO,
   error: null,
   needsKey: false,
@@ -110,7 +116,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   stop: () => controller?.abort(),
 
   dismiss: () =>
-    set({ status: 'idle', log: [], summary: '', changed: 0, counts: ZERO, error: null, needsKey: false, step: 0 }),
+    set({ status: 'idle', log: [], summary: '', changed: 0, stoppedBy: null, counts: ZERO, error: null, needsKey: false, step: 0 }),
 
   start: async () => {
     const instruction = get().instruction.trim()
@@ -131,7 +137,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     }
 
     controller = new AbortController()
-    set({ status: 'running', log: [], summary: '', changed: 0, counts: ZERO, error: null, needsKey: false })
+    set({ status: 'running', log: [], summary: '', changed: 0, stoppedBy: null, counts: ZERO, error: null, needsKey: false })
 
     // From here the document is written without touching history, so the user can
     // watch the work land and still reverse the whole session with one undo.
@@ -181,6 +187,7 @@ export const useAgentStore = create<AgentState>((set, get) => ({
       status: get().error ? 'error' : 'done',
       summary: outcome.summary,
       changed: outcome.changed,
+      stoppedBy: outcome.stoppedBy,
       counts: diffCounts(outcome.diff),
       confirm: null,
     })

@@ -1,12 +1,10 @@
 /**
- * Coordinate conversion, the zoom ladder, and fit. See docs/specs/05-editor.md §4-5.
+ * Coordinate conversion, zoom, and fit. See docs/specs/05-editor.md §4-5 and
+ * docs/specs/15-feedback-and-input.md §2.
  */
 
 import type { Viewport } from '../renderer/canvas'
 import type { Doc } from '../artwork-core/schema'
-
-/** Integer scales only, so cells always tile exactly. */
-export const ZOOM_LADDER = [1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64] as const
 
 export const MIN_SCALE = 1
 export const MAX_SCALE = 64
@@ -16,17 +14,51 @@ export function clampScale(raw: number): number {
   return Math.max(MIN_SCALE, Math.min(MAX_SCALE, Math.round(raw)))
 }
 
-export function nextScale(current: number, direction: 1 | -1): number {
-  const i = ZOOM_LADDER.findIndex((s) => s >= current)
-  const at = i < 0 ? ZOOM_LADDER.length - 1 : i
-  const target = at + direction
-  return ZOOM_LADDER[Math.max(0, Math.min(ZOOM_LADDER.length - 1, target))]!
-}
+/**
+ * The scales the − and + buttons walk. Roughly geometric at ~1.2–1.33 per
+ * step, and every power of two is on it so the recognisable factors the coarse
+ * ladder existed for are still reachable by clicking.
+ *
+ * A list rather than a multiplier. `current * 1.25` rounded to an integer
+ * cannot be reversed — floor(5/1.25) and floor(6/1.25) are both 4, so stepping
+ * back up from 4 has no way to know whether it came from 5 or 6. Walking a
+ * list by index is exactly reversible by construction, which is the property
+ * that was actually broken.
+ */
+export const ZOOM_STEPS = [
+  1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64,
+] as const
 
-export function snapScale(raw: number): number {
-  let best: number = ZOOM_LADDER[0]!
-  for (const s of ZOOM_LADDER) if (Math.abs(s - raw) < Math.abs(best - raw)) best = s
-  return best
+/**
+ * A proportional zoom step, for the − and + buttons.
+ *
+ * These used to step a coarse twelve-rung ladder, one rung per click. Three
+ * measured faults, all reported as "the zoom is janky" — see
+ * docs/specs/15-feedback-and-input.md §0 and §2:
+ *
+ *   - Steps of up to 50%. 32 -> 48 is half the artwork's size again, in one
+ *     click, where the wheel's largest step is 14% and its typical step is 2%.
+ *   - Not reversible. From an off-rung scale it stepped PAST the nearest rung
+ *     one way and not the other: down from 41 gave 32, up from 32 gave 48, and
+ *     it oscillated between those two forever after. fitViewport returns
+ *     arbitrary integers, so off-rung was the normal case, not an edge case.
+ *   - set_zoom then re-snapped to the same coarse rungs, so no caller could
+ *     land anywhere else however carefully it chose.
+ *
+ * "The next entry strictly past where I am" rather than "my index plus one":
+ * fitViewport returns arbitrary integers, so the current scale is usually NOT
+ * on ZOOM_STEPS at all. From an off-list scale the first click snaps onto the
+ * list in the direction of travel — 41 down is 40, 41 up is 48 — and every
+ * click after that is exactly reversible. Round-tripping an off-list scale
+ * cannot return to it, because the list does not contain it; the old ladder's
+ * fault was not that, it was oscillating 32 <-> 48 forever afterwards.
+ */
+export function stepScale(current: number, direction: 1 | -1): number {
+  const next =
+    direction === 1
+      ? ZOOM_STEPS.find((s) => s > current)
+      : [...ZOOM_STEPS].reverse().find((s) => s < current)
+  return Math.max(MIN_SCALE, Math.min(MAX_SCALE, next ?? current))
 }
 
 /**
@@ -62,10 +94,10 @@ export function isInside(x: number, y: number, doc: Doc): boolean {
 /**
  * Largest INTEGER scale that fits with a margin, centred.
  *
- * Not the largest ladder rung. The ladder exists so stepped zoom lands on
- * recognisable factors, but it jumps 32 → 48, so a viewport with room for 47.25
- * fell back to 32 — the artwork rendered at 514 px where 754 px fitted, which is
- * less than half the area. Measured at 1440×900 in docs/research/ui-audit.md §2.
+ * Not a step off ZOOM_STEPS. Fit used to pick from the old coarse ladder, which
+ * jumped 32 → 48, so a viewport with room for 47.25 fell back to 32 — the
+ * artwork rendered at 514 px where 754 px fitted, which is less than half the
+ * area. Measured at 1440×900 in docs/research/ui-audit.md §2.
  *
  * Integer is the constraint that actually matters here: it is what makes cells
  * tile exactly. Anything below 1 would round to nothing, hence the floor.

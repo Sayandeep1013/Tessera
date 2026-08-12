@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { Tooltip } from './Tooltip'
 import { useDocStore } from '@/lib/store/editor'
 import { chromeFor, useTier, type Tier } from '@/lib/editor/breakpoint'
 import { cloneLayer } from '@/lib/artwork-core/commands'
@@ -237,9 +238,9 @@ function LayerRow({
         background: active ? 'var(--accent-soft)' : hover ? 'var(--hover)' : 'transparent',
       }}
     >
+      <Tooltip label={hidden ? 'Show this layer' : 'Hide this layer'} placement="left">
       <button
         type="button"
-        title={hidden ? 'Show this layer' : 'Hide this layer'}
         aria-label={hidden ? `Show ${name || 'untitled layer'}` : `Hide ${name || 'untitled layer'}`}
         aria-pressed={!hidden}
         onClick={onToggle}
@@ -251,6 +252,7 @@ function LayerRow({
       >
         {hidden ? <EyeSlash size={16} /> : <Eye size={16} />}
       </button>
+      </Tooltip>
 
       {renaming ? (
         <input
@@ -275,10 +277,10 @@ function LayerRow({
           }}
         />
       ) : (
+        <Tooltip label="Click to select, double-click to rename" placement="left">
         <button
           type="button"
           aria-pressed={active}
-          title="Click to select, double-click to rename"
           onClick={onSelect}
           onDoubleClick={onStartRename}
           style={{
@@ -292,6 +294,7 @@ function LayerRow({
         >
           {name || <span style={{ color: 'var(--faint)' }}>Untitled</span>}
         </button>
+        </Tooltip>
       )}
     </div>
   )
@@ -312,9 +315,12 @@ function TextBtn({
 }) {
   const [hover, setHover] = useState(false)
   return (
+    <Tooltip label={title} placement="top">
     <button
       type="button"
-      title={title}
+      // No aria-label: the visible text is the accessible name. Adding one
+      // would override the label a user can actually see, and the tooltip
+      // already carries the longer explanation for anyone who hovers.
       disabled={disabled}
       onClick={onClick}
       onPointerEnter={() => setHover(true)}
@@ -330,6 +336,7 @@ function TextBtn({
       {Icon && <Icon size={14} />}
       {label}
     </button>
+    </Tooltip>
   )
 }
 
@@ -343,9 +350,9 @@ function IconBtn({
 }) {
   const [hover, setHover] = useState(false)
   return (
+    <Tooltip label={title} placement="top">
     <button
       type="button"
-      title={title}
       aria-label={title}
       disabled={disabled}
       onClick={onClick}
@@ -360,5 +367,6 @@ function IconBtn({
     >
       <Icon size={16} />
     </button>
+    </Tooltip>
   )
 }

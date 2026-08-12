@@ -34,7 +34,7 @@ async function main() {
   const results: Array<[string, boolean]> = []
 
   for (const tool of ['Brush (B)', 'Eraser (E)', 'Shapes (U)', 'Gradient (H)', 'Fill (G)']) {
-    await p.getByTitle(tool).click()
+    await p.getByRole('button', { name: tool }).click()
     await p.waitForTimeout(80)
     const before = await p.evaluate(`document.querySelector('canvas').toDataURL().length`)
     await drag(p, 700, 350, 820, 470)
@@ -43,23 +43,23 @@ async function main() {
   }
 
   // marquee then move
-  await p.getByTitle('Select region (M)').click()
+  await p.getByRole('button', { name: 'Select region (M)' }).click()
   await drag(p, 700, 350, 820, 470)
   const selVisible = await p.evaluate(`document.querySelector('canvas').toDataURL().length`)
-  await p.getByTitle('Select / Move (V)').click()
+  await p.getByRole('button', { name: 'Select / Move (V)' }).click()
   const beforeMove = selVisible
   await drag(p, 740, 390, 900, 520)
   const afterMove = await p.evaluate(`document.querySelector('canvas').toDataURL().length`)
   results.push(['Select region + Move', beforeMove !== afterMove])
 
   // eyedropper: changes the swatch, not the document
-  await p.getByTitle('Eyedropper (I)').click()
+  await p.getByRole('button', { name: 'Eyedropper (I)' }).click()
   await p.mouse.click(760, 400)
   await p.waitForTimeout(120)
   results.push(['Eyedropper (I)', true])
 
   // dither menu
-  await p.getByTitle('Dither pattern').click()
+  await p.getByRole('button', { name: 'Dither pattern' }).click()
   await p.waitForTimeout(200)
   const menu = await p.getByRole('menu', { name: 'Dither pattern' }).isVisible()
   results.push(['Dither menu opens', menu])
@@ -88,7 +88,7 @@ async function main() {
   const baseBefore = JSON.stringify(start[0]!.px)
 
   for (const tool of ['Brush (B)', 'Shapes (U)', 'Gradient (H)']) {
-    await p.getByTitle(tool).click()
+    await p.getByRole('button', { name: tool }).click()
     await p.waitForTimeout(80)
     const before = (await p.evaluate(LAYERS)) as ProbeLayer[]
     await drag(p, 640, 300, 780, 440)
@@ -100,7 +100,7 @@ async function main() {
 
   // Fill is separate: it must be bounded by the active layer, not by what is
   // beneath it, so on an empty upper layer it floods the whole canvas.
-  await p.getByTitle('Fill (G)').click()
+  await p.getByRole('button', { name: 'Fill (G)' }).click()
   await p.waitForTimeout(80)
   await p.mouse.click(1100, 700)
   await p.waitForTimeout(200)

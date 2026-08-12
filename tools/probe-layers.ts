@@ -56,7 +56,7 @@ async function main() {
     await p.goto(APP, { waitUntil: 'networkidle' })
     await p.waitForTimeout(2000)
 
-    await p.getByTitle('File — new, open, export').click()
+    await p.getByRole('button', { name: 'File — new, open, export' }).click()
     await p.getByRole('menuitem', { name: 'Example — face' }).click()
     await p.waitForTimeout(500)
 
