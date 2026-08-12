@@ -11,6 +11,10 @@ clean, 6 measured viewports clean, and five browser probes green: `probe-layers`
 
 ---
 
+> **Parked work lives in [`DEFERRED.md`](./DEFERRED.md)** — code that exists and
+> looks finished but is not wired, tested or switched on. Share is there, on
+> hold at the user's request. Read it before assuming a button works.
+
 ## 0. The prompt to start the next session with
 
 Paste this verbatim:
