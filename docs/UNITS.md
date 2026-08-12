@@ -188,7 +188,7 @@ because the thing that did not fit was its placement, not its content.
 
 ## B1 — File menu · DONE
 
-**12 Aug 2026 · `0029cbb` · 9/10**
+**12 Aug 2026 · `0029cbb` + `5f47938` (the follow-up) · 9/10**
 
 `lib/artwork-core/clear.ts` (`paintedCellCount`, `clearFrameCommand`),
 `lib/artwork-core/duplicate.ts` (`copyName`, `duplicateDoc`),
