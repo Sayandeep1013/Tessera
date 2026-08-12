@@ -1,6 +1,6 @@
 # 15 — Feedback and Input
 
-**Status:** in build, 12 Aug 2026
+**Status:** built and scored 9/10, 12 Aug 2026
 **Covers:** what the editor tells you about its own state, and how it responds to a zoom gesture.
 
 Four faults reported from real use in one session. They look unrelated and they are not: in every
@@ -293,3 +293,28 @@ Shortcut text is rendered in `--t-mono-sm` inside the tooltip, right-aligned aft
 `npx tsx tools/check-responsive.ts` clean at all 6 viewports · `probe-zoom` shows no button step
 over 34% and a reversible sequence · `probe-tools-ui` and `probe-layers` still green ·
 tooltips screenshotted in both themes and looked at · score ≥ 9 with an honest table.
+
+---
+
+## 9. Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | All four faults fixed and the §5.3 coverage table is complete. Touch tooltips and a long-press equivalent are declared out of scope in §1, not dropped. |
+| 2 | Correctness | 9 | Zoom measured before and after; the outcome table is exhaustive over `stoppedBy` so a new stop reason is a type error until it has a sentence. The panel cap is derived from the rail rather than picked. |
+| 3 | Tests | 9 | 269 pass. New: `stepScale` (7, exhaustive over 1..64), `describeOutcome` (8), a static tooltip check (4). Probes: `probe-zoom`, `probe-tooltip` (23), `probe-agent-ui` (18). The probes still need a running server, so they are not in `npm test` — the standing gap. |
+| 4 | Integration | 9 | Tokens only, one new (`--t-mono-sm`). `commit()` untouched. The dev hook gained a read-only `viewport()`; it deliberately did **not** gain a setter, so `probe-agent-ui` drives the real mock provider instead. |
+| 5 | Design fidelity | 9 | Tooltip screenshotted in both themes and looked at, not just asserted. 6 viewports clean. |
+| 6 | No regressions | 9 | Full suite, build, and every probe green, and the live deployment was screenshotted and drawn on. Removing `title` broke four probes' locators; those were migrated to `getByRole` in the same change. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **A long-press tooltip on touch.** §1. It is a different interaction, not a port of this one.
+- **Tooltips on buttons that already have visible text.** `Add`, `Copy`, `Delete` and `Stop` name
+  themselves; only the ones with something extra to say (a consequence, a shortcut) got one.
+- **Animating the tooltip in.** `globals.css` governs motion by frequency, and a tooltip is a
+  100-times-an-hour interaction. It appears; it does not slide.
+- **A shared tooltip singleton.** Each instance mounts its own portal. The only shared state is the
+  group-window timestamp, which is what makes scanning a toolbar cheap.

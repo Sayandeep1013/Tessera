@@ -197,6 +197,7 @@ export function AgentPanel() {
         {/* The button keeps its identity while working — aria-busy rather than
             swapping the child for a bare spinner node, so it stays the same
             control to a screen reader and stays focusable. */}
+        <Tooltip label={busy ? 'Working…' : 'Send'} shortcut={busy ? undefined : 'Enter'} placement="top">
         <button
           type="submit"
           disabled={!ready}
@@ -211,6 +212,7 @@ export function AgentPanel() {
         >
           {busy ? <TurnMark /> : <ArrowUp size={16} />}
         </button>
+        </Tooltip>
       </form>
 
       {!hasKey && status === 'idle' && (

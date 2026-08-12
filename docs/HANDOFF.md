@@ -1,10 +1,13 @@
 # Session handoff — Tessera
 
 **Written:** 12 Aug 2026, end of session.
-**Repo:** https://github.com/Sayandeep1013/Tessera · branch `main` · last commit `3844da0`
-**State:** everything green and committed; **not pushed**. 253 tests across 16 files, production
-build clean, 6 measured viewports clean, `tools/probe-layers.ts` 42/42 in both themes, zero runtime
-errors.
+**Repo:** https://github.com/Sayandeep1013/Tessera · branch `main` · last commit `9065da9`
+**Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`, git-connected to `main`,
+so every push deploys. **`GEMINI_API_KEY` is not set there**, so the live site is BYOK-only until it
+is added in the dashboard.
+**State:** everything green, committed and pushed. 269 tests across 18 files, production build
+clean, 6 measured viewports clean, and five browser probes green: `probe-layers` 42/42,
+`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-tools-ui`, `check-responsive`.
 
 ---
 
@@ -122,6 +125,7 @@ looked fine in a screenshot until magnified.
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
 | Layers | Active-layer state, 6 layer commands, the panel (add/copy/delete/reorder/rename/hide/select), 4 registry actions. **Scored 9/10** — see §6. |
+| Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Persistence | IndexedDB autosave. |
 
 ### Not built
@@ -138,7 +142,7 @@ sits in `showLayers` instead, which is `tier !== 'mobile'`.
 ### Open tasks
 
 - **#47 Phase 4: Animation timeline and frames** ← start here, see §7
-- **#48 Phase 4: Share via Supabase snapshots**
+- **#48 Phase 4: Share via Supabase snapshots** ← chosen as the next feature after this one
 - **#23 Phase 6: AI edit quality** — assessed, honestly still open. See §7.
 
 ---
@@ -167,6 +171,13 @@ Every one of these has already cost time in this repo.
   now; keep it passing.
 - **React registers `wheel` listeners as passive**, so `preventDefault` from an `onWheel` prop is
   ignored. Use a native listener with `{ passive: false }`.
+- **`getByTitle` no longer works.** Tooltips are ours now (`components/Tooltip.tsx`) and no
+  component renders a native `title`, so every probe locator moved to
+  `getByRole('button', { name })`. A test in `lib/__tests__/tooltips.test.ts` fails if a `title`
+  comes back — two tooltips stacked is worse than either alone.
+- **A button with visible text must not be given an `aria-label`.** Adding one to the layer panel's
+  `Add`/`Copy`/`Delete` overrode the name a user can see, and `getByRole({ name: 'Add' })` stopped
+  matching. The visible text is already the accessible name.
 - **A Playwright drag must use artwork coordinates, not element coordinates.** The canvas fills the
   whole area below the header and the artwork is centred inside it, so `box.x + 40` is *outside the
   document* and `onPointerDown` returns at its `isInside` guard. The stroke silently does nothing and
@@ -332,6 +343,10 @@ npm run build                     # rm -rf .next first if a dev server has been 
 npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
+npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
+npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
+npx tsx tools/probe-zoom.ts       # measures the zoom gesture; run it before changing zoom
+npx tsx tools/check-quota.ts      # is the Gemini key alive? one request, prints no secrets
 npx tsx tools/e2e-agent.ts        # agent flow end to end (wants AI_PROVIDER=mock)
 npx tsx tools/probe-agent.ts "make it angrier" 32   # live model, real quota, optional canvas size
 npx tsx tools/render-probe.ts     # render the last probe result to a PNG and LOOK at it
