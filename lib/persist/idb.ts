@@ -68,6 +68,42 @@ export async function listDrafts(): Promise<DraftRecord[]> {
   return all.reverse()
 }
 
+/**
+ * One entry per saved draft, parsed. See docs/specs/17-file-menu.md §8.2.
+ *
+ * A row cannot be drawn without knowing whether its record is readable — the
+ * name, the size and the thumbnail all come from the parsed document — so the
+ * parse happens here rather than being repeated by every caller.
+ *
+ * A record that fails to parse becomes `{ record, error }` and is **kept**
+ * (F-M4). Not deleted, and not filtered out either: hiding it is the same sin
+ * as deleting it, because the row is the only remaining evidence that the work
+ * exists at all. The menu shows it disabled with its reason.
+ */
+export type RecentEntry =
+  | { record: DraftRecord; doc: Doc; error?: undefined }
+  | { record: DraftRecord; doc?: undefined; error: string }
+
+/**
+ * Newest first, at most `limit` entries.
+ *
+ * The cap is applied BEFORE parsing: parsing is the expensive part, and there
+ * is no point reading a hundred documents to show ten. It is applied before the
+ * caller drops the currently-open document too, so a list of ten can come back
+ * as nine — which is correct. The alternative, over-fetching to guarantee ten
+ * rows, means parsing an extra document on every menu open to defend against a
+ * case nobody notices.
+ */
+export async function listRecent(limit = 10): Promise<RecentEntry[]> {
+  const records = (await listDrafts()).slice(0, limit)
+  return records.map((record) => {
+    const parsed = parseDoc(record.doc)
+    return parsed.ok
+      ? { record, doc: parsed.value }
+      : { record, error: `${parsed.error.code}: ${parsed.error.message}` }
+  })
+}
+
 export async function deleteDraft(id: string): Promise<void> {
   const d = await db()
   await d.delete(STORE, id)

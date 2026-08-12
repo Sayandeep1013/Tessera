@@ -44,17 +44,35 @@ describe('the menu, as a shape', () => {
   })
 
   /**
-   * §7.2. A hint is a promise about a key, and only Ctrl+S is wired
-   * (app/page.tsx). Shortcuts are step 3 of §6; when they land this test moves
-   * with them rather than being deleted.
+   * §7.2. A hint is a promise about a key. B1 shipped Ctrl+S alone because that
+   * was all that existed; B2 wired Ctrl+N and Ctrl+O and they appeared in the
+   * same change. An exact list, not a subset check — the point is to catch a
+   * hint added ahead of its key as well as a key added without its hint.
    */
-  it('only promises a shortcut that is actually wired', () => {
+  it('only promises shortcuts that are actually wired', () => {
     const hinted = FILE_MENU_ITEMS.filter((i) => i.hint)
-    expect(hinted.map((i) => [i.id, i.hint])).toEqual([['download', 'Ctrl S']])
+    expect(hinted.map((i) => [i.id, i.hint])).toEqual([
+      ['new', 'Ctrl N'],
+      ['open', 'Ctrl O'],
+      ['download', 'Ctrl S'],
+    ])
   })
 
-  it('marks exactly one item as a submenu', () => {
-    expect(FILE_MENU_ITEMS.filter((i) => i.submenu).map((i) => i.id)).toEqual(['examples'])
+  /** Ctrl+V waits for B3. §8.4: a key that does nothing is the same broken
+   *  promise as a hint for a key that does nothing. */
+  it('does not promise Ctrl V while Paste image is unbuilt', () => {
+    expect(FILE_MENU_ITEMS.some((i) => i.hint?.toLowerCase().includes('v'))).toBe(false)
+    expect(FILE_MENU_ITEMS.some((i) => i.label.toLowerCase().includes('paste'))).toBe(false)
+  })
+
+  it('marks the two disclosures as submenus, and nothing else', () => {
+    expect(FILE_MENU_ITEMS.filter((i) => i.submenu).map((i) => i.id))
+      .toEqual(['recent', 'examples'])
+  })
+
+  /** §1 draws recent directly under New — the same question from both ends. */
+  it('puts Open recent in the first group, under New', () => {
+    expect(FILE_MENU[0]!.map((i) => i.id)).toEqual(['new', 'recent', 'open', 'duplicate'])
   })
 
   it('every label is real text — no placeholder or "coming soon" rows', () => {

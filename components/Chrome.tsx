@@ -14,14 +14,22 @@ import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
 import { refitViewport } from '@/lib/editor/refit'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
+import { isMod, isTyping } from '@/lib/editor/keys'
 import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/artwork-core/create'
 import { clearFrameCommand, paintedCellCount } from '@/lib/artwork-core/clear'
+import { UNTITLED, renameCommand } from '@/lib/artwork-core/doc-name'
 import { duplicateDoc } from '@/lib/artwork-core/duplicate'
+import { MAX_NAME } from '@/lib/artwork-core/schema'
 import {
   CLEAR_ACTION, CLEAR_TONE, CONFIRM_DOM_ID, FILE_MENU, NEW_ACTION, NEW_TONE,
+  RECENT_EMPTY_DOM_ID, RECENT_LIST_DOM_ID,
   clearConfirm, exampleDomId, menuItemDomId, needsNewConfirm, newConfirm, starterLabel,
   type ConfirmTone, type FileMenuItem, type FileMenuItemId,
 } from '@/lib/editor/file-menu'
+import {
+  RECENT_CORRUPT, RECENT_EMPTY, RECENT_LIMIT, recentRows, type RecentRow,
+} from '@/lib/editor/recent'
+import { listRecent } from '@/lib/persist/idb'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
 import { spriteRects } from '@/lib/renderer/sprite-svg'
@@ -150,6 +158,15 @@ export function TopBar() {
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
+  /**
+   * Set when Ctrl+N arrives on a document with work on it.
+   *
+   * The New confirm lives inside the menu's body (§7.5), so a keyboard New has
+   * nowhere to draw it — the menu is not open. So it opens the menu straight
+   * into the confirm rather than inventing a second dialog, and the keystroke
+   * and the click end up at exactly the same panel.
+   */
+  const [fileIntent, setFileIntent] = useState<'new' | null>(null)
   const [ditherOpen, setDitherOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const dither = useEditorStore((s) => s.dither)
@@ -159,6 +176,40 @@ export function TopBar() {
 
   // token-exempt: an artwork colour is document data, not a design token
   const swatch = doc?.palette[colorIndex]?.c ?? '#000000'
+
+  /**
+   * The File menu's shortcuts — spec 17 §3 and §8.4.
+   *
+   * Here rather than in `app/page.tsx` because this component owns the menu's
+   * open state, and Ctrl+N on a document with work on it has to *open the menu*
+   * to show its confirm. The `isTyping` guard is imported rather than rewritten,
+   * which is what §3 actually asks for: one rule, not one handler.
+   *
+   * Ctrl+V is deliberately absent. Paste image is B3, and a key that does
+   * nothing is the same broken promise as a hint for a key that does nothing.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!isMod(e) || e.shiftKey || e.altKey || isTyping(e.target)) return
+      const key = e.key.toLowerCase()
+      if (key === 'n') {
+        e.preventDefault()
+        const d = useDocStore.getState().doc
+        // Same rule as the menu item: ask only when there is work at stake.
+        if (needsNewConfirm(d, useDocStore.getState().frame)) {
+          setFileIntent('new')
+          setFileOpen(true)
+        } else {
+          startNewDocument()
+        }
+      } else if (key === 'o') {
+        e.preventDefault()
+        openFile()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <header
@@ -193,7 +244,12 @@ export function TopBar() {
             <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
           </button>
         </Tooltip>
-        {fileOpen && <FileMenu onClose={() => setFileOpen(false)} />}
+        {fileOpen && (
+          <FileMenu
+            intent={fileIntent}
+            onClose={() => { setFileOpen(false); setFileIntent(null) }}
+          />
+        )}
       </div>
 
       <div style={{ position: 'relative' }}>
@@ -330,23 +386,7 @@ export function TopBar() {
           pointerEvents: 'none',
         }}
       >
-        <input
-          // Uncontrolled, so it needs remounting when the DOCUMENT's name
-          // changes — loading an example used to leave "untitled" on screen next
-          // to a face. Typing here does not write back to the document (that is
-          // still unwired), so the key is stable while the user types.
-          key={doc?.name ?? ''}
-          defaultValue={doc?.name || 'untitled'}
-          spellCheck={false}
-          aria-label="Artwork name"
-          style={{
-            width: 240, height: 32, padding: '4px 8px', borderRadius: 'var(--r-md)',
-            font: 'var(--t-label-lg)', textAlign: 'center', color: 'var(--fg)',
-            pointerEvents: 'auto',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
-          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-        />
+        <NameField key={`${doc?.id ?? ''}:${doc?.name ?? ''}`} />
       </div>
       )}
 
@@ -419,6 +459,68 @@ export function TopBar() {
 }
 
 /**
+ * The document's name, in the header. See docs/specs/17-file-menu.md §8.1.
+ *
+ * This used to be an input that displayed `doc.name` and **silently discarded
+ * anything typed into it** — no handler at all. It also put the word `untitled`
+ * in as a *value*, so focusing and blurring the empty field would have renamed
+ * the document to "untitled" the moment a handler existed. It is a placeholder
+ * now, which is what it always meant.
+ *
+ * Uncontrolled, and remounted by a key on `${id}:${name}`, so the field follows
+ * the document when it changes underneath — an undo, a load, a Duplicate. The
+ * key is stable *while typing*, because nothing is committed until blur.
+ *
+ * Commit on blur and on Enter, not per keystroke: per-keystroke renaming would
+ * put one undo entry on the stack per character. Escape puts the document's
+ * name back in the field and then blurs, which needs no "cancelled" flag —
+ * `renameCommand` returns null when the name has not changed, so the blur
+ * commits nothing.
+ */
+function NameField() {
+  const doc = useDocStore((s) => s.doc)
+  const ref = useRef<HTMLInputElement>(null)
+
+  const commitName = () => {
+    const d = useDocStore.getState().doc
+    if (!d || !ref.current) return
+    // Through commit() like every other mutation — rule 4 has no metadata
+    // carve-out, and Ctrl+Z reverses a rename like anything else.
+    useDocStore.getState().commit(renameCommand(d, ref.current.value))
+  }
+
+  return (
+    <input
+      ref={ref}
+      defaultValue={doc?.name ?? ''}
+      placeholder={UNTITLED}
+      spellCheck={false}
+      autoComplete="off"
+      maxLength={MAX_NAME}
+      aria-label="Artwork name"
+      onBlur={commitName}
+      onKeyDown={(e) => {
+        // The keys are handled here rather than in the page's global handler:
+        // its isTyping guard returns early for exactly this element, which is
+        // the correct division — a field owns the keys pressed inside it.
+        if (e.key === 'Enter') ref.current?.blur()
+        if (e.key === 'Escape' && ref.current) {
+          ref.current.value = useDocStore.getState().doc?.name ?? ''
+          ref.current.blur()
+        }
+      }}
+      style={{
+        width: 240, height: 32, padding: '4px 8px', borderRadius: 'var(--r-md)',
+        font: 'var(--t-label-lg)', textAlign: 'center', color: 'var(--fg)',
+        pointerEvents: 'auto',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--hover)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    />
+  )
+}
+
+/**
  * Our own mark, drawn in our own format. Not theirs.
  *
  * The geometry is not written here — it is read from
@@ -459,17 +561,54 @@ function Logo({ size = 24 }: { size?: number }) {
  * rendered from data, and an exhaustive record is what makes the compiler name a
  * new item that nobody wired rather than letting it render as a dead row.
  */
-function FileMenu({ onClose }: { onClose: () => void }) {
+function FileMenu({
+  onClose, intent = null,
+}: {
+  onClose: () => void
+  /** Ctrl+N opens the menu already showing its confirm — see TopBar. */
+  intent?: 'new' | null
+}) {
   const doc = useDocStore((s) => s.doc)
   const frame = useDocStore((s) => s.frame)
   const ref = useRef<HTMLDivElement>(null)
   const tier = useTier()
 
-  const [examplesOpen, setExamplesOpen] = useState(false)
+  /**
+   * Which disclosure is expanded, if any. One at a time: two open submenus in a
+   * 232px popover is a scroll, and only one of them is ever the answer.
+   */
+  const [open, setOpen] = useState<FileMenuItemId | null>(null)
   /** Which item is mid-confirm. The confirm replaces the menu's body — §7.5. */
-  const [confirming, setConfirming] = useState<'new' | 'clear' | null>(null)
+  const [confirming, setConfirming] = useState<'new' | 'clear' | null>(intent)
+  /** Loaded when the recent disclosure is first expanded, not on menu open. */
+  const [recent, setRecent] = useState<RecentRow[] | null>(null)
 
   const painted = doc ? paintedCellCount(doc, frame) : 0
+
+  /**
+   * Read IndexedDB when the list is actually asked for.
+   *
+   * Not on menu open: that would parse up to ten documents every time somebody
+   * reaches for Export PNG. `Date.now()` is read once here rather than per row,
+   * so every row in one opening is dated against the same instant.
+   */
+  useEffect(() => {
+    if (open !== 'recent' || recent) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const entries = await listRecent(RECENT_LIMIT)
+        if (!cancelled) {
+          setRecent(recentRows(entries, doc?.id ?? null, Date.now(), UNTITLED))
+        }
+      } catch {
+        // IndexedDB unavailable (private mode). An empty list reads as "nothing
+        // saved yet", which is true of this browser.
+        if (!cancelled) setRecent([])
+      }
+    })()
+    return () => { cancelled = true }
+  }, [open, recent, doc?.id])
 
   useEffect(() => {
     const away = (e: MouseEvent) => {
@@ -483,7 +622,7 @@ function FileMenu({ onClose }: { onClose: () => void }) {
     const esc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       if (confirming) setConfirming(null)
-      else if (examplesOpen) setExamplesOpen(false)
+      else if (open) setOpen(null)
       else onClose()
     }
     // `mousedown`, not `click`: the click that OPENS the menu is still
@@ -497,20 +636,10 @@ function FileMenu({ onClose }: { onClose: () => void }) {
       document.removeEventListener('mousedown', away)
       document.removeEventListener('keydown', esc)
     }
-  }, [onClose, confirming, examplesOpen])
+  }, [onClose, confirming, open])
 
   const startNew = () => {
-    const r = runUi('new_document', { width: doc?.w ?? 16, height: doc?.h ?? 16 })
-    if (!r.ok) {
-      window.alert(r.error)
-      return
-    }
-    // A blank canvas is a different artwork, so it is shown fitted and centred
-    // rather than under whatever pan the last drawing was left at. The size is
-    // unchanged by construction, so this is about the artwork, not the
-    // dimensions — §7.3.
-    const after = useDocStore.getState().doc
-    if (after) refitViewport(after)
+    startNewDocument()
     onClose()
   }
 
@@ -523,12 +652,15 @@ function FileMenu({ onClose }: { onClose: () => void }) {
     onClose()
   }
 
+  /** A disclosure toggles rather than acting. It IS the menu, one level down. */
+  const toggle = (id: FileMenuItemId) => setOpen((v) => (v === id ? null : id))
+
   const run: Record<FileMenuItemId, () => void> = {
     new: () => (needsNewConfirm(doc, frame) ? setConfirming('new') : startNew()),
+    recent: () => toggle('recent'),
     open: () => { openFile(); onClose() },
     duplicate: () => { void duplicateCurrent(); onClose() },
-    // The one item that does not close the menu: it IS the menu, one level down.
-    examples: () => setExamplesOpen((v) => !v),
+    examples: () => toggle('examples'),
     download: () => {
       const d = useDocStore.getState().doc
       if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
@@ -598,15 +730,15 @@ function FileMenu({ onClose }: { onClose: () => void }) {
             <div key={it.id} role="none">
               <MenuItem
                 item={it}
-                expanded={it.submenu ? examplesOpen : undefined}
+                expanded={it.submenu ? open === it.id : undefined}
                 disabled={disabled[it.id]}
                 onClick={run[it.id]}
               />
-              {/* The submenu, expanded in place. §7.1: a flyout at this anchor
-                  runs off a 390px phone, and flipping it left lands on its own
+              {/* Submenus expand in place. §7.1: a flyout at this anchor runs
+                  off a 390px phone, and flipping it left lands on its own
                   parent. `listStarters()` is the source — the rows are never
                   hard-coded, so adding a starter adds a row. */}
-              {it.submenu && examplesOpen && (
+              {it.id === 'examples' && open === 'examples' && (
                 <div role="group" aria-label="Examples">
                   {listStarters().map((s) => (
                     <button
@@ -623,12 +755,178 @@ function FileMenu({ onClose }: { onClose: () => void }) {
                   ))}
                 </div>
               )}
+              {it.id === 'recent' && open === 'recent' && (
+                <RecentList rows={recent} onPick={onClose} />
+              )}
             </div>
           ))}
         </div>
       ))}
     </div>
   )
+}
+
+/**
+ * Open recent. See docs/specs/17-file-menu.md §8.2.
+ *
+ * `listDrafts()` had existed since the persistence unit and nothing called it,
+ * so every document anyone had ever autosaved was sitting in IndexedDB
+ * unreachable — the artwork was never discarded, it just could not be got back
+ * to, which is a rule-7 problem with no error message to give it away.
+ *
+ * `null` rows means "still reading", and it is a distinct state from an empty
+ * list: showing "Nothing saved yet." for the half-frame before IndexedDB answers
+ * would be a lie about the user's work, which is the one thing this list exists
+ * not to do.
+ */
+function RecentList({ rows, onPick }: { rows: RecentRow[] | null; onPick: () => void }) {
+  if (rows === null) {
+    return (
+      <div role="group" aria-label="Open recent" style={{ ...ROW, paddingLeft: 28, color: 'var(--faint)' }}>
+        Reading…
+      </div>
+    )
+  }
+
+  if (!rows.length) {
+    return (
+      <div
+        id={RECENT_EMPTY_DOM_ID}
+        role="group"
+        aria-label="Open recent"
+        style={{ ...ROW, paddingLeft: 28, color: 'var(--faint)' }}
+      >
+        {RECENT_EMPTY}
+      </div>
+    )
+  }
+
+  return (
+    <div id={RECENT_LIST_DOM_ID} role="group" aria-label="Open recent">
+      {rows.map((row) => (
+        <button
+          key={row.id}
+          role="menuitem"
+          // F-M4: a record that no longer parses is shown, disabled, and says
+          // so. Never dropped from the list — the row is the only remaining
+          // evidence that the work exists, so hiding it is the same as deleting
+          // it as far as the person who drew it is concerned.
+          disabled={!!row.error}
+          // No `title`: tooltips are ours (components/Tooltip.tsx) and
+          // lib/__tests__/tooltips.test.ts fails on a native one — it caught
+          // this. The row says "Can't be read" in the slot where a date would
+          // be, which is the labelling F-M4 asks for; the parse error itself is
+          // developer detail and belongs in the console, not on a menu row.
+          onClick={() => { void openRecent(row); onPick() }}
+          style={{
+            ...ROW, paddingLeft: 28, gap: 8,
+            color: row.error ? 'var(--disabled)' : 'var(--fg)',
+          }}
+          onMouseEnter={(e) => !row.error && (e.currentTarget.style.background = 'var(--hover)')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+        >
+          <Thumb row={row} />
+          <span
+            style={{
+              flex: 1, minWidth: 0, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}
+          >
+            {row.label}
+          </span>
+          <span className="tabular" style={{ color: 'var(--faint)', font: 'var(--t-label-sm)' }}>
+            {row.error ? RECENT_CORRUPT : row.when}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * A 20px thumbnail, or the document's size where a thumbnail is not cheap.
+ *
+ * §8.3: `spriteRects` merges runs, so a starter is tens of rects and a dense
+ * 256×256 is thousands — ten of those is a rendering job on the click that
+ * opens a menu. `row.thumb` carries the decision; `recent.ts` makes it.
+ */
+function Thumb({ row, size = 20 }: { row: RecentRow; size?: number }) {
+  const doc = row.entry.doc
+  const box: React.CSSProperties = {
+    width: size, height: size, flex: 'none', display: 'grid', placeItems: 'center',
+    borderRadius: 'var(--r-sm)', boxShadow: 'inset 0 0 0 1px var(--line)', overflow: 'hidden',
+  }
+
+  if (!doc) return <span aria-hidden style={box} />
+  if (!row.thumb) {
+    return (
+      <span aria-hidden style={{ ...box, font: 'var(--t-mono-sm)', color: 'var(--faint)' }}>
+        {doc.w}
+      </span>
+    )
+  }
+
+  return (
+    <span aria-hidden style={box}>
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${doc.w} ${doc.h}`}
+        preserveAspectRatio="xMidYMid meet"
+        shapeRendering="crispEdges"
+      >
+        {spriteRects(doc).map((r, i) => (
+          <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={r.fill} />
+        ))}
+      </svg>
+    </span>
+  )
+}
+
+/**
+ * Start over on a blank canvas at the current size.
+ *
+ * Module scope, not inside FileMenu, because `Ctrl+N` reaches it too and a
+ * shortcut that took a different route from its menu item is a divergence
+ * waiting to happen (§8.4). The confirm is the *caller's* business — both
+ * callers ask `needsNewConfirm` first.
+ *
+ * Through the registry, so the UI inherits the same destructive-action gate the
+ * agent is held to.
+ */
+function startNewDocument() {
+  const doc = useDocStore.getState().doc
+  const r = runUi('new_document', { width: doc?.w ?? 16, height: doc?.h ?? 16 })
+  if (!r.ok) {
+    window.alert(r.error)
+    return
+  }
+  // A blank canvas is a different artwork, so it is shown fitted and centred
+  // rather than under whatever pan the last drawing was left at. The size is
+  // unchanged by construction, so this is about the artwork, not the
+  // dimensions — §7.3.
+  const after = useDocStore.getState().doc
+  if (after) refitViewport(after)
+}
+
+/**
+ * Switch to a saved draft.
+ *
+ * `setDoc`, not `commit` — a different document is being opened, which is the
+ * path `openFile` and Duplicate already take (§7.7). The flush before it is the
+ * same load-bearing line: autosave is debounced 500ms, so leaving within half a
+ * second of a stroke would lose it from the document you are walking away from.
+ *
+ * Re-fitted after, because a recent document can be any size — the same one line
+ * `Open…` needed (§7.9).
+ */
+async function openRecent(row: RecentRow) {
+  const doc = row.entry.doc
+  if (!doc) return
+  const store = useDocStore.getState()
+  await store.flushSave()
+  store.setDoc(doc)
+  refitViewport(doc)
 }
 
 /** Shared row geometry — the menu, the submenu and the confirm's buttons agree. */

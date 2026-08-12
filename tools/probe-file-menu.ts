@@ -29,6 +29,7 @@ const LAYERS = `window.__tessera.layers()`
 const IDENTITY = `window.__tessera.identity()`
 const VIEWPORT = `window.__tessera.viewport()`
 const ACTIVE_ID = `document.activeElement ? document.activeElement.id : ''`
+const BLUR = `(() => { const a = document.activeElement; if (a && a.blur) a.blur(); return true })()`
 
 /** Every draft record in IndexedDB. Duplicate's promise is that two survive. */
 const DRAFTS = `(() => new Promise((res, rej) => {
@@ -101,7 +102,7 @@ async function dotAtCentre(p: Page) {
 }
 
 const EXPECTED_ITEMS = [
-  'New…', 'Open…', 'Duplicate', 'Examples',
+  'New…', 'Open recent', 'Open…', 'Duplicate', 'Examples',
   'Download .tessera.json', 'Export PNG', 'Clear…',
 ]
 
@@ -124,8 +125,10 @@ async function run(p: Page, theme: string) {
   const text = (await menu(p).innerText()).toLowerCase()
   check(t('no account items'),
     !['dashboard', 'explore', 'publish', 'community'].some((w) => text.includes(w)), text)
-  check(t('Ctrl S is the only shortcut promised (§7.2)'),
-    (text.match(/ctrl/g) ?? []).length === 1, text)
+  check(t('three shortcuts promised, and they are the wired ones (§8.4)'),
+    (text.match(/ctrl/g) ?? []).length === 3, text)
+  check(t('…and Ctrl V is not among them, because paste is B3'),
+    !text.includes('ctrl v'), text)
 
   // ── a blank document: Clear has nothing to do, New has nothing to ask ─────
   check(t('Clear is disabled with nothing painted (§7.4)'),
@@ -269,6 +272,71 @@ async function run(p: Page, theme: string) {
   check(t('…while the original is still saved (§2, §7.7)'),
     drafts.some((d) => d.id === before.id) && drafts.some((d) => d.id === after.id),
     JSON.stringify(drafts))
+
+  // ── Open recent: listDrafts() finally reaching the surface — §8.2 ─────────
+  await openMenu(p)
+  await p.locator('#file-recent').click()
+  await p.waitForTimeout(400) // the IndexedDB read is async
+
+  const list = p.locator('#file-recent-list')
+  check(t('Open recent lists something'), (await list.count()) === 1)
+  const rowCount = await list.locator('button').count()
+  check(t('…one row per saved draft, minus the one already open'),
+    rowCount === drafts.length - 1, `${rowCount} rows, ${drafts.length} drafts`)
+
+  const firstRow = (await list.locator('button').first().innerText()).replace(/\s+/g, ' ')
+  check(t('…each row is named and dated'),
+    firstRow.includes('untitled') && /just now|min ago/.test(firstRow), firstRow)
+  await p.screenshot({ path: join(OUT, `probe-file-menu-${theme}-recent.png`) })
+
+  const current = await identity(p)
+  await list.locator('button').first().click()
+  await p.waitForTimeout(600)
+  const switched = await identity(p)
+  check(t('…and choosing one switches to it'), switched.id !== current.id,
+    `${current.id} → ${switched.id}`)
+  check(t('…closing the menu behind it'), (await menu(p).count()) === 0)
+
+  // ── rename: the header input used to discard what you typed — §8.1 ────────
+  const nameField = p.getByLabel('Artwork name')
+  await nameField.fill('gull')
+  await nameField.press('Enter')
+  await p.waitForTimeout(400)
+  check(t('the name commits on Enter'), (await identity(p)).name === 'gull',
+    (await identity(p)).name)
+
+  await p.keyboard.press('Control+z')
+  await p.waitForTimeout(400)
+  check(t('…and Ctrl+Z reverses a rename like any other edit'),
+    (await identity(p)).name !== 'gull', (await identity(p)).name)
+
+  const kept = (await identity(p)).name
+  await nameField.fill('discard me')
+  await nameField.press('Escape')
+  await p.waitForTimeout(300)
+  check(t('…Escape puts the document name back and commits nothing'),
+    (await identity(p)).name === kept, (await identity(p)).name)
+
+  // ── shortcuts — §8.4 ──────────────────────────────────────────────────────
+  // Blur without clicking anything: the shortcut handler ignores keys typed in
+  // a field (isTyping), and clicking the canvas to escape the input would paint.
+  await p.evaluate(BLUR)
+
+  // Ctrl+O opens a native picker, which Playwright surfaces as a filechooser
+  // event. Waiting for it is the real assertion — the key reached the app AND
+  // ran the same openFile() the menu item does.
+  const chooser = p.waitForEvent('filechooser', { timeout: 4000 }).catch(() => null)
+  await p.keyboard.press('Control+o')
+  check(t('Ctrl+O opens the file picker'), (await chooser) !== null)
+
+  await dotAtCentre(p)
+  await p.keyboard.press('Control+n')
+  await p.waitForTimeout(400)
+  check(t('Ctrl+N on a painted document opens the menu into its confirm'),
+    (await p.getByRole('alertdialog').count()) === 1)
+  await p.getByRole('button', { name: 'Cancel' }).click()
+  await p.waitForTimeout(200)
+  await closeMenu(p)
 
   // ── an example replaces the document and re-fits the view ─────────────────
   await openMenu(p)

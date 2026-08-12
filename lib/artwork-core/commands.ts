@@ -50,6 +50,13 @@ export type EditorCommand =
   | { type: 'frame_add'; label: string; at: number; frame: Frame }
   | { type: 'frame_delete'; label: string; at: number; frame: Frame }
   | { type: 'frame_duration'; label: string; at: number; before: number; after: number }
+  /**
+   * The document's name. Its own command rather than a `replace_doc`, because
+   * cloning every pixel to record a changed string makes the undo stack
+   * expensive for no reason — and rule 4 has no carve-out for metadata, so a
+   * rename is a mutation like any other. See docs/specs/17-file-menu.md §8.1.
+   */
+  | { type: 'doc_rename'; label: string; before: string; after: string }
   | { type: 'replace_doc'; label: string; before: Doc; after: Doc }
   | { type: 'resize'; label: string; before: Doc; after: Doc }
 
@@ -176,6 +183,12 @@ export function applyCommand(doc: Doc, cmd: EditorCommand): Doc {
       return stamp(next)
     }
 
+    case 'doc_rename': {
+      const next = cloneDoc(doc)
+      next.name = cmd.after
+      return stamp(next)
+    }
+
     case 'replace_doc':
     case 'resize':
       return cloneDoc(cmd.after)
@@ -248,6 +261,12 @@ export function invertCommand(cmd: EditorCommand): EditorCommand {
       return { type: 'frame_add', label: cmd.label, at: cmd.at, frame: cmd.frame }
 
     case 'frame_duration':
+      return { ...cmd, before: cmd.after, after: cmd.before }
+
+    // Self-inverse under exchange, like layer_rename and frame_duration. Not
+    // merged with them: sharing a branch widens before/after across three
+    // unrelated value types and none of them type-check.
+    case 'doc_rename':
       return { ...cmd, before: cmd.after, after: cmd.before }
 
     case 'replace_doc':

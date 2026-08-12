@@ -87,8 +87,8 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
   tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
   loop, one-undo sessions, bring-your-own-key), and layers (#46). Both units scored **9/10**.
 - **Next:** whatever `docs/UNITS.md` marks `NEXT` — it is the ledger and this line is not. As of
-  B1 that is **B2, Open recent**, with paste-image, the code panel, exporters, layers phase 2 and
-  animation behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9`
+  B2 that is **B3, paste image**, with the code panel, exporters, layers phase 2 and animation
+  behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9`
   before the animation unit: layers are per-frame, and whether a layer belongs to one frame or all
   of them is the decision that unit left open.
 - **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent

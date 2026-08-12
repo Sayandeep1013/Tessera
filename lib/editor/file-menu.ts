@@ -20,6 +20,7 @@ import type { StarterName } from '../artwork-core/create'
 
 export type FileMenuItemId =
   | 'new'
+  | 'recent'
   | 'open'
   | 'duplicate'
   | 'examples'
@@ -33,9 +34,10 @@ export type FileMenuItem = {
   /**
    * The keyboard hint, and ONLY when that key is really wired.
    *
-   * Spec §1 draws four of these; §6 makes shortcuts a later step and only Ctrl+S
-   * exists today (`app/page.tsx`). A hint is a promise about a key, so the
-   * column stays empty until the promise can be kept — §7.2.
+   * A hint is a promise about a key (§7.2). B1 shipped `Ctrl S` alone because
+   * that was all that existed; B2 wired `Ctrl N` and `Ctrl O` and they appeared
+   * in the same change. `Ctrl V` is still absent because Paste image is B3 —
+   * `file-menu.test.ts` holds that line by asserting the hinted set exactly.
    */
   hint?: string
   /** Expands in place instead of running. §7.1 says why it is not a flyout. */
@@ -49,15 +51,18 @@ export type FileMenuItem = {
  * empty one — spec §0: "a divider that exists only to separate an empty group is
  * worse than no divider".
  *
- * Open recent (B2) and Paste image (B3) belong in the first group and are not
- * here yet. They are absent rather than disabled for the same reason the account
- * items are: a row that looks like a control and does nothing is worse than no
- * row.
+ * Paste image (B3) belongs in the first group and is not here yet. It is absent
+ * rather than disabled for the same reason the account items are: a row that
+ * looks like a control and does nothing is worse than no row.
  */
 export const FILE_MENU: readonly (readonly FileMenuItem[])[] = [
   [
-    { id: 'new', label: 'New…' },
-    { id: 'open', label: 'Open…' },
+    { id: 'new', label: 'New…', hint: 'Ctrl N' },
+    // Ordered as §1 draws it: recent sits directly under New, because the two
+    // are the same question from opposite ends — start something, or go back to
+    // something.
+    { id: 'recent', label: 'Open recent', submenu: true },
+    { id: 'open', label: 'Open…', hint: 'Ctrl O' },
     { id: 'duplicate', label: 'Duplicate' },
   ],
   [{ id: 'examples', label: 'Examples', submenu: true }],
@@ -99,12 +104,23 @@ export const menuItemDomId = (id: FileMenuItemId): string => `file-${id}`
 export const exampleDomId = (name: StarterName): string => `file-example-${name}`
 export const CONFIRM_DOM_ID = { new: 'file-confirm-new', clear: 'file-confirm-clear' } as const
 
+/**
+ * The recent rows are keyed by document id, which is a nanoid — there is no
+ * static handle for a row. So the *container* carries one and a probe reaches
+ * rows through it (`#file-recent-list button`), which is also the honest
+ * description: what is under test is the list, not any particular draft.
+ */
+export const RECENT_LIST_DOM_ID = 'file-recent-list'
+export const RECENT_EMPTY_DOM_ID = 'file-recent-empty'
+
 /** Every handle this menu renders, for the probe-handle test to check against. */
 export function fileMenuDomHandles(starters: readonly StarterName[]): string[] {
   return [
     ...FILE_MENU_ITEMS.map((i) => menuItemDomId(i.id)),
     ...starters.map(exampleDomId),
     ...Object.values(CONFIRM_DOM_ID),
+    RECENT_LIST_DOM_ID,
+    RECENT_EMPTY_DOM_ID,
   ]
 }
 

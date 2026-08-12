@@ -89,8 +89,8 @@ works; it is done when the next agent can start without asking anything.
 | **A1** | Resize transform + command | **DONE** | 9 | [16 §4](./specs/16-settings.md) |
 | **A2** | Canvas tab size UI | **DONE** | 9 | [16 §4.1](./specs/16-settings.md) |
 | **B1** | File menu, Examples, Duplicate, Clear | **DONE** | 9 | [17](./specs/17-file-menu.md) |
-| **B2** | Open recent | **NEXT** | — | [17 §2](./specs/17-file-menu.md) |
-| **B3** | Paste image | TODO | — | [17 §2](./specs/17-file-menu.md) |
+| **B2** | Open recent, rename, shortcuts | **DONE** | 9 | [17 §2, §3, §8](./specs/17-file-menu.md) |
+| **B3** | Paste image | **NEXT** | — | [17 §2](./specs/17-file-menu.md) |
 | **C** | Code panel | TODO | — | [07](./specs/07-code-panel.md) |
 | **D** | Exporters ×6 | TODO | — | [08](./specs/08-exporters.md) |
 | **E** | Layers phase 2 | TODO | — | [14 §6.4](./specs/14-layers.md) |
@@ -322,7 +322,86 @@ draft, and regressions carried two probes broken by a rename.
 
 ---
 
-## B2 — Open recent · NEXT
+## B2 — Open recent, rename, shortcuts · DONE
+
+**12 Aug 2026 · `PENDING-B2` · 9/10**
+
+`lib/artwork-core/doc-name.ts` (`cleanDocName`, `copyName`, `renameCommand`),
+the `doc_rename` command, `listRecent()` in `lib/persist/idb.ts`,
+`lib/editor/recent.ts` (the cap, the exclusion, relative dates, the thumbnail
+rule, every string), `lib/editor/keys.ts`, and the menu work in
+`components/Chrome.tsx`. 34 new unit tests, and the probe grew from 80 checks to
+112. Decisions in `17-file-menu.md §8`.
+
+**Two things were folded in, and both were load-bearing.**
+
+*Shortcuts had no owner.* §6 lists them as step 3 but the ledger only had B2 and
+B3, so nothing claimed them and they would quietly never have happened. `⌘N` and
+`⌘O` are wired; **not `⌘V`**, because Paste image is B3 and a key that does
+nothing is the same broken promise as a hint for a key that does nothing. The
+hint column B1 built now has three entries and a test that pins the set exactly.
+
+*Rename is what makes a recent list worth having.* Every draft was called
+nothing, because the header's filename input **displayed** `doc.name` and
+silently discarded anything typed into it — no handler at all. It also carried
+the word `untitled` as a *value*, so the moment a handler existed, focusing and
+blurring the empty field would have renamed the document to "untitled". It is a
+placeholder now, which is what it always meant.
+
+**`doc_rename` is a real command**, not a `replace_doc`: rule 4 has no
+metadata carve-out, but cloning every pixel to record a changed string makes the
+undo stack expensive for nothing. Committed on blur and on Enter rather than per
+keystroke — per-keystroke would be one undo entry per character. Escape needs no
+"cancelled" flag, because putting the document's name back in the field makes
+`renameCommand` return null.
+
+**Three decisions §2 left open**, now in §8:
+
+- **The open document is not in the recent list.** It is always the most
+  recently saved, so it would always be row one and choosing it would do
+  nothing. The list means "documents you can go back to".
+- **Thumbnails, measured rather than assumed.** §2 said "if it is cheap —
+  measure". `spriteRects` merges runs, so a starter is tens of rects and a dense
+  256×256 is thousands; ten of those is a rendering job on the click that opens
+  a menu. Drawn up to 64×64, a size label above it.
+- **The list loads when the disclosure is expanded**, not when the menu opens —
+  otherwise reaching for Export PNG parses ten documents. `null` rows means
+  "still reading" and is a distinct state from empty, because showing "Nothing
+  saved yet." before IndexedDB answers is a lie about the user's work.
+
+**An existing guard caught a real mistake.** I put the parse error on the corrupt
+row as a native `title`, and `lib/__tests__/tooltips.test.ts` failed — tooltips
+are ours, and two stacked is worse than either. The row says "Can't be read —
+kept, not deleted" in the slot where a date would be, which is the labelling
+F-M4 asks for; the parse error is developer detail.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | §2's recent list, §3's shortcuts and F-M4 all built; three gaps in §2 filled in §8. Not 10: §2 also offers a thumbnail "per row" without qualification, and the measured answer is "up to 64×64" — a divergence, recorded, but a divergence. |
+| 2 | Correctness | 9 | Ordering, the cap, the exclusion, corrupt-kept-and-disabled, the flush before switching, the refit after; rename commits once, undoes, and cannot be committed by a blur that changed nothing. Not 10: the list is read once per expansion, so a draft saved in another tab while the menu is open is not reflected until it is reopened. |
+| 3 | Tests | 9 | 419 unit tests and 112 browser checks; `Ctrl+O` is asserted through Playwright's filechooser event rather than assumed. Not 10: `listRecent` itself has no unit test — it needs IndexedDB, so the ordering and cap are covered through `recentRows` and the probe instead. |
+| 4 | Integration | 9 | `commit()` still the only writer; `setDoc` only where a different document is opened; `doc_rename` is one more entry in the same inverse table; the `isTyping` guard is shared rather than copied, per §3. Not 10: `copyName` moved to `doc-name.ts` and `duplicate.ts` re-exports it, so there are two import paths for one function until something forces the choice. |
+| 5 | Design fidelity | 9 | Read in both themes and at both phone widths. Rows carry a thumbnail, a name and a relative date, aligned with the Examples rows above them. Not 10: three rows reading "untitled · just now" is still what a fresh browser shows, and only real use will tell whether rename fixes that in practice. |
+| 6 | No regressions | 9 | 419 tests, clean build, six viewports, all ten probes green in one run. The `Examples` disclosure generalised to two without changing its behaviour, and the tooltips guard caught the one mistake this unit made. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **`⌘V`.** B3, along with the hint.
+- **Deleting a draft from the list.** The whole unit exists because artwork was
+  unreachable; adding a delete button to the fix is how you get back to the
+  problem. Wait until it is asked for.
+- **Renaming from a recent row.** The header renames the open document. A second
+  rename affordance is a second source of truth for a name.
+- **Live-updating the list.** Read once per expansion. A menu is open for
+  seconds.
+
+---
+
+## B2 — the original handover, kept for reference
 
 ### Context handed over
 
@@ -395,7 +474,7 @@ draft, and regressions carried two probes broken by a rename.
 
 ---
 
-## B3 — Paste image · TODO
+## B3 — Paste image · NEXT
 
 ### Context handed over
 
@@ -407,10 +486,55 @@ draft, and regressions carried two probes broken by a rename.
 - One `paint` command for the whole thing, so it is one undo.
 - Report the colour count rather than pretending nothing was lost.
 
+**From B1 and B2 — the menu is built and has a shape. Do not fight it:**
+
+- **Add the row to `FILE_MENU` in `lib/editor/file-menu.ts`, not to the JSX.**
+  The menu renders from that array, and the handler table in `Chrome.tsx` is an
+  exhaustive `Record<FileMenuItemId, () => void>`, so adding an id makes the
+  compiler name the missing handler instead of letting the row render dead.
+  `paste` goes in the first group, after `open` — that is where §1 draws it.
+- **Add the `Ctrl V` hint in the same change as the key, and not before.**
+  `file-menu.test.ts` asserts the hinted set *exactly* and currently asserts
+  that no item promises `V`; that test moves with your unit rather than being
+  deleted. The shortcut itself belongs in the `useEffect` in `TopBar` next to
+  `Ctrl+N`/`Ctrl+O`, and must go through `isTyping` from `lib/editor/keys.ts` —
+  stealing `⌘V` inside the filename field would be its own bug, and that field
+  is now a real input that people type into.
+- **`lib/__tests__/probe-handles.test.ts` will fail if a probe names an id you
+  removed.** Build handles with `menuItemDomId`, never by hand.
+- **Extend `tools/probe-file-menu.ts`** (112 checks) rather than writing a
+  second probe, and **run `npm run probes`**, not just yours — see §0.
+- **Never a native `title`.** `lib/__tests__/tooltips.test.ts` fails on one; it
+  caught B2 doing exactly that. Use `components/Tooltip.tsx`.
+
+**The shape of the work itself:**
+
+- **Quantising belongs in `artwork-core`** — pure, deterministic, imports
+  nothing but zod. `lib/artwork-core/quantise.ts`. The clipboard read is the
+  only part that touches the browser, and it should be the thinnest possible
+  layer around it so the algorithm stays testable in node.
+- **The palette is the hard constraint, not the pixels.** A document holds at
+  most 36 entries and the current one may already have 16. Reuse before adding,
+  and the "close enough" threshold is a decision the spec does not make — make
+  it, write it down, and test it.
+- **Say the cost before or with the action** — the shape A2 and B1 both landed
+  on. *"Reduced to 18 colours."* F-M3.
+
 ### Prompt
 
-> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md §2`, then build unit
-> **B3**: paste image. Treat it as its own unit; it is an algorithm, not wiring.
+> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md` (§2, §4 and §8), then
+> build unit **B3**: paste image. Treat it as its own unit; it is an algorithm,
+> not wiring.
+>
+> Put the quantiser in `artwork-core` — pure, deterministic, testable in node —
+> and keep the clipboard read as a thin layer around it. One `paint` command for
+> the whole paste, so it is one undo. Reuse existing palette entries before
+> adding new ones, and decide and write down what "close enough" means. Report
+> the colour count rather than pretending nothing was lost.
+>
+> Add the row to `FILE_MENU` and the `Ctrl V` hint in the same change as the
+> key — `file-menu.test.ts` asserts the hinted set exactly and currently asserts
+> that nothing promises V.
 >
 > Then follow the finishing protocol in `docs/UNITS.md §0`.
 

@@ -413,3 +413,99 @@ The runner found two more things on its first real run, both pre-existing:
   then "detached from the DOM", then a 30-second timeout that took the script
   down. Both fixed, and the block now asserts the run really stopped rather than
   passing vacuously when the click was swallowed.
+
+---
+
+## 8. Unit B2 — Open recent, rename, shortcuts
+
+**Scoped 12 Aug 2026.** §6's order puts Open recent at step 2 and shortcuts at
+step 3. Two things are folded in with them, and the reasoning is below.
+
+### 8.0 Why these three are one unit
+
+- **Shortcuts had no owner.** §6 lists them as step 3, but the ledger only ever
+  had B2 (recent) and B3 (paste). Nothing claimed step 3, so it would quietly
+  never have happened. It is the same file, the same menu, and the hint column
+  B1 built is already sitting empty waiting for the keys to exist.
+- **Rename is what makes a recent list worth having.** Every draft is currently
+  called nothing, because the header's filename input does not write back to the
+  document — it is an uncontrolled input that *displays* `doc.name` and silently
+  discards anything typed into it. So Open recent without rename is a list of
+  eight rows that all say `untitled`, and the input is a rule-7 problem in its
+  own right: it accepts input and drops it.
+
+### 8.1 Rename — a real command, like everything else
+
+`doc_rename` joins the command list. Rule 4 has no carve-out for metadata: a
+rename is a document mutation, so it goes through `commit()` and `⌘Z` reverses
+it. It is its own command rather than a `replace_doc` because cloning the whole
+document, pixels and all, to record a changed string is the sort of thing that
+makes an undo stack expensive for no reason.
+
+```ts
+| { type: 'doc_rename'; label: string; before: string; after: string }
+```
+
+Self-inverse under exchange, like `layer_rename` and `frame_duration`.
+
+**Committed on blur and on Enter, not per keystroke.** Per-keystroke would put
+one undo entry per character. Escape reverts the field to the document's name
+without committing.
+
+The name is trimmed and capped at `MAX_NAME`; an empty name is legal and stays
+empty, because `untitled` is a placeholder the header draws, not a value the
+document holds. `copyName` already relies on that distinction (§7.10).
+
+### 8.2 Open recent — the rows
+
+Newest first, capped at 10, each row a thumbnail, the name, and a relative date.
+
+- **The open document is not in the list.** It is always the most recently
+  saved, so it would always be row one, and clicking it would do nothing. The
+  list means "documents you can go back to". Filtered by id, after the cap is
+  applied to the rest.
+- **Parse before listing.** `listRecent()` in `lib/persist/idb.ts` parses each
+  record, because a row cannot be drawn without knowing whether the record is
+  readable. A record that fails is **kept and shown disabled with its reason**
+  (F-M4) — never deleted, never hidden. Hiding it is the same sin as deleting
+  it: the user's work vanishes from the only place it was visible.
+- **Empty state:** *"Nothing saved yet."* — never an empty menu.
+- **Switching documents is `setDoc`, not `commit`.** Same as `Open…`: this is a
+  different document being opened, not a mutation of the open one. The autosave
+  is flushed first, exactly as Duplicate does (§7.7), or the document you are
+  leaving loses its last half-second.
+- **`refitViewport` after**, because a recent document can be any size — the
+  same one line as `Open…` (§7.9).
+
+### 8.3 Thumbnails — measured, not assumed
+
+§2 says "a thumbnail per row if it is cheap — measure before committing to it".
+
+Measured: `spriteRects` merges horizontal runs, so a 16×16 starter is tens of
+rects, but a dense 256×256 is thousands, and ten of those in one menu is not
+cheap. The rule is therefore **a thumbnail for documents up to 64×64, and a
+size-only placeholder above it**. That covers every document this editor
+actually produces by default while refusing to pay an unbounded cost for a
+canvas nobody has drawn yet.
+
+### 8.4 Shortcuts
+
+`⌘N` and `⌘O` only. **Not `⌘V`** — paste image is B3, and a hint for a key that
+does nothing is exactly what §7.2 refuses. `⌘S` already works.
+
+All of them go through the existing `isTyping` guard in `app/page.tsx`, per §3 —
+one guard, not a second one. `preventDefault` is conditional on that guard, so
+`⌘N` in the filename field is still the browser's.
+
+`⌘N` and `⌘O` open the same code paths the menu items do, so a shortcut and a
+click cannot diverge.
+
+### 8.5 What B2 does not do
+
+- **`⌘V`.** B3.
+- **Deleting a draft from the list.** There is no way to remove a document from
+  recent, and there should not be one until it is asked for: the whole unit
+  exists because artwork was unreachable, and adding a delete button to the fix
+  is how you get back to the problem.
+- **Renaming from the recent list.** The header renames the open document. A
+  second rename affordance is a second source of truth for a name.

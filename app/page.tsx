@@ -12,6 +12,9 @@ import { createDoc } from '@/lib/artwork-core/create'
 import { nanoid } from 'nanoid'
 import { loadLatestDraft } from '@/lib/persist/idb'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
+// Shared with Chrome.tsx, which owns the File menu's own shortcuts. Spec 17 §3:
+// one guard for "is the user typing", not one per handler.
+import { isTyping } from '@/lib/editor/keys'
 import { serializeDoc } from '@/lib/artwork-core/codec'
 
 export default function EditorPage() {
@@ -114,9 +117,6 @@ export default function EditorPage() {
 
   // ── keyboard ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    const isTyping = (t: EventTarget | null) =>
-      t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
-
     const down = (e: KeyboardEvent) => {
       const ed = useEditorStore.getState()
       const ds = useDocStore.getState()

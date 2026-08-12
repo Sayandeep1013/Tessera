@@ -1,12 +1,12 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `5f47938` (unit **B1**, the File menu —
-`0029cbb` plus its follow-up) · branch `main`, pushed.
+**Written:** 12 Aug 2026 · last commit unit **B2** (Open recent, rename,
+shortcuts) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 385 tests across 25 files · production build clean · 6 viewports
+**Green:** 419 tests across 27 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 84/84, `probe-canvas-size` 70/70, `probe-layers` 42/42,
+`probe-file-menu` 112/112, `probe-canvas-size` 70/70, `probe-layers` 42/42,
 `probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
 `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
 
@@ -27,7 +27,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **B2 — Open recent**. Its prompt is in `UNITS.md`, in the B2
+The next unit is **B3 — Paste image**. Its prompt is in `UNITS.md`, in the B3
 block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
@@ -138,7 +138,8 @@ looked fine in a screenshot until magnified.
 | Renderer (`lib/renderer/`) | Full-viewport canvas, DPR capped at 2, difference-blended grid, selection overlay, sprite→SVG. |
 | Editor input | 8 tools all working: brush, eraser, fill, shapes, gradient, marquee, select/move, eyedropper. Dither (Bayer 4×4). Scroll pans, pinch zooms. |
 | Chrome | Top bar, tool rail, zoom bar, palette popover, File menu, dither menu. |
-| File menu | New… (confirms when there is work at stake), Open…, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. **Scored 9/10** — `docs/specs/17-file-menu.md §7`. |
+| File menu | New… (confirms when there is work at stake), Open recent, Open…, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘S` wired. **Scored 9/10** twice — `17-file-menu.md §7` and `§8`. |
+| Naming | The header input renames the document through `doc_rename`, on blur and on Enter. It used to display the name and silently discard what you typed. |
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
@@ -355,7 +356,7 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 385 tests (3 skip without a .next build)
+npm test                          # vitest — 419 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
 
@@ -464,11 +465,17 @@ Recorded so they are not rediscovered as surprises.
   did not pass.** It ignored `APP_URL`, and its `Stop` click raced the agent
   panel's aria-live log into a 30s timeout. Both fixed in B1's follow-up; it is
   in `npm run probes` now, so it stays exercised.
-- **The header's filename input still does not write back to the document.** It
-  is uncontrolled and remounts on `doc.name`, so it *displays* correctly; typing
-  in it changes nothing. Duplicate therefore copies whatever name the document
-  loaded with, and most drafts are unnamed — which B2 will feel, because Open
-  recent lists documents by name. Pre-existing, noted in `Chrome.tsx`.
+- ~~The header's filename input does not write back.~~ **Fixed in B2.** It
+  renames through `doc_rename` on blur and on Enter, Escape reverts, and the
+  placeholder is a placeholder rather than a value. `17-file-menu.md §8.1`.
+- **`listRecent()` has no unit test.** It needs IndexedDB, which `npm test` does
+  not have. The ordering, cap and corrupt-record handling are covered through
+  `recentRows` (pure) and `probe-file-menu` (real browser), so the behaviour is
+  held at both ends — but the function in the middle is only exercised by the
+  probe. Same shape as every other persistence path here.
+- **`copyName` has two import paths.** It lives in `lib/artwork-core/doc-name.ts`
+  and `duplicate.ts` re-exports it, so nothing broke when it moved. Pick one
+  when something next touches either file.
 - **Four hand-built `ActionCtx` objects.** `lib/actions/__tests__/harness.ts`,
   `session.test.ts`, `run.test.ts` and `tools/probe-agent.ts` each construct one
   by hand. Adding a required field to `ActionCtx` means editing all four — which
