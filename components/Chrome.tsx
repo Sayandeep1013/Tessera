@@ -160,6 +160,8 @@ export function TopBar() {
   const showGrid = useEditorStore((s) => s.gridMode !== 'off')
   const layersOpen = useEditorStore((s) => s.layersOpen)
   const setLayersOpen = useEditorStore((s) => s.setLayersOpen)
+  const codeOpen = useEditorStore((s) => s.codeOpen)
+  const setCodeOpen = useEditorStore((s) => s.setCodeOpen)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
@@ -272,7 +274,9 @@ export function TopBar() {
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <Logo />
-            <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
+            {c.showWordmark && (
+              <span style={{ font: 'var(--t-title)', letterSpacing: '-0.4px' }}>Tessera</span>
+            )}
             <span style={{ color: 'var(--faint)' }}><CaretDown size={16} /></span>
           </button>
         </Tooltip>
@@ -465,15 +469,23 @@ export function TopBar() {
           </div>
         )}
 
-        {/* Not built yet. They hold newt's layout on a wide screen, but they are
+        {/* Live, so it left the dead-control group. It survives to a phone,
+            where it becomes a sheet — spec 07 §7. */}
+        {c.showCode && (
+          <GlyphBtn
+            title="Code"
+            tip="Code — the document itself"
+            shortcut="Ctrl /"
+            Icon={Code}
+            active={codeOpen}
+            onClick={() => setCodeOpen(!codeOpen)}
+          />
+        )}
+
+        {/* Not built yet. It holds newt's layout on a wide screen, but it is
             the first thing to go when space is short — a dead control must never
             cost a live one its place. */}
-        {c.showUnbuilt && (
-          <>
-            <GlyphBtn title="Code & Export" Icon={Code} disabled />
-            <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />
-          </>
-        )}
+        {c.showUnbuilt && <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />}
 
         {/* Live, so it is no longer gated with the dead controls above — it
             survives down to tablet on its own terms. */}

@@ -149,10 +149,17 @@ export function parseDoc(input: unknown): Result<Doc, DocError> {
       for (let p = 0; p < decoded.value.length; p++) {
         const i = decoded.value[p]!
         if (i >= s.palette.length) {
+          const x = p % s.w
+          const y = Math.floor(p / s.w)
           return err({
             code: 'palette_range',
-            message: `pixel at (${p % s.w}, ${Math.floor(p / s.w)}) uses palette index ${i}, but the palette has ${s.palette.length} entries`,
-            path: `frames.${f}.layers.${l}.px`,
+            message: `pixel at (${x}, ${y}) uses palette index ${i}, but the palette has ${s.palette.length} entries`,
+            // The row and column, not just `px`. The message already names the
+            // pixel; the path used to name the whole array, so the code panel
+            // could only wash the entire grid to point at one character
+            // (docs/specs/07-code-panel.md §3). Every other error in this file
+            // is as specific as it can be and this one was not.
+            path: `frames.${f}.layers.${l}.px[${y}][${x}]`,
           })
         }
       }

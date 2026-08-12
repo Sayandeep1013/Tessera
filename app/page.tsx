@@ -5,6 +5,7 @@ import { Canvas } from '@/components/Canvas'
 import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
 import { AgentPanel } from '@/components/AgentPanel'
 import { LayersPanel } from '@/components/Layers'
+import { CodePanel, useCodeShortcut } from '@/components/CodePanel'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { MosaicLoader } from '@/components/Loaders'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
@@ -44,6 +45,10 @@ export default function EditorPage() {
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
   const ready = mounted && doc
+
+  // ⌘/ — spec 07 §1. The panel owns its own key; this is only where the hook
+  // has to be called from, because the panel is not mounted until it is open.
+  useCodeShortcut()
 
   // ── initial document ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -115,6 +120,13 @@ export default function EditorPage() {
       // is still legal". Neither half is on screen, and the palette popover
       // shows swatches rather than a count.
       palette: () => useDocStore.getState().doc?.palette.map((p) => p.c) ?? null,
+      // Spec 07 §1 and §8: the code panel's text must be byte-identical to what
+      // `Download .tessera.json` writes. Both are serializeDoc, so the probe
+      // proves it by comparing the textarea against this.
+      source: () => {
+        const d = useDocStore.getState().doc
+        return d ? serializeDoc(d) : null
+      },
       viewport: () => useEditorStore.getState().viewport,
     }
     return () => {
@@ -206,25 +218,33 @@ export default function EditorPage() {
           real chrome mounts. */}
       {ready ? <TopBar /> : <div style={{ flex: 'none', height: 48 }} />}
 
-      <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
-        {ready ? (
-          <>
-            <Canvas />
-            <ToolRail />
-            <ZoomBar />
-            {layersOpen && showLayers && (
-              <LayersPanel onClose={() => useEditorStore.getState().setLayersOpen(false)} />
-            )}
-            <AgentPanel />
-          </>
-        ) : (
-          // Boot previously rendered an empty <main> — a blank rectangle that is
-          // indistinguishable from a broken app.
-          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-            <MosaicLoader />
-          </div>
-        )}
-      </main>
+      {/* A row, because the code panel is a SPLIT and not an overlay (spec 07
+          §1): the canvas gives up width to it rather than being covered by it.
+          The canvas's own ResizeObserver re-centres the view by half the change,
+          so opening the panel slides the artwork over instead of hiding half of
+          it (§9.3). */}
+      <div style={{ flex: '1 1 0', display: 'flex', minHeight: 0, minWidth: 0 }}>
+        <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden', minWidth: 0 }}>
+          {ready ? (
+            <>
+              <Canvas />
+              <ToolRail />
+              <ZoomBar />
+              {layersOpen && showLayers && (
+                <LayersPanel onClose={() => useEditorStore.getState().setLayersOpen(false)} />
+              )}
+              <AgentPanel />
+            </>
+          ) : (
+            // Boot previously rendered an empty <main> — a blank rectangle that is
+            // indistinguishable from a broken app.
+            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+              <MosaicLoader />
+            </div>
+          )}
+        </main>
+        {ready && <CodePanel />}
+      </div>
       <Notice />
     </div>
   )

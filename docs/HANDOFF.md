@@ -1,14 +1,15 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `01ec4e1` (unit **B3** — Paste image) ·
+**Written:** 12 Aug 2026 · last commit `TBD` (unit **C** — the code panel) ·
 branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 496 tests across 31 files · production build clean · 6 viewports
+**Green:** 564 tests across 33 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 134/134, `probe-canvas-size` 70/70, `probe-layers` 42/42,
-`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
-`probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
+`probe-file-menu` 134/134, `probe-code-panel` 74/74, `probe-canvas-size` 70/70,
+`probe-layers` 42/42, `probe-tooltip` 23/23, `probe-agent-ui` 18/18,
+`probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime
+errors.
 
 ---
 
@@ -27,7 +28,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **C — the code panel**. Its prompt is in `UNITS.md`, in the C
+The next unit is **D — the exporters**. Its prompt is in `UNITS.md`, in the D
 block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
@@ -141,6 +142,7 @@ looked fine in a screenshot until magnified.
 | File menu | Complete — it is now exactly the menu `17 §1` draws. New… (confirms when there is work at stake), Open recent, Open…, Paste image, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘V`/`⌘S` wired. **Scored 9/10** three times — `17-file-menu.md §7`, `§8` and `§9`. |
 | Paste image | Clipboard or file → fitted (box-average down, integer nearest-neighbour up, centred) → median-cut to ≤36 palette entries, reusing existing ones within a redmean distance of 24 → one undoable command. Reports the colour count. **Scored 9/10** — `17-file-menu.md §9`. |
 | Status line | One `role="status"` notice, `useEditorStore.notice` / `setNotice(text, sticky?)`. 6s and click to dismiss; `sticky` for anything about work that could be lost. |
+| Code panel | A split (a sheet on a phone) showing `serializeDoc(doc)` byte for byte, editable, both sync directions with an origin guard, a one-character mark on a parse error, `row 12 · char 7 → pixel (7, 12)`, click-to-locate both ways, and one ⌘Z per burst of typing. A `<textarea>` and an overlay — **no CodeMirror**, `07 §9.1` says why. **Scored 9/10.** |
 | Naming | The header input renames the document through `doc_rename`, on blur and on Enter. It used to display the name and silently discard what you typed. |
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
@@ -153,9 +155,9 @@ looked fine in a screenshot until magnified.
 ### Not built, and what is next
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
-part of finishing a unit, and this section is not. In brief: the Code and
-Timeline buttons are the last dead controls, Share is built but parked
-(`DEFERRED.md`), and units C through F remain.
+part of finishing a unit, and this section is not. In brief: **Timeline is the
+last dead control**, Share is built but parked (`DEFERRED.md`), and units D
+through F remain.
 
 Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
 below 1100px, so a dead control never costs a live one its place. When you build
@@ -246,6 +248,26 @@ Every one of these has already cost time in this repo.
 - **`Math.trunc(-0.5)` is `-0`, and `Object.is(-0, 0)` is false.** Already recorded for A1's resize
   offset; noted again because `fit-image.ts` reuses `resizeOffset` for exactly that reason and the
   next person to write a centring calculation will reach for `Math.floor`.
+- **`transform: translate` moves an element's BOX, so it clips.** The code panel's overlay is a
+  `<pre>` behind a transparent textarea, and translating it to follow the textarea's scroll raised
+  its bottom edge with the content — `overflow: hidden` then clipped the last three pixel rows of a
+  16×16 document while the gutter cheerfully numbered them. **Every probe check passed; only a
+  screenshot found it.** Set `scrollTop` on the hidden-overflow element instead: that moves the
+  content and leaves the box where it is. Translating an *inner* wrapper inside a fixed box is fine
+  and is what the line-number gutter does.
+- **React's `onSelect` is not "the caret moved".** It fires for a click and a drag-select, and not
+  for an arrow key, Home, a programmatic `setSelectionRange`, or the field's own undo. Anything that
+  tracks a caret wants `document`'s `selectionchange`, guarded on the field being focused.
+- **A textarea brings its own undo history and it wins.** ⌘Z inside one reverts the field, not your
+  app — and if the field is synced to a document, that revert then commits, so "undo" pushes a new
+  command rather than reversing one. Handle the key on the field and call the app's own undo.
+- **`isTyping` is for keys a field NEEDS.** ⌘N, ⌘O and ⌘V mean something inside a text field, so
+  they are guarded. ⌘/ does not, and guarding it made the code panel's own textarea the one place
+  the shortcut that closes the panel did not work. Guard a key the field needs; do not guard a chord
+  it has no use for.
+- **`Number('')` is `0`, not `NaN`.** An empty localStorage entry read as a width of zero, clamped
+  to the minimum, and the panel would have opened narrow forever with nothing to explain it. Any
+  `Number(stored)` needs a blank check before the `isFinite` one.
 - **An interactive element must not carry `role="status"`.** A `<button role="status">` loses its
   button semantics, so a screen reader announces the text and never mentions it is clickable. Put
   the live region on a wrapper and the button inside it.
@@ -375,7 +397,7 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 496 tests (3 skip without a .next build)
+npm test                          # vitest — 564 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
 
@@ -387,6 +409,7 @@ npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
+npx tsx tools/probe-code-panel.ts  # 74 checks: both sync directions, errors, coalescing, the sheet
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
@@ -492,6 +515,15 @@ Recorded so they are not rediscovered as surprises.
   `recentRows` (pure) and `probe-file-menu` (real browser), so the behaviour is
   held at both ends — but the function in the middle is only exercised by the
   probe. Same shape as every other persistence path here.
+- **Undoing while the code panel's buffer is invalid discards what was typed.** ⌘Z works on the
+  document like everywhere else, and the panel is then rewritten from the restored document — so
+  text that did not parse is gone. It was never applied and never saved, so nothing that *existed*
+  is lost, but it is the one place in the app where something a user typed disappears without a
+  message. `07-code-panel.md §9.8`.
+- **The code panel's three layers agree by convention, not by mechanism.** The gutter, the overlay
+  and the textarea share one `TEXT_BOX` style object and one font, and the probe checks they agree
+  at the top of the buffer and at the very bottom. A mid-scroll drift would need measuring a
+  character's box in both layers. Worth doing if anything ever edits `TEXT_BOX`.
 - **F-M5's first rung has never executed.** `lib/editor/clipboard.ts` falls back to a file picker
   when `navigator.clipboard.read()` is missing or refused, which is the Firefox case. Every probe
   here is Chromium, where `read()` exists, so that branch has run in neither CI nor a probe. Faking

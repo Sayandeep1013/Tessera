@@ -15,6 +15,7 @@ import { clampLayer } from '../artwork-core/layers'
 import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
+import { CODE_DEFAULT_W, clampCodeWidth } from '../editor/code-panel'
 
 /** Spec 16 §1. Auto follows the zoom, as the renderer always has. */
 export type GridMode = 'auto' | 'on' | 'off'
@@ -65,7 +66,20 @@ type DocState = {
 
   setDoc: (doc: Doc) => void
   setLayer: (i: number) => void
-  commit: (cmd: EditorCommand | null) => void
+  /**
+   * The one writer. See docs/specs/07-code-panel.md §9.4 for `coalesce`.
+   *
+   * `coalesce` merges this command into the top of the history stack instead of
+   * pushing a new step, when the top is a `replace_doc` with the same label.
+   * Ten keystrokes in the code panel are one undo step, and undoing goes back
+   * to where the typing started rather than to the ninth keystroke.
+   *
+   * Rule 4 is untouched: this changes *what happens to history*, not *who
+   * writes the document* — the same distinction `agentDepth` draws. **When** to
+   * coalesce is not decided here; the caller passes the flag, so the policy
+   * stays in `lib/editor/code-panel.ts` where a node test can reach it.
+   */
+  commit: (cmd: EditorCommand | null, coalesce?: boolean) => void
   undo: () => void
   redo: () => void
   beginAgentSession: () => void
@@ -103,7 +117,7 @@ export const useDocStore = create<DocState>((set, get) => {
       set({ layer: clampLayer(doc, frame, i) })
     },
 
-    commit: (cmd) => {
+    commit: (cmd, coalesce = false) => {
       if (!cmd) return // an empty stroke must not consume an undo step
       const { doc, past, frame, layer, agentDepth } = get()
       if (!doc) return
@@ -118,6 +132,23 @@ export const useDocStore = create<DocState>((set, get) => {
       // not who writes the document.
       if (agentDepth > 0) {
         set({ doc: next, layer: nextLayer })
+        scheduleSave()
+        return
+      }
+
+      // Merge into the step already on top, keeping ITS `before`. Keeping the
+      // new command's `before` would undo to the previous keystroke instead of
+      // to where the burst of typing started, which is a coalesce that saves
+      // nothing.
+      const top = past[past.length - 1]
+      if (coalesce && top && top.type === 'replace_doc' && cmd.type === 'replace_doc' &&
+          top.label === cmd.label) {
+        set({
+          doc: next,
+          layer: nextLayer,
+          past: [...past.slice(0, -1), { ...cmd, before: top.before }],
+          future: [],
+        })
         scheduleSave()
         return
       }
@@ -210,6 +241,23 @@ type EditorState = {
   layersOpen: boolean
   settingsOpen: boolean
   /**
+   * Whether the code panel is on screen, and how wide it is.
+   *
+   * The width lives here rather than inside the panel because `<main>` is the
+   * flex row that has to leave room for it — the panel is a split, not an
+   * overlay (spec 07 §1), so the canvas has to know. Persisted to localStorage
+   * by the panel; this is the live value.
+   */
+  codeOpen: boolean
+  codeWidth: number
+  /**
+   * The document cell the code panel's caret is inside, outlined on the canvas.
+   * Spec 07 §4 — panel → canvas, the half of click-to-locate that makes the
+   * link feel real rather than claimed. Null whenever the caret is not in a
+   * pixel row, which is most of the file.
+   */
+  codeCell: { x: number; y: number } | null
+  /**
    * One line of status, shown over the canvas. Null when there is nothing to
    * say. See docs/specs/17-file-menu.md §9.6.
    *
@@ -248,6 +296,9 @@ type EditorState = {
   setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
   setLayersOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
+  setCodeOpen: (open: boolean) => void
+  setCodeWidth: (w: number) => void
+  setCodeCell: (c: { x: number; y: number } | null) => void
   /** `null` dismisses. Any string replaces whatever was there. */
   setNotice: (text: string | null, sticky?: boolean) => void
 }
@@ -268,6 +319,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selection: null,
   layersOpen: false,
   settingsOpen: false,
+  codeOpen: false,
+  codeWidth: CODE_DEFAULT_W,
+  codeCell: null,
   notice: null,
 
   setTool: (t) => set({ tool: t, prevTool: get().tool }),
@@ -290,6 +344,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelection: (sel) => set({ selection: sel }),
   setLayersOpen: (open) => set({ layersOpen: open }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setCodeOpen: (open) => set({ codeOpen: open }),
+  setCodeWidth: (w) =>
+    set({
+      codeWidth: clampCodeWidth(w, typeof window === 'undefined' ? Infinity : window.innerWidth),
+    }),
+  setCodeCell: (c) => set({ codeCell: c }),
   setNotice: (text, sticky = false) =>
     set({ notice: text === null ? null : { text, sticky, seq: (get().notice?.seq ?? 0) + 1 } }),
 }))

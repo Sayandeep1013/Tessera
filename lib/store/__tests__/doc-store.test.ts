@@ -136,3 +136,95 @@ describe('paint commands still record their own layer', () => {
     expect(Array.from(layers[2]!.px)).toEqual([0, 0, 0, 0])
   })
 })
+
+/**
+ * Coalescing — spec 07 §5 and §9.4.
+ *
+ * The code panel debounces at 300ms, so a paragraph of typing is several
+ * commits. Without this each one is an undo step and getting back to before you
+ * started is a dozen presses.
+ */
+describe('commit(cmd, coalesce)', () => {
+  const named = (name: string, base: Doc): EditorCommand => ({
+    type: 'replace_doc',
+    label: 'Edit code',
+    before: base,
+    after: { ...base, name },
+  })
+
+  it('pushes a step when it is not asked to coalesce', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit(named('one', start))
+    useDocStore.getState().commit(named('two', useDocStore.getState().doc!))
+    expect(useDocStore.getState().past).toHaveLength(2)
+  })
+
+  it('replaces the top step when it is', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit(named('one', start))
+    useDocStore.getState().commit(named('two', useDocStore.getState().doc!), true)
+    expect(useDocStore.getState().past).toHaveLength(1)
+    expect(useDocStore.getState().doc!.name).toBe('two')
+  })
+
+  /**
+   * The half that is easy to get wrong: keeping the NEW command's `before`
+   * would undo to the previous keystroke, which is a coalesce that saves
+   * nothing. Ten edits must undo to where the typing started.
+   */
+  it('keeps the original before, so one undo goes back to the start of the burst', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2, name: 'original' })
+    useDocStore.getState().setDoc(start)
+    for (const n of ['one', 'two', 'three', 'four']) {
+      useDocStore.getState().commit(named(n, useDocStore.getState().doc!), n !== 'one')
+    }
+    expect(useDocStore.getState().doc!.name).toBe('four')
+    expect(useDocStore.getState().past).toHaveLength(1)
+
+    useDocStore.getState().undo()
+    expect(useDocStore.getState().doc!.name).toBe('original')
+  })
+
+  it('redoes to the end of the burst, not into the middle of it', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2, name: 'original' })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit(named('one', start))
+    useDocStore.getState().commit(named('two', useDocStore.getState().doc!), true)
+    useDocStore.getState().undo()
+    useDocStore.getState().redo()
+    expect(useDocStore.getState().doc!.name).toBe('two')
+  })
+
+  /** It must not swallow a brush stroke that happens to be on top. */
+  it('refuses to merge into a command that is not its own', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Brush', frame: 0, layer: 0, cells: [[0, 0, 0, 1]],
+    })
+    useDocStore.getState().commit(named('one', useDocStore.getState().doc!), true)
+    expect(useDocStore.getState().past).toHaveLength(2)
+
+    // …and the stroke is still there to undo separately.
+    useDocStore.getState().undo()
+    useDocStore.getState().undo()
+    expect(useDocStore.getState().doc!.frames[0]!.layers[0]!.px[0]).toBe(0)
+  })
+
+  it('refuses to merge across labels, so two features cannot collide', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit({ ...named('one', start), label: 'Something else' })
+    useDocStore.getState().commit(named('two', useDocStore.getState().doc!), true)
+    expect(useDocStore.getState().past).toHaveLength(2)
+  })
+
+  it('starts a step when there is nothing on the stack to merge into', () => {
+    const start = createDoc({ id: 'a', w: 2, h: 2 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit(named('one', start), true)
+    expect(useDocStore.getState().past).toHaveLength(1)
+  })
+})

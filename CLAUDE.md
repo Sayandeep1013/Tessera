@@ -85,10 +85,11 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
 
 - **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
   tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
-  loop, one-undo sessions, bring-your-own-key), layers (#46), and the whole File menu including
-  paste image (clipboard → fit → median-cut quantise → one undoable command). Every unit **9/10**.
+  loop, one-undo sessions, bring-your-own-key), layers (#46), the whole File menu including
+  paste image (clipboard → fit → median-cut quantise → one undoable command), and the code panel —
+  the document's own bytes, editable, both ways. Every unit **9/10**.
 - **Next:** whatever `docs/UNITS.md` marks `NEXT` — it is the ledger and this line is not. As of
-  B3 that is **C, the code panel**, with the exporters, layers phase 2 and animation
+  C that is **D, the exporters**, with layers phase 2 and animation
   behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9`
   before the animation unit: layers are per-frame, and whether a layer belongs to one frame or all
   of them is the decision that unit left open.

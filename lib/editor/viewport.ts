@@ -113,6 +113,31 @@ export function fitViewport(doc: Doc, cssW: number, cssH: number, margin = 48): 
 }
 
 /**
+ * Keep the middle in the middle when the canvas element changes size.
+ * See docs/specs/07-code-panel.md §9.3.
+ *
+ * `offsetX` is measured from the canvas element's left edge, so narrowing the
+ * element leaves the artwork exactly where it was and the space disappears off
+ * the right. The code panel is a split, so opening it takes 460px that way and
+ * arrives on top of the right-hand half of the drawing.
+ *
+ * Re-fitting would fix it and cost too much: it throws away the pan and zoom of
+ * somebody mid-detail-work, which is the price `refit.ts` names in its own
+ * header and which `17 §7.3` already refused for the same reason. Moving the
+ * offset by half the change keeps the scale, keeps the framing, and is what
+ * "the window got smaller" should have always meant — resizing the browser had
+ * the same defect and nobody had noticed, because it drifts a little at a time.
+ */
+export function recentreViewport(vp: Viewport, dw: number, dh: number): Viewport {
+  if (dw === 0 && dh === 0) return vp
+  return {
+    scale: vp.scale,
+    offsetX: Math.round(vp.offsetX + dw / 2),
+    offsetY: Math.round(vp.offsetY + dh / 2),
+  }
+}
+
+/**
  * Zoom anchored at a point — the document pixel under the cursor stays under the
  * cursor. Anchoring at the canvas centre instead feels wrong immediately.
  */

@@ -68,6 +68,19 @@ export function chromeFor(tier: Tier) {
      * gone and the centre is free again.
      */
     showFilename: tier === 'wide' || tier === 'tablet',
+    /**
+     * The word "Tessera" beside the mark, which is decoration rather than a
+     * control.
+     *
+     * Dropped on a phone because unit C added the Code button and the header ran
+     * 38px off a 320px screen — measured by `check-responsive.ts`, which is
+     * exactly the failure it exists to catch. The wordmark is ~70px and the
+     * logo alone still opens the File menu, still carries the caret that says it
+     * is a menu, and is still the product's mark. A live control does not lose
+     * its place to a word, which is the same rule that keeps the dead controls
+     * out of a narrow header.
+     */
+    showWordmark: tier !== 'mobile',
     showSaveStatus: tier === 'wide' || tier === 'compact',
     /**
      * Layers are built now, so they are not gated with the dead controls. Not on
@@ -98,7 +111,15 @@ export function chromeFor(tier: Tier) {
      * and it is the part that must not.
      */
     showShare: tier !== 'mobile',
-    /** Code and Timeline — still not built. */
+    /**
+     * The code panel is built, so it leaves the dead-control group as Layers and
+     * Share did. It survives all the way down to a phone, unlike either of them:
+     * below 640 it is a full-screen sheet rather than a split (spec 07 §7), so
+     * it never has to fit beside the canvas — and it is the one surface where a
+     * phone can do something the canvas cannot, which is read the document.
+     */
+    showCode: true,
+    /** Timeline — still not built, and now the only one. */
     showUnbuilt: tier === 'wide',
   }
 }

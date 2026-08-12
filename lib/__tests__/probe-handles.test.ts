@@ -24,6 +24,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fileMenuDomHandles } from '../editor/file-menu'
+import { codePanelDomHandles } from '../editor/code-panel'
 import { listStarters } from '../artwork-core/create'
 
 const ROOT = process.cwd()
@@ -57,7 +58,7 @@ function selectorsByProbe(): Map<string, Set<string>> {
  * module that builds it, so the component and the allow-list cannot drift.
  */
 function renderedIds(): Set<string> {
-  const ids = new Set<string>(fileMenuDomHandles(listStarters()))
+  const ids = new Set<string>([...fileMenuDomHandles(listStarters()), ...codePanelDomHandles()])
   for (const [, src] of read(COMPONENTS, '.tsx')) {
     for (const m of src.matchAll(/\bid=(?:"([\w-]+)"|\{\s*['"`]([\w-]+)['"`]\s*\})/g)) {
       ids.add((m[1] ?? m[2])!)
@@ -93,5 +94,13 @@ describe('probe DOM handles', () => {
       expect(src, `Chrome.tsx should build ids with ${fn}`).toContain(fn)
     }
     expect(fileMenuDomHandles(listStarters()).length).toBeGreaterThan(6)
+  })
+
+  /** Same arrangement, second surface. Unit C's panel ids are built the same way. */
+  it('the code panel still renders every handle it declares', () => {
+    const src = readFileSync(join(COMPONENTS, 'CodePanel.tsx'), 'utf8')
+    for (const id of ['CODE_DOM_ID', 'CODE_TEXT_DOM_ID', 'CODE_STATUS_DOM_ID']) {
+      expect(src, `CodePanel.tsx should build its id from ${id}`).toContain(`id={${id}}`)
+    }
   })
 })

@@ -15,7 +15,7 @@ import {
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { useAiStore } from '@/lib/store/ai'
 import {
-  MAX_SCALE, MIN_SCALE, clampScale, fitViewport, isInside, screenToDoc, zoomAt,
+  MAX_SCALE, MIN_SCALE, clampScale, fitViewport, isInside, recentreViewport, screenToDoc, zoomAt,
 } from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
 import { mirrored } from '@/lib/editor/symmetry'
@@ -58,6 +58,9 @@ export function Canvas() {
     const canvas = ref.current
     if (!wrap || !canvas) return
 
+    /** The last size we laid out at, so a resize knows how much it changed by. */
+    let was: { w: number; h: number } | null = null
+
     const apply = () => {
       const r = wrap.getBoundingClientRect()
       resizeCanvas(canvas, r.width, r.height)
@@ -67,7 +70,16 @@ export function Canvas() {
       // First real layout: fit the artwork rather than leaving it at 0,0.
       if (doc && vp.offsetX === 0 && vp.offsetY === 0) {
         useEditorStore.getState().setViewport(fitViewport(doc, r.width, r.height))
+      } else if (was && (was.w !== r.width || was.h !== r.height)) {
+        // Everything after that: keep the scale and keep the middle in the
+        // middle. Opening the code panel takes 460px off the right of this
+        // element, and without this the artwork does not move — the panel simply
+        // arrives on top of half of it. See docs/specs/07-code-panel.md §9.3.
+        useEditorStore
+          .getState()
+          .setViewport(recentreViewport(vp, r.width - was.w, r.height - was.h))
       }
+      was = { w: r.width, h: r.height }
       markDirty()
     }
 
@@ -135,6 +147,16 @@ export function Canvas() {
         renderDiffOverlay(ctx, ai.proposal!.diff, viewport, theme)
       } else if (cursor && isInside(cursor.x, cursor.y, doc) && tool !== 'eyedropper') {
         renderCursor(ctx, cursor.x, cursor.y, brushSize, viewport, theme)
+      }
+
+      // Panel → canvas (spec 07 §4): the pixel the code panel's caret is sitting
+      // in. Drawn after the brush cursor rather than instead of it — they are
+      // two different questions ("where will I paint" and "which character am I
+      // in") and answering only one of them at a time is how the link stops
+      // feeling real.
+      const { codeCell } = useEditorStore.getState()
+      if (codeCell && isInside(codeCell.x, codeCell.y, doc)) {
+        renderCursor(ctx, codeCell.x, codeCell.y, 1, viewport, theme)
       }
 
       const sel = useEditorStore.getState().selection

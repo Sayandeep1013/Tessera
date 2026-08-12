@@ -91,8 +91,8 @@ works; it is done when the next agent can start without asking anything.
 | **B1** | File menu, Examples, Duplicate, Clear | **DONE** | 9 | [17](./specs/17-file-menu.md) |
 | **B2** | Open recent, rename, shortcuts | **DONE** | 9 | [17 §2, §3, §8](./specs/17-file-menu.md) |
 | **B3** | Paste image | **DONE** | 9 | [17 §9](./specs/17-file-menu.md) |
-| **C** | Code panel | **NEXT** | — | [07](./specs/07-code-panel.md) |
-| **D** | Exporters ×6 | TODO | — | [08](./specs/08-exporters.md) |
+| **C** | Code panel | **DONE** | 9 | [07 §9](./specs/07-code-panel.md) |
+| **D** | Exporters ×6 | **NEXT** | — | [08](./specs/08-exporters.md) |
 | **E** | Layers phase 2 | TODO | — | [14 §6.4](./specs/14-layers.md) |
 | **F** | Animation | TODO | — | [10](./specs/10-animation.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
@@ -653,7 +653,120 @@ real browser, palette included.
 
 ---
 
-## C — Code panel · NEXT
+## C — Code panel · DONE
+
+**12 Aug 2026 · `TBD` · 9/10**
+
+`lib/editor/json-locate.ts` (a position-tracking JSON scanner),
+`lib/editor/code-panel.ts` (widths, debounces, the coalescing policy, the caret
+mapping, every string), `components/CodePanel.tsx`, `recentreViewport` in
+`viewport.ts`, `commit(cmd, coalesce)` in the doc store, and
+`tools/probe-code-panel.ts`. 68 new unit tests — 496 to **564** — and a new
+probe of **74** browser checks. Decisions in `07-code-panel.md §9`.
+
+**The spec predated everything and reading it critically was most of the unit.**
+Four corrections and four gaps, all recorded in §9 rather than routed around:
+
+**1. No CodeMirror (§9.1).** §1 asked for CodeMirror 6 with a themed JSON mode
+and `next/dynamic` to keep its ~200KB out of the bundle — and asked for it with
+folding, autocomplete and bracket-closing all switched off, because "all three
+fight hand-editing a pixel grid". What is left is line numbers, colouring, and a
+diagnostic at a position, on a file that is 90% pixel rows where colouring
+braces tells the reader nothing. §3's *"CodeMirror's syntax tree, not a regex"*
+is also a false choice: the third option is a 200-line position-tracking scanner
+that is pure, has no DOM, costs no dependency, and — the part that decided it —
+**`npm test` can reach it**, where anything built on an editor widget would have
+been probe-only. This repo has written its own codec, tooltip, dither and
+quantiser on exactly that reasoning.
+
+What replaces the colouring is better aimed: an overlay `<pre>` behind a
+transparent textarea, holding the *same string*, marking the two ranges that
+mean something right now — the parse error, and the character under the canvas
+cursor. Three text nodes and two marks, so a 256×256 document costs what a
+16×16 one does.
+
+**2. The ladder of error surfaces (§9.2).** No CodeMirror means no inline
+diagnostic, so the mark is the overlay's range and the message is the status
+line's alone. §3's degradation rule survives intact and is the part that
+matters: a path that will not resolve still shows its message. Added: the status
+line says **where the caret is as a pixel** — `row 12 · char 7 → pixel (7, 12)`
+— which is the sentence that makes "code underneath" literal, and costs one
+lookup against ranges the overlay already computed.
+
+**3. Opening a split has to re-centre the view (§9.3), and the spec says
+nothing about it.** `offsetX` is measured from the canvas element's left edge,
+so taking 460px off the right leaves the artwork where it was and the panel
+arrives on top of half of it. Re-fitting is the wrong fix — it throws away the
+pan and zoom of somebody mid-detail-work, the cost `refit.ts` names and `17
+§7.3` already refused. `recentreViewport` keeps the scale and moves the offset
+by half the change. **It fixed something older on the way:** resizing the
+browser window had the same defect and nobody had noticed, because it drifts a
+little at a time.
+
+**4. Coalescing needed the store's help (§9.4).** §5 says consecutive edits
+replace the top of the history stack; nothing could do that, because `commit()`
+only ever pushed. It takes a second argument now, and merges while keeping the
+*original* `before` — ten keystrokes undo to where the typing started, not to
+the ninth keystroke. Rule 4 is intact: this changes what happens to history, not
+who writes, the same distinction `agentDepth` draws. The 2-second window stays
+in a pure module, so the policy is tested in node rather than by typing into a
+browser.
+
+**Running it found the rest.** Twelve probe checks failed on the first run and
+three were real:
+
+- **⌘Z inside the panel undid the *textarea*, not the document** — which then
+  parsed and committed, so "undo" pushed a new command instead of reversing one
+  and §5 was quietly false wherever the caret was. There is one history and it
+  belongs to the document.
+- **⌘/ was behind `isTyping`**, which made the panel's own textarea the one
+  place the shortcut that closes the panel did not work. The guard exists for
+  keys a field *needs* — ⌘N, ⌘O, ⌘V — and a slash chord is not one. §9.6 states
+  the rule now that there are four of them.
+- **`check-responsive` failed at 320** the moment the button existed: 38px off
+  the edge. The wordmark beside the logo is ~70px of decoration and the mark
+  alone still opens the menu, so it goes on a phone. Same rule as the dead
+  controls, one step further — a live control does not lose its place to a word.
+
+**And one thing only looking found.** Every check passed while the overlay was
+*translated* rather than scrolled — `transform` moves an element's box, so its
+bottom edge rose with the content and `overflow: hidden` clipped the last three
+pixel rows of a 16×16 document while the gutter cheerfully numbered them. The
+screenshot found it; the probe now has three geometry checks that would.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Everything §1–§7 asks the panel to *do* is built, and every item in §8's test list exists. Four of the mechanisms it names are replaced and four gaps filled, in §9. Not 10: §1's JSON syntax colouring is genuinely gone, not deferred — that is the price of §9.1 and it is a real subtraction from what the spec drew. |
+| 2 | Correctness | 9 | Both sync directions, the origin guard, an invalid buffer that changes nothing, a one-character mark on the one wrong character, coalescing that undoes to the start of a burst, and ⌘Z ownership settled. Not 10: undoing while the buffer is invalid discards what was typed — it was never applied and never saved, so nothing that existed is lost, but it is the one place text a user typed can vanish without a message. `HANDOFF §11`. |
+| 3 | Tests | 9 | 68 unit tests, including `locate` driven by the paths `parseDoc` really emits rather than paths I invented, and 74 browser checks covering both sync directions, the error mark, the coalesced undo, the sheet and the overlay's geometry. Not 10: the geometry checks were written *after* a screenshot found the bug they now catch, and there is no guard that the overlay and the textarea agree at every scroll position — only at the two ends. |
+| 4 | Integration | 9 | `commit()` is still the only writer; artwork-core untouched but for one path made more specific; the panel's decisions are all in two pure modules; ids come from the module that feeds `probe-handles.test.ts`, which caught them missing; tokens only. Not 10: `codeWidth` and `codeCell` live in the editor store because `<main>` and the renderer need them — correct, and it is two more fields on a store that is getting long. |
+| 5 | Design fidelity | 9 | Read in both themes, at both phone widths as a sheet, and with the caret in a pixel row so both directions of §4 are visible at once. Six viewports clean after the wordmark change. Not 10: the gutter, the overlay and the textarea agree because they share one style object and one font, which is a convention rather than a mechanism — a future edit to one of them can still drift. |
+| 6 | No regressions | 9 | 564 tests, clean build, six viewports, all eleven probes green in one run. Two pre-existing things are better: the window-resize drift, and `palette_range`'s path, which named a whole array while its own message named a pixel. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **JSON syntax colouring.** §9.1. The overlay is where it would go, and the
+  price is a span per token on a 70KB string.
+- **A `Format` button.** The text is canonical every time the document writes
+  it; a button that re-canonicalises somebody's in-progress typing is a button
+  that moves their caret.
+- **Editing anything but the whole document.** A "just the pixels" view would be
+  a second representation, which is rule 3.
+- **Column-accurate `Go to error` scrolling.** It scrolls to the line and lets
+  the browser keep the caret visible, which is right for a 16-wide row and
+  approximate for a 256-wide one.
+- **A guard that the two layers agree at every scroll position.** They are
+  checked at the top and at the very bottom. A mid-scroll drift would need
+  measuring a character's box in both layers, which is worth doing if anything
+  ever touches `TEXT_BOX`.
+
+---
+
+## C — the original handover, kept for reference
 
 ### Context handed over
 
@@ -717,18 +830,51 @@ real browser, palette included.
 
 ---
 
-## D — Exporters · TODO
+## D — Exporters · NEXT
 
 ### Context handed over
 
 - `spriteRects` in `lib/renderer/sprite-svg.ts` already merges runs and is
-  already shared by the favicon and the share viewer. SVG and CSS build on it
-  rather than re-walking pixels.
+  already shared by the favicon, the share viewer, Export PNG and the Open
+  recent thumbnails. SVG and CSS build on it rather than re-walking pixels.
 - **ASCII is nearly free** — the `px` rows are the ASCII. One line, and the best
   demonstration of the whole premise.
 - Each exporter consumes `Doc` and nothing else; no exporter imports another.
 - Exported React must be pixel-identical to the canvas — that is the Phase 3
   acceptance criterion.
+
+**From C — the panel these are supposed to live next to now exists:**
+
+- **`components/CodePanel.tsx` is where an export UI belongs**, and its header
+  currently holds a title, the size and a Close button. Spec 07 §7.6 renamed the
+  File menu's item to `Download .tessera.json` *specifically* so that "Export"
+  would be free for this unit — the two words mean different things and the menu
+  would have been ambiguous if both had been spent.
+- **`serializeDoc` is already one of the six.** JSON is done; do not write a
+  second one. §1's equality between the panel's text and the JSON export is
+  asserted by `probe-code-panel` against `window.__tessera.source()`, so a new
+  JSON exporter that differed by a byte would break the code panel's own test.
+- **Everything that decides anything goes in a pure module.** Five units in a
+  row have landed on this and it is no longer a suggestion: `npm test` runs in
+  node, every browser probe needs a dev server, so a rule inside a `.tsx` has no
+  CI guard. The exporters are pure by nature, which makes golden tests trivial —
+  take the advantage.
+- **`window.__tessera.source()` exists** for exactly this shape of check, and
+  `palette()` and `identity()` are there too.
+
+**Things that will bite:**
+
+- **A new control in the header costs 40px, and 320 has none left.** C's Code
+  button pushed the header off a 320px screen and the wordmark had to go to pay
+  for it (`07 §9.7`). If Export becomes a header button rather than something
+  inside the code panel, `check-responsive.ts` will fail at 320 and there is
+  nothing cheap left to cut.
+- **Timeline is the last member of `showUnbuilt`.** If unit F ever moves it out,
+  that flag and its comment should go with it.
+- **`lib/__tests__/probe-handles.test.ts` cannot see an id built from a
+  constant.** Declare handles in a `lib/` module and contribute them through a
+  `…DomHandles()` function, as `file-menu.ts` and `code-panel.ts` both do — it
+  caught C for exactly this.
 
 ### Prompt
 

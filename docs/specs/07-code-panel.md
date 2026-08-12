@@ -1,8 +1,20 @@
 # 07 — Code Panel
 
-**Owns:** `components/code-panel/**`
+**Owns:** `components/CodePanel.tsx`, `lib/editor/code-panel.ts`, `lib/editor/json-locate.ts`
 **Depends on:** [01 — Document Format](./01-document-format.md), [03 — artwork-core](./03-artwork-core.md)
 **Phase:** 3
+
+> **Read §9 first.** This spec was written in Phase 3 and built as unit **C**,
+> after layers, settings, the agent, the File menu and paste image had all
+> happened to the code around it. Four of its decisions did not survive contact
+> and are corrected in §9 rather than routed around (rule 10) — most of all its
+> choice of editor. The behaviour it asks for is all built; several of the
+> mechanisms it names are not the ones that build it.
+>
+> §9 also carries four things this spec does not mention at all and which turned
+> out to be load-bearing: re-centring the view when the split opens, who owns ⌘Z
+> inside a text field, which shortcuts the `isTyping` guard applies to, and what
+> had to leave the header to make room for the button.
 
 The split view that makes "code underneath" literal. Newt has this — measured as the `</>` button in
 its top bar — and it is the second-strongest demo moment after the AI diff.
@@ -152,3 +164,163 @@ click-to-locate is disabled in that mode. `Done` dismisses it and applies any pe
 - An invalid buffer leaves the document unchanged and the canvas rendering the last valid state
 - Ten keystrokes within 2s produce one undo step; two edits 3s apart produce two
 - `pathToRange` returns `null` for an unresolvable path and the UI degrades to a banner
+
+---
+
+## 9. Built — unit C, 12 Aug 2026
+
+Everything §1–§8 asks the panel to *do* is built. Four of the mechanisms it
+names to do it with are not the ones that did, and one thing it does not mention
+turned out to be load-bearing. Rule 10: corrected here rather than routed
+around.
+
+### 9.1 No CodeMirror — §1 and §3 corrected
+
+§1 specifies CodeMirror 6 with `json()` support, a custom theme wired to the
+tokens, and `next/dynamic` to keep its ~200KB out of the initial bundle. The
+panel is a `<textarea>` with an overlay instead, and no new dependency at all.
+
+Four reasons, in order of weight:
+
+1. **§1 already asks for CodeMirror with most of CodeMirror turned off** — "no
+   code folding, no autocomplete, no bracket auto-closing (all three fight
+   hand-editing a pixel grid)". What is left that a textarea does not give is
+   line numbers, JSON colouring, and a diagnostic at a position. That is a thin
+   remainder for a dependency whose own cost §6 puts at 200KB.
+2. **§3's "CodeMirror's syntax tree, not a regex" is a false choice.** The third
+   option is a position-tracking JSON scanner — `lib/editor/json-locate.ts`,
+   about 200 lines, pure, no DOM — and it is the one that fits this repo, which
+   has written its own codec, its own tooltip, its own dither and its own
+   quantiser rather than importing them. It also makes `pathToRange` testable
+   under `npm test`, where a CodeMirror-based one would need a browser and would
+   therefore be probe-only.
+3. **A textarea is the accessible, IME-correct, caret-correct editor the
+   platform already ships.** Selection, undo-within-the-field, mobile keyboards
+   and screen readers all work without being reimplemented or themed.
+4. **JSON colouring is close to worthless on this document.** The file is
+   `{ v, id, name, w, h, palette, frames }` and then a wall of pixel rows.
+   Colouring braces and quotes tells the reader nothing they did not know; the
+   rows are the content, and they are one character per pixel.
+
+**What replaces the syntax highlighting is better aimed.** An overlay `<pre>`
+sits behind the transparent textarea holding the *same string*, and marks the
+ranges that mean something right now: the parse error, and the character under
+the canvas cursor. It renders as three text nodes and two marks — not one span
+per character — so a 256×256 document costs the same as a 16×16 one.
+
+**The honest cost:** there is no syntax colouring, and there never will be
+without reversing this. If that is ever wanted, the overlay is where it goes,
+and the price is a span per token on a 70KB string.
+
+### 9.2 The status line replaces the inline diagnostic — §3 amended
+
+§3 wants a CodeMirror diagnostic at the resolved position plus a status line at
+the foot. Without CodeMirror the position marker is the overlay's error range,
+and the message is the status line's job alone. Same two pieces of information,
+same `Go to error` action, which selects the range in the textarea and scrolls
+it into view.
+
+§3's degradation rule is unchanged and is the part that matters: **when a path
+cannot be resolved the message still appears**, without a range. A parse error
+is never silent.
+
+One addition §3 does not have. The status line also reports **where the caret
+is, as a pixel**: `row 12 · char 7 → pixel (7, 12)`. That is the sentence that
+makes "code underneath" literal, and it costs one lookup against the row ranges
+that are already computed for the overlay.
+
+### 9.3 Opening the panel must re-centre the view — not in the spec at all
+
+§1 makes the panel a split, so opening it takes 460px off the canvas. The
+viewport's `offsetX` is measured from the canvas element's left edge, so
+narrowing the element leaves the artwork where it was and the panel arrives on
+top of the right-hand side of it. On a 16×16 document at a wide zoom that is the
+artwork half behind the panel.
+
+Re-fitting is the wrong fix — it throws away the pan and zoom of somebody
+mid-detail-work, which is the cost `refit.ts` names in its own header and which
+`17 §7.3` already decided against for Duplicate. The right fix is to keep the
+scale and move the offset by **half the width the canvas lost**, so what was in
+the middle stays in the middle. `recentreViewport` in `viewport.ts`.
+
+That function also fixes something older and unrelated: resizing the browser
+window had the same defect, and the artwork drifted toward the top-left every
+time. The `ResizeObserver` in `Canvas.tsx` now recentres on every size change,
+so the panel is not a special case.
+
+### 9.4 Coalescing needs the store's help — §5 clarified
+
+§5 says consecutive panel edits within 2 seconds coalesce, "replacing the top of
+the history stack when its type is `replace_doc`, its label matches, and its
+timestamp is within the window". Nothing could do that: `commit()` only ever
+pushed.
+
+`commit(cmd, coalesce)` now takes a second argument. When it is true and the top
+of `past` is a `replace_doc` with the same label, the top is **replaced** by the
+new command carrying the *original* `before` — so ten keystrokes collapse to one
+step that undoes to where the typing started, not to the ninth keystroke.
+
+Rule 4 is intact: `commit` is still the only thing that writes the document, and
+this changes what happens to history, not who writes — the same distinction
+`agentDepth` already draws. **The 2-second window is not in the store.** The
+panel decides whether to coalesce and the store does as it is told, so the
+policy stays pure and tested in node (`shouldCoalesce`) instead of being
+observable only through a browser.
+
+### 9.5 The mobile sheet — §7 built, and it is the repo's first
+
+§7's full-screen sheet below 640px is built, and this is the first sheet in the
+repo. `14-layers.md §6.4` deferred the mobile layer panel on the grounds that "a
+sheet is a component this repo does not have"; it does now, and that unit's
+blocker is gone.
+
+Click-to-locate is disabled in sheet mode as §7 requires, because the canvas is
+not on screen to locate anything on.
+
+### 9.6 Two keys the spec does not mention, both found by running it
+
+Neither of these is in §1–§8. Both were found by the probe failing, and both are
+about the panel being a text field inside an app that also has keys.
+
+**⌘Z inside the panel is the DOCUMENT's undo.** A textarea brings its own
+history and wins by default, so ⌘Z reverted the field, which then parsed and
+committed — "undo" pushed a *new* command instead of reversing one, and §5's
+"one ⌘Z reverses an arbitrary code edit" was quietly false wherever the caret
+happened to be. There is one history in this app and it belongs to the
+document; the panel is a view of it. The pending parse is cancelled first, or a
+keystroke from 200ms ago lands after the undo and re-applies what was undone.
+
+**⌘/ is deliberately NOT behind `isTyping`**, unlike ⌘N, ⌘O and ⌘V. That guard
+exists because those keys mean something *inside a text field* — new, open,
+paste — and stealing them there breaks the field (`17 §3`). ⌘/ means nothing in
+a field, and guarding it made the panel's own textarea the one place the
+shortcut that closes the panel did not work. The rule, now that there are four
+of these: **guard a key the field itself needs; do not guard a chord it has no
+use for.**
+
+### 9.7 The header lost its wordmark, and the Code button is why
+
+`check-responsive.ts` failed at 320×568 the moment the Code button existed: the
+header ran 38px off the right edge. The word "Tessera" beside the mark is ~70px
+and is decoration; the mark alone still opens the File menu and still carries
+the caret that says it is one. So `showWordmark` is false on a phone.
+
+It is the same rule that keeps the dead controls out of a narrow header, applied
+one step further: **a live control does not lose its place to a word.**
+
+### 9.8 What C deliberately did not build
+
+- **JSON syntax colouring.** §9.1. The overlay is where it would go.
+- **Editing anything but the whole document.** The panel is `serializeDoc(doc)`
+  and nothing else — §1's equality with `Download .tessera.json` is asserted by
+  a test, and a "just the pixels" view would be a second representation, which
+  is rule 3.
+- **A `Format` button.** The text is already canonical every time the document
+  writes it; a button that re-canonicalises the user's in-progress typing is a
+  button that moves their caret.
+- **Undo of a code edit while the buffer is invalid.** ⌘Z works, on the
+  document, exactly as everywhere else — but the panel is showing text that does
+  not parse, so it is rewritten from the restored document and the invalid text
+  is lost. It was never applied and never saved, so nothing that existed is
+  gone; it is still the one place where something a user typed can disappear
+  without a message. Recorded in `HANDOFF §11`.

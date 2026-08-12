@@ -1,10 +1,52 @@
 import { describe, expect, it } from 'vitest'
 import {
-  MAX_SCALE, MIN_SCALE, ZOOM_STEPS, clampScale, fitViewport, screenToDoc, stepScale, zoomAt,
+  MAX_SCALE, MIN_SCALE, ZOOM_STEPS, clampScale, fitViewport, recentreViewport, screenToDoc,
+  stepScale, zoomAt,
 } from '../viewport'
 import { loadStarter } from '../../artwork-core/create'
 
 const doc = loadStarter('face') // 16x16
+
+describe('recentreViewport — spec 07 §9.3', () => {
+  /**
+   * The case that made it necessary: the code panel takes 460px off the right
+   * of the canvas element, and an offset measured from the left edge does not
+   * notice. Without this the artwork does not move and the panel simply arrives
+   * on top of the right-hand half of it.
+   */
+  it('keeps what was centred centred when the canvas narrows', () => {
+    const wide = fitViewport(doc, 1440, 900)
+    const narrow = recentreViewport(wide, -460, 0)
+    // What the fit would have produced at the new width — same framing.
+    expect(narrow.offsetX).toBe(fitViewport(doc, 980, 900).offsetX)
+  })
+
+  it('keeps the scale, because a resize is not a zoom', () => {
+    const vp = { scale: 37, offsetX: 200, offsetY: 120 }
+    expect(recentreViewport(vp, -460, 0).scale).toBe(37)
+  })
+
+  it('is exactly reversible, so opening and closing the panel is a no-op', () => {
+    const vp = { scale: 12, offsetX: 301, offsetY: 77 }
+    expect(recentreViewport(recentreViewport(vp, -460, 0), 460, 0)).toEqual(vp)
+  })
+
+  it('does nothing at all when nothing changed', () => {
+    const vp = { scale: 8, offsetX: 5, offsetY: 6 }
+    expect(recentreViewport(vp, 0, 0)).toBe(vp)
+  })
+
+  it('moves both axes, because a window resize changes both', () => {
+    expect(recentreViewport({ scale: 4, offsetX: 100, offsetY: 100 }, -40, -60))
+      .toEqual({ scale: 4, offsetX: 80, offsetY: 70 })
+  })
+
+  it('stays on whole pixels — a fractional offset blurs the grid', () => {
+    const r = recentreViewport({ scale: 4, offsetX: 100, offsetY: 100 }, -33, -1)
+    expect(Number.isInteger(r.offsetX)).toBe(true)
+    expect(Number.isInteger(r.offsetY)).toBe(true)
+  })
+})
 
 describe('fit uses the largest integer scale, not the largest ladder rung', () => {
   /**
