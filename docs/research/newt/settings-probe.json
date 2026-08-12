@@ -1,0 +1,67 @@
+[
+  {
+    "name": "Settings",
+    "surfaces": []
+  },
+  {
+    "name": "Newt",
+    "surfaces": []
+  },
+  {
+    "name": "Color",
+    "surfaces": []
+  },
+  {
+    "name": "Share",
+    "surfaces": [
+      {
+        "role": "menu",
+        "label": "Share",
+        "x": 970,
+        "y": 48,
+        "w": 256,
+        "h": 152,
+        "text": "Post to community\nPublish and share a link\nCopy as PNG\nDownload PNG",
+        "items": [
+          {
+            "role": "menuitem",
+            "type": "button",
+            "text": "Post to community\nPublish and share a link",
+            "aria": null,
+            "checked": null,
+            "state": null,
+            "shortcut": null,
+            "w": 242,
+            "h": 57
+          },
+          {
+            "role": "menuitem",
+            "type": "button",
+            "text": "Copy as PNG",
+            "aria": null,
+            "checked": null,
+            "state": null,
+            "shortcut": null,
+            "w": 242,
+            "h": 36
+          },
+          {
+            "role": "menuitem",
+            "type": "button",
+            "text": "Download PNG",
+            "aria": null,
+            "checked": null,
+            "state": null,
+            "shortcut": null,
+            "w": 242,
+            "h": 36
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Layers",
+    "surfaces": []
+  }
+]

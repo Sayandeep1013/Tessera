@@ -111,6 +111,8 @@ Read [01](./specs/01-document-format.md) before any other.
 | 12 | [Agent Actions](./specs/12-agent-actions.md) | The registry, the look-act-verify loop, sessions, budgets |
 | 13 | [Visual Identity](./specs/13-visual-identity.md) | "Mosaic" — the direction, tokens, and what was rejected |
 | 14 | [Layers](./specs/14-layers.md) | Active layer, layer commands, the panel, the layer actions |
+| 15 | [Feedback and Input](./specs/15-feedback-and-input.md) | Honest agent outcomes, panel geometry, tooltips, zoom steps |
+| 16 | [Settings](./specs/16-settings.md) | The settings panel, theme, grids, symmetry, canvas resize |
 
 Process: [WORKFLOW.md](./WORKFLOW.md) — scope → spec → review → plan → build → score, iterating until ≥ 9/10.
 
