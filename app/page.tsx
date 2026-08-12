@@ -91,6 +91,13 @@ export default function EditorPage() {
           px: Array.from(l.px),
         })) ?? null,
       active: () => useDocStore.getState().layer,
+      // Layers alone cannot answer "is this 64x36 or 36x64" — a px array of
+      // 2304 entries is the same either way — and that is exactly what the
+      // resize probe has to check.
+      size: () => {
+        const d = useDocStore.getState().doc
+        return d ? { w: d.w, h: d.h } : null
+      },
       viewport: () => useEditorStore.getState().viewport,
     }
     return () => {

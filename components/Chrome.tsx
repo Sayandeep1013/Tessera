@@ -11,6 +11,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useDocStore, useEditorStore, type Tool } from '@/lib/store/editor'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
+import { refitViewport } from '@/lib/editor/refit'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { listStarters, loadLogo, loadStarter, type StarterName } from '@/lib/artwork-core/create'
 import { runUi } from '@/lib/store/ctx'
@@ -543,12 +544,7 @@ function loadExample(name: StarterName) {
   if (!before) return
   const after = { ...loadStarter(name), id: before.id }
   useDocStore.getState().commit({ type: 'replace_doc', label: `Example: ${name}`, before, after })
-
-  const el = document.querySelector('canvas')
-  if (el) {
-    const r = el.getBoundingClientRect()
-    useEditorStore.getState().setViewport(fitViewport(after, r.width, r.height))
-  }
+  refitViewport(after)
 }
 
 /** Reads a .tessera.json from disk. A failed parse surfaces — never silently discarded. */

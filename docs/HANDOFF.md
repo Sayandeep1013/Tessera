@@ -1,11 +1,13 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `e4ffa2c` · branch `main`, pushed.
+**Written:** 12 Aug 2026 · last unit **A2**, the Canvas tab size UI · branch
+`main`.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 301 tests across 20 files · production build clean · 6 viewports
-clean · `probe-layers` 42/42 · `probe-tooltip` 23/23 · `probe-agent-ui` 18/18 ·
-`probe-crisp` 4/4 · `probe-tools-ui` · zero runtime errors.
+**Green:** 327 tests across 21 files · production build clean · 6 viewports
+clean · `probe-canvas-size` 70/70 · `probe-layers` 42/42 · `probe-tooltip` 23/23 ·
+`probe-agent-ui` 18/18 · `probe-crisp` 4/4 · `probe-tools-ui` · zero runtime
+errors.
 
 ---
 
@@ -16,25 +18,24 @@ next, and carries a ready-to-use prompt for every remaining unit. It also
 carries the protocol that keeps the chain unbroken: what an agent must do when
 it finishes, so the next one can start without asking anything.
 
-The next unit is **A2 — the Canvas tab size UI**. Paste this:
+The next unit is **B1 — the File menu**. Paste this:
 
-> Read `docs/UNITS.md` and `docs/specs/16-settings.md §4`, then build unit **A2**:
-> the Canvas tab's size UI.
+> Read `docs/UNITS.md` and `docs/specs/17-file-menu.md`, then build unit **B1**:
+> the File menu structure, the Examples submenu, Duplicate, and Clear.
 >
-> A 3×3 grid of preset buttons (16, 32, 64, 128, 256, 16:9, Banner, Portrait,
-> Custom), paired W×H number inputs, and an apply button that shows the pending
-> size — `32×32`, not the word "Apply" — and is disabled while it equals the
-> current size. Clicking a preset fills the inputs; typing in the inputs selects
-> Custom; nothing resizes until apply is pressed. When a shrink would destroy
-> painted pixels, say how many before it happens (`pixelsLostOnResize`, error
-> code S-E2).
+> No account items — Dashboard, Explore and publish-to-community are out of
+> scope permanently. Clear empties the frame through `commit` so it is undoable,
+> is red, and confirms. New… confirms when the document has painted pixels,
+> because it replaces the document and cannot be undone. Duplicate forks to a
+> new draft with a fresh id.
 >
-> `resizeDoc` and the `resize` command already exist and are tested — this is
-> wiring. Commit through `useDocStore.commit()`.
+> Call `refitViewport` after anything that changes the document's dimensions, and
+> open the menu at 390 and 320 in a probe — `check-responsive.ts` does not open
+> popovers and will report clean while your menu hangs off the screen.
 >
 > Verify with `npm test`, `npm run typecheck`, `npm run build`,
-> `npx tsx tools/check-responsive.ts`, and screenshot the panel in both themes
-> and look at it. Then follow the finishing protocol in `docs/UNITS.md §0`.
+> `npx tsx tools/check-responsive.ts`, and screenshot both themes and look at
+> it. Then follow the finishing protocol in `docs/UNITS.md §0`.
 
 Before writing code, read `CLAUDE.md` and **§5 of this file** (traps). Every
 entry in §5 has already cost this repo an hour and none of them announce what
@@ -144,6 +145,7 @@ looked fine in a screenshot until magnified.
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
 | Layers | Active-layer state, 6 layer commands, the panel (add/copy/delete/reorder/rename/hide/select), 4 registry actions. **Scored 9/10** — see §6. |
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
+| Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. **Scored 9/10** — `docs/specs/16-settings.md`. |
 | Persistence | IndexedDB autosave. |
 
 ### Not built, and what is next
@@ -151,7 +153,7 @@ looked fine in a screenshot until magnified.
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: the Code and
 Timeline buttons are the last dead controls, Share is built but parked
-(`DEFERRED.md`), and units A2 through F remain.
+(`DEFERRED.md`), and units B1 through F remain.
 
 Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
 below 1100px, so a dead control never costs a live one its place. When you build
@@ -199,6 +201,17 @@ Every one of these has already cost time in this repo.
   layer above this one' })` times out against a button whose label is `Add`. And prefer
   `exact: true` — `{ name: 'Layer 2' }` also matches the eye button labelled "Hide Layer 2", which
   is a strict-mode violation rather than a wrong click, so at least it fails loudly.
+- **`check-responsive.ts` never opens a popover.** It measures the app in its
+  resting state, so a panel, menu or submenu can hang 66px off a 390px screen
+  while all six viewports report clean — which is exactly what the Settings panel
+  was doing until A2 opened it at 390 and 320 and measured the box. If your unit
+  adds anything that appears over the app, it is not covered by the responsive
+  check and you have to measure it yourself.
+- **A "message or nothing" value must be `null`, not `''`.** `pendingSize`
+  returns no text when a field is merely blank, and the panel decided whether to
+  shout using `note !== null`; an empty string is not null, so clearing the width
+  field replaced the helper line with a blank red paragraph. If a `??` chain
+  feeds a nullish test, normalise with `|| null` at the boundary.
 - **An outside-click closer must use `mousedown`, not `click`.** The click that opens a menu is
   still propagating when the effect registers, so a `click` listener closes it in the same gesture
   and the menu never appears.
@@ -332,6 +345,7 @@ npm run build                     # rm -rf .next first if a dev server has been 
 npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
+npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
 npx tsx tools/probe-zoom.ts       # measures the zoom gesture; run it before changing zoom
@@ -417,6 +431,11 @@ Recorded so they are not rediscovered as surprises.
   and tested, and it reuses an escape hatch that already existed rather than inventing a multi-layer
   command — but the undo entry is the whole document. Worth revisiting only if the agent starts
   working across layers routinely.
+- **`openFile()` in `Chrome.tsx` does not re-fit the viewport.** A file opened
+  from disk can be any size, and the view is still fitted to the previous
+  document — the same defect A2 fixed for resize and `loadExample`.
+  `refitViewport(doc)` from `lib/editor/refit.ts` is the whole fix; it was left
+  out of A2 so the commit stayed one unit.
 - **`components/Layers.tsx` has no outside-click closer**, deliberately: the panel is a working
   surface you click away from constantly. Escape and the toolbar button close it. If that turns out
   to be wrong, the fix is `mousedown`, never `click` — see §5.

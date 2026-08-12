@@ -74,10 +74,11 @@ See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
 - **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
   tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
   loop, one-undo sessions, bring-your-own-key), and layers (#46). Both units scored **9/10**.
-- **Next:** Phase 4 — animation timeline (#47), then share via Supabase (#48). The Timeline and
-  Share buttons in the top bar are the only dead controls left, and each is a real feature rather
-  than a wiring job. Read `docs/specs/14-layers.md §9` before #47: layers are per-frame, and whether
-  a layer belongs to one frame or all of them is the decision that unit left open.
+- **Next:** whatever `docs/UNITS.md` marks `NEXT` — it is the ledger and this line is not. As of
+  A2 that is **B1, the File menu**, with the code panel, exporters, layers phase 2 and animation
+  behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9` before the
+  animation unit: layers are per-frame, and whether a layer belongs to one frame or all of them is
+  the decision that unit left open.
 - **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent
   loop and at 32x32 produces recognisable, correctly-placed edits that damage nothing, but the
   output is still not artist-grade. Recorded in `docs/PHASE-0-FINDINGS.md`. The remaining gap is
