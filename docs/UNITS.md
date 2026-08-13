@@ -883,7 +883,7 @@ loss of typed text, and tests carried an alignment gap the unit had named itself
 
 ## D — Exporters · DONE
 
-**13 Aug 2026 · `<<COMMIT>>` · 9/10**
+**13 Aug 2026 · `cea7495` · 9/10**
 
 `lib/exporters/` — `geometry.ts` (`horizontalRuns`, `flattenFrame`), `types.ts`
 (`ExportResult`/`ExportOk`/`Exporter<O>`), and one file per format: `svg.ts`,
