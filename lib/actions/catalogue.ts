@@ -12,7 +12,7 @@ import { diff } from '../artwork-core/diff'
 import { cloneLayer, paintCommand, type PaintCell } from '../artwork-core/commands'
 import { createDoc } from '../artwork-core/create'
 import {
-  MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, compositeAt, nextLayerName,
+  MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, compositeAt, layerAlpha, layerBlendMode, nextLayerName,
 } from '../artwork-core/layers'
 import { MAX_PALETTE, type Doc } from '../artwork-core/schema'
 import { clampScale, fitViewport, zoomAt } from '../editor/viewport'
@@ -40,6 +40,12 @@ const layersOf = (doc: Doc, frame: number) =>
     index,
     name: l.n,
     hidden: Boolean(l.hidden),
+    // Read-only, always present (not conditional the way get_grid's
+    // `composite` key is) — 14-layers.md §12.7. No mutate/destructive action
+    // exists yet for either; this is so the agent is not blind to why a
+    // layer looks different from what it expects.
+    opacity: Math.round(layerAlpha(l) * 100),
+    blendMode: layerBlendMode(l),
   }))
 
 /**

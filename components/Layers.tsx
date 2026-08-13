@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * The layer panel. See docs/specs/14-layers.md §6.
+ * The layer panel. See docs/specs/14-layers.md §6 (phase 1) and §12.6 (phase 2:
+ * opacity, blend mode, merge/flatten, drag reorder).
  *
  * Rows are listed TOP LAYER FIRST — the reverse of `frames[].layers`, because
  * index 0 is the bottom of the stack and every editor draws a stack the way it
@@ -9,20 +10,28 @@
  * once so nothing else has to think about it.
  *
  * Every control here goes through commit(), so every one is a single undo step.
- * Select and hide are the two that differ: select is UI state (like choosing a
- * tool) and never enters history, while hide changes `hidden`, which is
- * serialized, so it does.
+ * Select is the one that differs: it is UI state (like choosing a tool) and
+ * never enters history.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { Tooltip } from './Tooltip'
-import { useDocStore } from '@/lib/store/editor'
+import { useDocStore, useEditorStore } from '@/lib/store/editor'
 import { chromeFor, useTier, type Tier } from '@/lib/editor/breakpoint'
 import { cloneLayer } from '@/lib/artwork-core/commands'
-import { MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, nextLayerName } from '@/lib/artwork-core/layers'
-import { CaretDown, CaretUp, Eye, EyeSlash, Plus } from './icons'
+import {
+  MAX_LAYERS, MAX_LAYER_NAME, cleanLayerName, layerAlpha, layerBlendMode, nextLayerName,
+} from '@/lib/artwork-core/layers'
+import { flattenCommand, mergeDownCommand } from '@/lib/artwork-core/merge-layers'
+import { BLEND_MODES, type BlendMode, type Layer } from '@/lib/artwork-core/schema'
+import { mergeReport } from '@/lib/editor/merge-report'
+import { CaretDown, CaretUp, DotsThree, Eye, EyeSlash, Plus } from './icons'
 
 const WIDTH: Record<Tier, number> = { wide: 248, compact: 248, tablet: 224, mobile: 224 }
+
+/** Where a drag currently stands. Indices are DISPLAY order (top-first), the
+ *  same order `rows` renders in — converted to array order only on commit. */
+type Drag = { pointerId: number; from: number; to: number }
 
 export function LayersPanel({ onClose }: { onClose: () => void }) {
   const doc = useDocStore((s) => s.doc)
@@ -30,9 +39,16 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
   const active = useDocStore((s) => s.layer)
   const setLayer = useDocStore((s) => s.setLayer)
   const commit = useDocStore((s) => s.commit)
+  const setNotice = useEditorStore((s) => s.setNotice)
   const tier = useTier()
   const c = chromeFor(tier)
   const [renaming, setRenaming] = useState<number | null>(null)
+  const [drag, setDrag] = useState<Drag | null>(null)
+  // The opacity slider's value while a drag is in progress but not yet
+  // committed — committing per `input` event would be sixty undo steps for
+  // one drag, so this holds the live number for display only.
+  const [pendingOpacity, setPendingOpacity] = useState<number | null>(null)
+  const rowRefs = useRef<Array<HTMLDivElement | null>>([])
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => {
@@ -46,6 +62,13 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
   const layers = doc.frames[frame]?.layers ?? []
   // Top of the stack first.
   const rows = layers.map((l, i) => ({ layer: l, i })).reverse()
+  const displayRows = (() => {
+    if (!drag) return rows
+    const copy = [...rows]
+    const [item] = copy.splice(drag.from, 1)
+    copy.splice(drag.to, 0, item!)
+    return copy
+  })()
 
   const add = () => {
     const at = active + 1
@@ -114,7 +137,93 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
     })
   }
 
+  const commitOpacity = (next: number) => {
+    const layer = layers[active]
+    if (!layer) return
+    const before = Math.round(layerAlpha(layer) * 100)
+    if (before === next) return
+    commit({ type: 'layer_opacity', label: 'Layer opacity', frame, at: active, before, after: next })
+  }
+
+  const setBlendMode = (mode: BlendMode) => {
+    const layer = layers[active]
+    if (!layer) return
+    const before = layerBlendMode(layer)
+    if (before === mode) return
+    commit({ type: 'layer_blend_mode', label: 'Layer blend mode', frame, at: active, before, after: mode })
+  }
+
+  const doMergeDown = () => {
+    const { cmd, result } = mergeDownCommand(doc, frame, active)
+    if (!cmd) return
+    commit(cmd)
+    setLayer(active - 1)
+    setNotice(mergeReport('Merged', result))
+  }
+
+  const doFlatten = () => {
+    const { cmd, result } = flattenCommand(doc, frame)
+    if (!cmd) return
+    commit(cmd)
+    setLayer(0)
+    setNotice(mergeReport('Flattened', result))
+  }
+
+  // ── drag reorder ──────────────────────────────────────────────────────────
+  //
+  // Window-level listeners, not element-level `setPointerCapture`: every move
+  // sets `drag.to`, which re-renders the reordered preview, and a captured
+  // pointer on a row that has just been reordered in the DOM is not reliable
+  // across that re-render. The window is not going anywhere.
+
+  const indexForY = (y: number): number => {
+    for (let i = 0; i < rows.length; i++) {
+      const rect = rowRefs.current[i]?.getBoundingClientRect()
+      if (rect && y < rect.top + rect.height / 2) return i
+    }
+    return rows.length - 1
+  }
+
+  const dragRef = useRef(drag)
+  dragRef.current = drag
+
+  useEffect(() => {
+    if (!drag) return
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerId !== dragRef.current?.pointerId) return
+      setDrag((d) => (d ? { ...d, to: indexForY(e.clientY) } : d))
+    }
+    const onUp = (e: PointerEvent) => {
+      const current = dragRef.current
+      if (!current || e.pointerId !== current.pointerId) return
+      const { from, to } = current
+      setDrag(null)
+      if (from === to) return
+      // Display order is top-first, the reverse of the array `layers` is
+      // stored in — flipping an index through `n - 1 - i` is the same remap
+      // either direction, so the same formula converts both ends of the drag.
+      const n = layers.length
+      const arrFrom = n - 1 - from
+      const arrTo = n - 1 - to
+      commit({ type: 'layer_move', label: 'Reorder layer', frame, from: arrFrom, to: arrTo })
+      setLayer(arrTo)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag !== null])
+
+  const startDrag = (displayIndex: number, e: React.PointerEvent) => {
+    setDrag({ pointerId: e.pointerId, from: displayIndex, to: displayIndex })
+  }
+
   const full = layers.length >= MAX_LAYERS
+  const activeLayerObj: Layer | undefined = layers[active]
+  const opacityValue = pendingOpacity ?? (activeLayerObj ? Math.round(layerAlpha(activeLayerObj) * 100) : 100)
 
   return (
     <div
@@ -153,19 +262,81 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
       </div>
 
       <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: 4 }}>
-        {rows.map(({ layer, i }) => (
+        {displayRows.map(({ layer, i }, displayIndex) => (
           <LayerRow
             key={`${i}-${layer.n}`}
+            rowRef={(el) => { rowRefs.current[displayIndex] = el }}
             name={layer.n}
             hidden={Boolean(layer.hidden)}
             active={i === active}
             renaming={renaming === i}
+            dragging={drag?.from === displayIndex}
             onSelect={() => setLayer(i)}
             onToggle={() => toggle(i)}
             onStartRename={() => setRenaming(i)}
             onRename={(v) => rename(i, v)}
+            onDragStart={(e) => startDrag(displayIndex, e)}
           />
         ))}
+      </div>
+
+      <div
+        style={{
+          flex: 'none',
+          padding: '6px 10px',
+          borderTop: '1px solid var(--line)',
+          borderBottom: '1px solid var(--line)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ font: 'var(--t-label-sm)', color: 'var(--muted)', flex: 'none' }}>Opacity</span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={opacityValue}
+            aria-label="Layer opacity"
+            disabled={!activeLayerObj}
+            onChange={(e) => setPendingOpacity(Number(e.currentTarget.value))}
+            onPointerUp={() => {
+              if (pendingOpacity !== null) commitOpacity(pendingOpacity)
+              setPendingOpacity(null)
+            }}
+            onKeyUp={() => {
+              if (pendingOpacity !== null) commitOpacity(pendingOpacity)
+              setPendingOpacity(null)
+            }}
+            onBlur={() => {
+              if (pendingOpacity !== null) commitOpacity(pendingOpacity)
+              setPendingOpacity(null)
+            }}
+            style={{ flex: 1, accentColor: 'var(--accent)' }}
+          />
+          <span className="tabular" style={{ font: 'var(--t-label-sm)', color: 'var(--muted)', width: 32, textAlign: 'right' }}>
+            {opacityValue}%
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ font: 'var(--t-label-sm)', color: 'var(--muted)', flex: 'none' }}>Blend</span>
+          <select
+            aria-label="Layer blend mode"
+            value={activeLayerObj ? layerBlendMode(activeLayerObj) : 'normal'}
+            disabled={!activeLayerObj}
+            onChange={(e) => setBlendMode(e.currentTarget.value as BlendMode)}
+            style={{
+              flex: 1, height: 26, padding: '0 6px', borderRadius: 'var(--r-md)',
+              background: 'var(--panel2)', border: '1px solid var(--line)',
+              font: 'var(--t-label-sm)', color: 'var(--fg)',
+            }}
+          >
+            {BLEND_MODES.map((m) => (
+              <option key={m} value={m}>{m[0]!.toUpperCase() + m.slice(1)}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div
@@ -175,7 +346,6 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
           alignItems: 'center',
           gap: 2,
           padding: 4,
-          borderTop: '1px solid var(--line)',
         }}
       >
         <TextBtn
@@ -201,6 +371,31 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
         />
         <IconBtn title="Move down" Icon={CaretDown} disabled={active <= 0} onClick={() => move(-1)} />
       </div>
+
+      <div
+        style={{
+          flex: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          padding: '0 4px 4px',
+          borderTop: '1px solid var(--line)',
+          paddingTop: 4,
+        }}
+      >
+        <TextBtn
+          label="Merge down"
+          title={active === 0 ? 'Nothing below the bottom layer' : `Combine this layer into "${layers[active - 1]?.n || 'Untitled'}"`}
+          disabled={active === 0}
+          onClick={doMergeDown}
+        />
+        <TextBtn
+          label="Flatten"
+          title={layers.length <= 1 ? 'Already one layer' : 'Combine every layer into one'}
+          disabled={layers.length <= 1}
+          onClick={doFlatten}
+        />
+      </div>
     </div>
   )
 }
@@ -208,16 +403,20 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
 // ─── row ─────────────────────────────────────────────────────────────────────
 
 function LayerRow({
-  name, hidden, active, renaming, onSelect, onToggle, onStartRename, onRename,
+  rowRef, name, hidden, active, renaming, dragging,
+  onSelect, onToggle, onStartRename, onRename, onDragStart,
 }: {
+  rowRef: (el: HTMLDivElement | null) => void
   name: string
   hidden: boolean
   active: boolean
   renaming: boolean
+  dragging: boolean
   onSelect: () => void
   onToggle: () => void
   onStartRename: () => void
   onRename: (v: string) => void
+  onDragStart: (e: React.PointerEvent) => void
 }) {
   const [hover, setHover] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -228,6 +427,7 @@ function LayerRow({
 
   return (
     <div
+      ref={rowRef}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
       style={{
@@ -236,8 +436,23 @@ function LayerRow({
         gap: 2,
         borderRadius: 'var(--r-md)',
         background: active ? 'var(--accent-soft)' : hover ? 'var(--hover)' : 'transparent',
+        opacity: dragging ? 0.5 : 1,
       }}
     >
+      <Tooltip label="Drag to reorder" placement="left">
+      <button
+        type="button"
+        aria-label={`Reorder ${name || 'untitled layer'}`}
+        onPointerDown={onDragStart}
+        style={{
+          width: 20, height: 28, display: 'grid', placeItems: 'center', flex: 'none',
+          borderRadius: 'var(--r-md)', color: 'var(--muted)', cursor: 'grab', touchAction: 'none',
+        }}
+      >
+        <DotsThree size={14} style={{ transform: 'rotate(90deg)' }} />
+      </button>
+      </Tooltip>
+
       <Tooltip label={hidden ? 'Show this layer' : 'Hide this layer'} placement="left">
       <button
         type="button"

@@ -1,15 +1,16 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `c9fa7f7` (unit **D**, the exporters,
-plus the symmetry axis line built right after it) · branch `main`, pushed.
+**Written:** 13 Aug 2026 · last commit `<<COMMIT>>` (unit **E**, layers phase 2 —
+opacity, blend modes, merge/flatten, drag reorder) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 657 tests across 42 files · production build clean · 6 viewports
+**Green:** 681 tests across 44 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
 `probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
 `probe-export` 68/68, `probe-symmetry` 20/20, `probe-layers` 42/42,
-`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
-`probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
+`probe-merge` 24/24, `probe-tooltip` 23/23, `probe-agent-ui` 18/18,
+`probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime
+errors.
 
 ---
 
@@ -28,7 +29,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **E — layers phase 2**. Its prompt is in `UNITS.md`, in the E
+The next unit is **F — animation**. Its prompt is in `UNITS.md`, in the F
 block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
@@ -147,7 +148,7 @@ looked fine in a screenshot until magnified.
 | Responsive | 4 tiers (mobile/tablet/compact/wide), all 6 measured viewports clean (320 was added this session and found a real overflow). |
 | Visual identity | "Mosaic" — tiles, one accent from the product's own palette, Geist Mono numerals, two pixel loaders. |
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
-| Layers | Active-layer state, 6 layer commands, the panel (add/copy/delete/reorder/rename/hide/select), 4 registry actions. **Scored 9/10** — see §6. |
+| Layers | Active-layer state, 8 layer commands (add/copy/delete/reorder/rename/hide/opacity/blend), merge down and flatten, the panel (add/copy/delete/reorder-by-drag/rename/hide/opacity/blend/merge/flatten), 4 registry actions. **Scored 9/10** twice — `14-layers.md §6` (phase 1) and `§12` (phase 2, opacity/blend/merge/drag). |
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. Symmetry now draws its own mirror line(s) on the canvas — dashed, difference-blended against `--accent`, visible at every zoom. **Scored 9/10** — `docs/specs/16-settings.md §3.1`. |
 | Persistence | IndexedDB autosave. |
@@ -157,8 +158,8 @@ looked fine in a screenshot until magnified.
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: **Timeline is the
-last dead control**, Share is built but parked (`DEFERRED.md`), and units E
-and F remain.
+last dead control**, Share is built but parked (`DEFERRED.md`), and unit F
+(animation) remains.
 
 Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
 below 1100px, so a dead control never costs a live one its place. When you build
@@ -305,6 +306,19 @@ Every one of these has already cost time in this repo.
   is a 400 on flash-lite; a model listed by `models.list()` can still 404, so probe before trusting.
   The resolved model is cached at module scope because resolution costs a real request against a
   5-per-minute budget.
+- **`setPointerCapture` does not survive a re-render of the element that called it.** A drag handle
+  whose `pointermove` handler updates state (to preview the drop position, say) re-renders its own
+  row on every move; the captured element is no longer reliably in the DOM path the next pointer
+  event needs. Register `pointermove`/`pointerup` on `window` in a `useEffect` instead, reading the
+  latest drag state through a ref rather than the handler's own closure — see `Layers.tsx`'s row
+  reorder (`14-layers.md §12.6`, `HANDOFF §11`).
+- **Setting a React-controlled `<input>`'s `.value` directly from outside React is invisible to it.**
+  React shadows the native `value` setter to detect real changes, so `el.value = x` followed by
+  dispatching `input` does not register — `onChange` never fires. Only a probe or script driving a
+  controlled input from outside React hits this (real user typing goes through the browser's own
+  input path and is unaffected); the fix is calling the *native* prototype's setter explicitly:
+  `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(el, value)`
+  before dispatching `input`. See `tools/probe-merge.ts`'s opacity-slider check.
 
 ---
 
@@ -431,6 +445,7 @@ MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
 npx tsx tools/check-responsive.ts # overflow + target size at 6 viewports; exits non-zero
 npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
+npx tsx tools/probe-merge.ts      # 24 checks: opacity, blend mode, merge, flatten, drag reorder
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
 npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
 npx tsx tools/probe-export.ts     # 68 checks: six formats, real downloads, React pixel-identity, the CSS cap
@@ -587,9 +602,22 @@ Recorded so they are not rediscovered as surprises.
   never built. D's golden tests worked around it with hand-built documents rather than expanding the
   fixture set incidentally; a unit that actually needs it (multi-frame export, the renderer's own
   golden-image tests) should build it deliberately, once, for everyone downstream.
-- **`flattenFrame` (`lib/exporters/geometry.ts`) composites with topmost-non-transparent-wins, not a
-  true alpha blend.** Correct today because no layer carries an opacity value; E adds one. See
-  `08-exporters.md §12.1` and E's context handover in `UNITS.md`.
+- ~~`flattenFrame` composites with topmost-non-transparent-wins, not a true alpha blend, and E adds
+  opacity.~~ **Decided in E, deliberately kept, not fixed.** `08-exporters.md §12.1` and
+  `14-layers.md §12.4`: six exporters each re-deriving a real alpha-blend compositor would cost more
+  than it buys, and CSS/React's whole value is real DOM layers a browser still composites — turning
+  that into a pre-flattened raster would be a regression in the format that mattered least to fix.
+  Merge and flatten (new in E) are the escape hatch when an exact rendered result is what's wanted. A
+  semi-transparent or blended overlap in an *unflattened* multi-layer export can still show the wrong
+  colour — documented, accepted, not eliminated.
+- **`components/Layers.tsx`'s drag reorder uses window-level pointer listeners, not
+  `setPointerCapture`.** The natural-looking approach — capture the pointer on the grip button —
+  breaks the moment a `pointermove` handler updates state and re-renders the row it captured on;
+  event delivery to the now-reordered element becomes unreliable after the first move. A
+  `useEffect`-registered `pointermove`/`pointerup` pair on `window`, reading the latest drag state
+  through a ref, is what actually survives a mid-drag re-render. Worth knowing before any other
+  drag-to-reorder control gets built in this codebase — the File menu's rows, or an animation
+  timeline's frames, would hit the same wall.
 
 ---
 

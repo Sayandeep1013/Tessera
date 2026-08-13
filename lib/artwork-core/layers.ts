@@ -7,7 +7,7 @@
  * index still valid, what do I call the next one.
  */
 
-import type { Doc } from './schema'
+import { DEFAULT_BLEND_MODE, DEFAULT_OPACITY, type BlendMode, type Doc, type Layer } from './schema'
 
 /**
  * Ceiling on layers per frame, enforced by `add_layer` and by the panel —
@@ -66,4 +66,14 @@ export function nextLayerName(doc: Doc, frame: number): string {
 /** Trim, collapse whitespace, and cut to the format's limit. */
 export function cleanLayerName(raw: string): string {
   return raw.replace(/\s+/g, ' ').trim().slice(0, MAX_LAYER_NAME)
+}
+
+/** A layer's opacity as a fraction 0-1. Omitted `o` means fully opaque. */
+export function layerAlpha(layer: Layer): number {
+  return (layer.o ?? DEFAULT_OPACITY) / 100
+}
+
+/** A layer's blend mode. Omitted `mode` means 'normal'. */
+export function layerBlendMode(layer: Layer): BlendMode {
+  return layer.mode ?? DEFAULT_BLEND_MODE
 }

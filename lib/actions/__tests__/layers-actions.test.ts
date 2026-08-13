@@ -176,8 +176,8 @@ describe('reads report layers', () => {
     runAction('set_layer_visible', { index: 1, visible: false }, h.ctx)
     const d = state(h.ctx).data
     expect(d.layers).toEqual([
-      { index: 0, name: 'base', hidden: false },
-      { index: 1, name: 'over', hidden: true },
+      { index: 0, name: 'base', hidden: false, opacity: 100, blendMode: 'normal' },
+      { index: 1, name: 'over', hidden: true, opacity: 100, blendMode: 'normal' },
     ])
     expect(d.activeLayer).toBe(0)
   })

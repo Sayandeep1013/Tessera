@@ -118,6 +118,8 @@ File extension `.tessera.json`. MIME `application/json`. UTF-8, LF line endings,
 | `frames[].layers` | array | ≥ 1 | Bottom-to-top paint order. |
 | `frames[].layers[].n` | string | 0–32 chars | Layer name. |
 | `frames[].layers[].hidden` | bool? | — | Omitted when false. Hidden layers still serialize. |
+| `frames[].layers[].o` | int? | 0–100 | Opacity, percent. Omitted means 100 (opaque). Added in [14 §12.2](./14-layers.md#122-format-no-version-bump); no version bump — see there. |
+| `frames[].layers[].mode` | string? | one of `normal`, `multiply`, `screen`, `overlay`, `darken`, `lighten`, `difference`, `exclusion` | Blend mode. Omitted means `normal`. Same addition as `o`. |
 | `frames[].layers[].px` | string[] | length === `h` | Each row length === `w`. |
 | `meta.createdAt` | string | ISO 8601 | |
 | `meta.updatedAt` | string | ISO 8601 | Written on every mutation. |
@@ -203,6 +205,11 @@ whichever layer happens to be active. That is 14 §2.
 
 **Do not "simplify" this away.** It is the one piece of forward-compatibility in the format, and it
 was a deliberate decision (see the design review).
+
+**The same bet paid off a second time in task E** ([14 §12](./14-layers.md#12-phase-2--opacity-blend-modes-mergeflatten-drag-reorder)):
+per-layer opacity and blend mode are two more optional fields, defaulting to "as if this feature did
+not exist" exactly the way `hidden` already did, so they needed no version bump either. `v` is still
+`1`.
 
 ---
 

@@ -18,7 +18,7 @@
 
 import { cloneDoc } from './codec'
 import type { Op } from './ops'
-import type { Doc, Frame, Layer, PaletteEntry } from './schema'
+import type { BlendMode, Doc, Frame, Layer, PaletteEntry } from './schema'
 
 /** [x, y, before, after] */
 export type PaintCell = [number, number, number, number]
@@ -47,6 +47,8 @@ export type EditorCommand =
   | { type: 'layer_move'; label: string; frame: number; from: number; to: number }
   | { type: 'layer_rename'; label: string; frame: number; at: number; before: string; after: string }
   | { type: 'layer_visible'; label: string; frame: number; at: number; before: boolean; after: boolean }
+  | { type: 'layer_opacity'; label: string; frame: number; at: number; before: number; after: number }
+  | { type: 'layer_blend_mode'; label: string; frame: number; at: number; before: BlendMode; after: BlendMode }
   | { type: 'frame_add'; label: string; at: number; frame: Frame }
   | { type: 'frame_delete'; label: string; at: number; frame: Frame }
   | { type: 'frame_duration'; label: string; at: number; before: number; after: number }
@@ -165,6 +167,26 @@ export function applyCommand(doc: Doc, cmd: EditorCommand): Doc {
       return stamp(next)
     }
 
+    case 'layer_opacity': {
+      const next = cloneDoc(doc)
+      const layer = next.frames[cmd.frame]?.layers[cmd.at]
+      if (!layer) return next
+      // Omitted rather than 100 when opaque, matching `hidden`'s own rule —
+      // the runtime shape should not drift from what the file would write.
+      if (cmd.after === 100) delete layer.o
+      else layer.o = cmd.after
+      return stamp(next)
+    }
+
+    case 'layer_blend_mode': {
+      const next = cloneDoc(doc)
+      const layer = next.frames[cmd.frame]?.layers[cmd.at]
+      if (!layer) return next
+      if (cmd.after === 'normal') delete layer.mode
+      else layer.mode = cmd.after
+      return stamp(next)
+    }
+
     case 'frame_add': {
       const next = cloneDoc(doc)
       next.frames.splice(cmd.at, 0, cloneFrame(cmd.frame))
@@ -252,6 +274,15 @@ export function invertCommand(cmd: EditorCommand): EditorCommand {
       return { ...cmd, before: cmd.after, after: cmd.before }
 
     case 'layer_visible':
+      return { ...cmd, before: cmd.after, after: cmd.before }
+
+    // Self-inverse under exchange, like layer_visible. Not merged with it:
+    // sharing a branch widens before/after across unrelated value types and
+    // neither case type-checks.
+    case 'layer_opacity':
+      return { ...cmd, before: cmd.after, after: cmd.before }
+
+    case 'layer_blend_mode':
       return { ...cmd, before: cmd.after, after: cmd.before }
 
     case 'frame_add':

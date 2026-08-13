@@ -524,3 +524,321 @@ From `docs/HANDOFF.md §6.5`, plus what this spec added:
 - The `invertCommand` palette regression (§0.2) fixed and pinned by a test
 - Screenshots of the panel in both themes looked at
 - Scored across the six dimensions with an honest table, lowest taken as the overall, ≥ 9
+
+---
+
+## 12. Phase 2 — opacity, blend modes, merge/flatten, drag reorder
+
+Unit E. Everything below is new; §1–§11 describe phase 1, which is built and unchanged by this
+section except where it says otherwise.
+
+### 12.1 Scope
+
+**In scope:** per-layer opacity, per-layer blend mode, merge down, flatten, and reordering a layer
+by dragging its row (the panel has only had Move up/Move down since phase 1).
+
+**Out of scope, deliberately:**
+
+| Not built | Why |
+|---|---|
+| New agent actions for any of this | Same reasoning phase 1 already used for duplicate, rename and reorder (§7): prompt weight on every turn, and — unlike `add_layer`/`set_layer_visible`, which change what gets drawn — opacity and blend mode change how something *already drawn* looks, which is a finishing move, not a drawing capability. `get_state` reports both fields read-only so the agent is not blind to them; see §12.7. Revisit if asked for. |
+| A true alpha-blended compositor for the eyedropper, exporters, or the AI text grid | §12.4. |
+| Per-frame divergence of opacity/blend/order | Same standing note as phase 1 §9 — #47's problem. |
+
+### 12.2 Format: no version bump
+
+`docs/HANDOFF.md`'s handover for this unit says "opacity is a format change" and that
+`01-document-format.md` "moves with it." Both are true in the sense that the document format spec
+needs new words — but not in the sense of needing `FORMAT_VERSION` to become `2`. **Rule 10:** the
+literal reading (bump `v`, write a migration, add a fixture at the old version) is corrected here,
+because the format already has a working precedent for exactly this shape of addition.
+
+`hidden` is the precedent. `docs/specs/01-document-format.md §0.1` (written for phase 1) established
+that `layers[].hidden` was already an optional field nothing produced yet, and adding a producer for
+it required no version bump because an old file simply lacks the field and the reader supplies the
+default. `o` (opacity) and `mode` (blend mode) are the same shape: **optional, default to "as if this
+feature did not exist"** — `o` omitted means fully opaque, `mode` omitted means `normal`, and a
+`normal`-mode fully-opaque layer renders exactly as phase 1 always rendered it. A v1 file with neither
+field parses today, unchanged, and produces a document that behaves identically to one that explicitly
+says `"o": 100, "mode": "normal"` on every layer.
+
+A version bump exists to protect against a reader that does not understand a new field silently
+misinterpreting a document. That risk is not present here: an old build reading a *new* file ignores
+`o`/`mode` (zod's `.optional()` on an unknown key is a non-issue only because these are on our own
+schema — a build that predates this unit simply has no schema field for them and `serializedLayerSchema`
+would need `.passthrough()` for that direction to matter, which is a separate, pre-existing question
+this unit does not need to answer) and a *new* build reading an *old* file gets the sensible defaults
+above. `migrations` stays empty. `v` stays `1`.
+
+`01-document-format.md §3`'s field table gains two rows (below), and §6 gets a short addendum
+recording this decision rather than silently drifting from what the code does — the same discipline
+phase 1 held itself to.
+
+| Path | Type | Constraint | Notes |
+|---|---|---|---|
+| `frames[].layers[].o` | int? | 0–100 | Opacity, percent. Omitted means 100 (opaque) — never serialized when 100, matching how `hidden` is never serialized when false. |
+| `frames[].layers[].mode` | string? | one of §12.2.1 | Blend mode. Omitted means `"normal"`, never serialized when `"normal"`. |
+
+An integer 0–100 rather than a 0–1 float: this format's other numbers (`w`, `h`, `ms`) are all
+integers, and `"o": 62` reads better in a hand-edited file than `"o": 0.62` — consistent with §1's
+whole reason for existing, that the format is meant to be read.
+
+#### 12.2.1 Blend modes
+
+Eight, all natively supported by `CanvasRenderingContext2D.globalCompositeOperation` under the same
+names the CSS Compositing spec uses, so the renderer needs no blend math of its own — see §12.3.
+Chosen as the subset every mainstream pixel editor exposes as "the common ones," leaving out the six
+non-separable HSL modes (`hue`, `saturation`, `color`, `luminosity`) as a deliberate cut: they are
+rare in pixel art, and each one right now would be one more row in a dropdown nobody asked for.
+
+```ts
+export const BLEND_MODES = [
+  'normal', 'multiply', 'screen', 'overlay',
+  'darken', 'lighten', 'difference', 'exclusion',
+] as const
+export type BlendMode = typeof BLEND_MODES[number]
+```
+
+### 12.3 Renderer
+
+`drawLayer`'s caller (`renderDoc`'s step 3 loop) sets `ctx.globalAlpha = (layer.o ?? 100) / 100` and
+`ctx.globalCompositeOperation` from a fixed `BlendMode → GlobalCompositeOperation` table (identity for
+all eight names above — the CSS spec and the Canvas spec share vocabulary here) before drawing the
+layer's runs, and resets both to `1` / `'source-over'` immediately after, so a later step (grid,
+symmetry axis, border) is never accidentally composited through a stale blend mode. This is the same
+shape the grid and the symmetry axis already use (`ctx.save()`/`ctx.restore()` around a local
+`globalCompositeOperation` change) — reusing a pattern rather than inventing a second one.
+
+Skipped entirely for a hidden layer, as today. A layer at `o: 0` still walks the draw loop rather than
+being special-cased out of it — `fillRect` at `globalAlpha = 0` is correct and cheap, and a special
+case here is one more thing to keep in sync with the opacity slider's own bounds.
+
+### 12.4 The eyedropper, exporters, and the AI grid stay on the phase-1 approximation — decided, not open
+
+`08-exporters.md §12.1` flagged this as the thing E had to decide: `flattenFrame`/`compositeAt` pick
+the topmost non-transparent index, which is exactly correct when every layer is opaque and
+`normal`-blend, and stops being exactly correct the moment a layer has real transparency or a blend
+mode — the *rendered* pixel is now a blended colour that may not equal any single layer's stored
+index, let alone the topmost one.
+
+**Decision: they still return an index, and it is still the topmost-non-transparent one.** Building a
+"true" compositor for these call sites would mean one of two things, and both are worse than an
+honest approximation:
+
+1. Have `compositeAt` return a synthesized RGB instead of a palette index. But every consumer of
+   `compositeAt` — the eyedropper, `flattenFrame` (all six exporters), the AI text grid — exists
+   specifically because this format is index-based (§1: "one character per pixel"). An eyedropper
+   that "picks" a colour with no palette entry has nothing useful to do with it: add it to the
+   palette on every click (surprising, and burns the 36-slot budget on hovering), or refuse (a tool
+   that sometimes doesn't work), or snap it to the nearest existing entry (fine, but "nearest" is
+   exactly what `compositeAt` already gives you for the common case and a worse approximation for
+   the blended case, since it discards the actual blend the user is looking at rather than
+   representing it honestly as "not one of your colours").
+2. Have the exporters run a real per-pixel compositor and *then* quantise the result, so a
+   multi-layer document with blending gets an SVG/CSS/React export that looks like the canvas.
+   Rejected for this unit on cost/benefit: it would make export non-deterministic in the sense that
+   changes to any layer's opacity or blend mode ripple into the palette that gets exported (colours
+   appear and disappear from the output that were never in the working palette), which contradicts
+   §1's "rows of single characters" premise that the exported grid *is* the document's own palette,
+   not a derived one. It is also a second compositor to keep in sync with the renderer's, indefinitely.
+
+So: rule 3 wins. The document's pixels are indices, the renderer is the one place blended appearance
+exists, and every other consumer reads the document as indices, same as before this unit. This is a
+knowingly-coarser edge than phase 1's — phase 1's approximation was exact for every document it could
+then produce; this one is exact only when every layer stays default. It is written down here so it is
+found by reading rather than by someone noticing an export does not match what they see on screen.
+
+**Merge and flatten are the escape hatch.** A layer with real opacity or a real blend mode renders
+correctly on the canvas; if its author wants that appearance to survive into an export or a picked
+colour, merging it down or flattening the document bakes the true blended colour into the palette
+(§12.5) — at which point `compositeAt` is exact again, because there is only one layer to be topmost
+of.
+
+### 12.5 Merge down and flatten
+
+**No new command types.** §1's original phrase — "expressible as delete + paint" — is kept literally:
+both operations are pure functions in a new module, `lib/artwork-core/merge-layers.ts`, that build a
+`batch` out of commands that already exist (`palette_add`, `paint`, `layer_delete`), the same shape
+`pasteImageCommand` already uses for "paint plus maybe new colours, as one undo step." Nothing about
+`applyCommand`/`invertCommand` changes.
+
+- **`mergeDownCommand(doc, frame, at)`** combines layer `at` into layer `at - 1` and removes layer
+  `at`. No-op (`cmd: null`) when `at === 0` — there is nothing below the bottom layer; the panel
+  disables the button in that state rather than calling this and discarding the result.
+- **`flattenCommand(doc, frame)`** combines every layer in the frame into layer `0` and removes every
+  layer above it. No-op when the frame already has one layer.
+
+Both compute the **true blended colour** at every pixel — real per-layer opacity, real blend mode,
+walked bottom-to-top exactly as the renderer draws (§12.5.1) — then hand the whole `w×h` RGBA buffer
+to the *existing* `quantise()` (`lib/artwork-core/quantise.ts`, built for paste-image): reuse an
+existing palette entry within `REUSE_MAX` (redmean ≤ 24), else claim a free slot, else — only once the
+palette is genuinely full — snap to the nearest entry and report `clipped: true`. This is deliberately
+the same three-rule ladder paste-image already uses and already has tests for, not a new one merge
+invents: "what happens when a reduction needs more colours than there is room for" is one question in
+this codebase, asked and answered once.
+
+Why compute real colour at all rather than reusing `compositeAt`'s cheap topmost-wins answer (§12.4's
+decision, restated for the opposite call site): merge and flatten are the one place in the app whose
+entire job is "collapse layers into fewer layers, keeping what it looked like." Using the cheap
+approximation here would make merging a 50%-opacity overlay *silently discard the 50%* — the merged
+layer would look like the overlay was drawn at full strength, which is exactly the kind of surprise
+rule 7 exists to catch, and worse because nothing indicates it happened; the stroke is still there,
+just the wrong colour. So the two call sites make opposite choices for the same underlying reason
+(honesty about what the format can and cannot represent): §12.4 declines to fake precision it cannot
+promise everywhere, and §12.5 pays for real precision exactly where the operation's whole point is
+"make this permanent."
+
+**Command shape**, forward order (batch applies children in array order, §2):
+
+```
+flatten:   [palette_add?, paint(layer 0, blended pixels), layer_delete(top), …, layer_delete(1)]
+mergeDown: [palette_add?, paint(layer at-1, blended pixels), layer_delete(at)]
+```
+
+`palette_add` first (its added entries are what the `paint` cells reference — the same ordering
+`pasteImageCommand` uses and for the same reason). Deletes proceed **top index first** so that every
+`layer_delete`'s `at` is valid at the moment it applies without needing to account for earlier deletes
+shifting later indices — deleting from above never moves anything below it. `batch`'s existing inverse
+(reverse the array, invert each child) reconstructs the original stack exactly: each `layer_delete`'s
+inverse is a `layer_add` at the same index, so replaying them bottom-up (the reversed order) rebuilds
+layers `1..top` at their original positions before the final `paint`⁻¹ restores layer 0's original
+pixels and `palette_pop` removes the entries this operation added. No new inverse logic was written —
+this is `batch` doing exactly what §2 already specified it to do, exercised on a longer chain than
+phase 1 ever built one.
+
+**Reporting.** Both functions return `{ cmd, result }` where `result` matches `PasteResult`'s shape
+(`added`, `colours`, `clipped`) plus `layersConsumed` — the notice channel gets a sentence in the same
+voice as paste's: *"Flattened 3 layers. Added 2 colours."* or, in the clipped case, *"...; the palette
+was full, so 4 pixels were approximated to the nearest colour."* Never a silent flatten — rule 7.
+
+#### 12.5.1 The compositor, `lib/artwork-core/blend.ts`
+
+Pure, no DOM, imports nothing but the schema types — same constraint as everything else in
+`artwork-core`. Standard alpha-compositing-with-blend-functions, per the CSS Compositing and Blending
+spec (the same formula the canvas itself implements, reproduced here because artwork-core cannot call
+into a `CanvasRenderingContext2D` to get it):
+
+```ts
+export function compositeStack(doc: Doc, layers: readonly Layer[]): Rgba
+```
+
+`layers` is passed explicitly rather than a frame index — the two callers (§12.5) each want a
+different subset: `mergeDownCommand` composites exactly two layers, `flattenCommand` the whole stack.
+For each pixel, starting from a transparent backdrop and walking `layers` **bottom to top** (array
+order — matches the renderer's own draw loop), skipping `hidden`:
+
+- source colour/alpha come from the palette entry at that pixel's index (`transparent`/index 0 →
+  alpha 0) times the layer's own opacity (`(layer.o ?? 100) / 100`)
+- `Cs_mixed = (1 − αb)·Cs + αb·B(Cb, Cs)` — the blend function only applies where the backdrop already
+  has something to blend against; where it is still fully transparent, the layer shows through as
+  plain source, which is what "nothing is there yet" has to mean
+- `Co = (1 − αs/αo)·Cb + (αs/αo)·Cs_mixed`, `αo = αs + αb·(1 − αs)` — standard non-premultiplied
+  "over," with `Cs_mixed` standing in for the source colour
+
+`B(Cb, Cs)` for the eight modes in §12.2.1, each a per-channel function on 0–255 values (`multiply`,
+`screen`, `darken`, `lighten`, `difference`, `exclusion` are direct; `overlay` is hard-light with its
+arguments swapped, same as the spec defines it; `normal` is `B(Cb, Cs) = Cs`, which collapses the
+whole formula to plain alpha-over — the existing, unglamorous behaviour, recovered as the zero case
+rather than special-cased).
+
+**Verified against the real renderer, not just against hand arithmetic.** Unit tests in
+`blend.test.ts` check the eight formulas against values worked out by hand (multiply of pure red over
+pure blue, etc.) and the `normal`-mode case against plain alpha-over. `tools/probe-merge.ts` (a new
+browser probe) additionally builds a real two-layer document with a non-default opacity and blend
+mode, reads the **rendered canvas pixel** at a known cell through `window.__tessera`, and asserts it
+equals `compositeStack`'s prediction for that cell before quantisation — the same "don't just trust
+the formula, sample the real output" discipline D used for React export pixel-identity.
+
+### 12.6 Panel
+
+Three additions to the structure in §6.1, in order top to bottom:
+
+**1. A drag handle per row**, alongside the existing eye button, for reordering by drag. Pointer-based
+(`onPointerDown`/`onPointerMove`/`onPointerUp` on the handle, `setPointerCapture` so the drag survives
+leaving the row's bounds), not native HTML5 drag-and-drop — this codebase already prefers pointer
+events for exactly this reason (`HANDOFF §5`'s wheel-listener note is the same family of decision: a
+browser-native input gesture that only sort-of does what a pixel editor needs). The row order updates
+visually as the pointer crosses a neighbour's midpoint; **only the final position commits**, as one
+`layer_move`, on pointer-up — a drag is one undo step, exactly like every other panel control (§6.1's
+closing line: "every one of these goes through `commit()`, so every one is a single undo step").
+Move up/Move down stay: a drag handle does not help someone using a keyboard or a screen reader, and
+removing a working control to add a nicer one for a different input method is not a trade this unit
+makes.
+
+**2. An active-layer strip**, between the row list and the footer, always showing the active layer's
+name and its two new controls — an opacity `<input type="range">` (0–100, `accent-color: var(--accent)`,
+the browser's own thumb rather than a custom one, matching this codebase's preference for dressed-up
+native controls over reimplementing widgets — the rename `<input>` two lines above it in the same
+component is the precedent) with a numeric readout, and a blend-mode `<select>` styled with
+`--panel2`/`--line`/`--fg` the same way the rename input is. Both commit on change — the range input
+commits on `pointerup`/`change`, not on every `input` event mid-drag, so dragging the slider from 100
+to 40 is one undo step and not sixty. Selecting a layer changes what this strip shows; there is no
+per-row inline version of it, because two controls per row in a 224px-wide panel that already carries
+a name, an eye button and a drag handle does not fit, measured.
+
+**3. A second footer row**: `Merge down` and `Flatten`, text buttons in the same idiom as
+`Add`/`Copy`/`Delete`. `Merge down` disabled at `active === 0` (nothing below the bottom layer) with a
+tooltip saying so; `Flatten` disabled at one layer. Both go through the notice channel on completion
+(§12.5's reporting), and both are ordinary (non-red) commits — merging is not framed as destructive
+the way Delete is, because nothing the user drew is lost, only recombined; §6.1's rule for Delete's red
+styling ("a red button that never costs anything is how a red button stops meaning anything") argues
+for restraint here specifically.
+
+### 12.7 Registry
+
+**No new actions.** §12.1 states the reasoning. `get_state`'s existing `layers` array
+(`Array<{ index, name, hidden }>`, added in phase 1 §7.2) gains `opacity: number` (0–100) and
+`blendMode: BlendMode`, always present (not conditional the way `get_grid`'s `composite` key is),
+because the array is already small and per-layer, and an agent reasoning about "why does this look
+different from what I expect" needs both numbers without an extra round trip. This is the only
+registry change in this unit.
+
+### 12.8 Error codes
+
+Extends §10's table.
+
+| Code | Meaning | Surfaces as |
+|---|---|---|
+| `L-E9` | `mergeDownCommand` at `at === 0`, or `flattenCommand` on a single-layer frame | `cmd: null`; the panel disables the button first, so this is a defensive return, not a user-facing message |
+
+Nothing else needed one: opacity and blend-mode changes cannot fail (the range and the select both
+constrain their own input), and merge/flatten's palette-overflow case is not a failure, it is
+`clipped: true` in the result — same as paste-image, §17-file-menu.md §9.
+
+### 12.9 Test requirements
+
+- `lib/artwork-core/__tests__/schema.test.ts` (extend, or fold into `codec.test.ts`): a v1 document
+  with neither `o` nor `mode` parses and both default correctly at read time; a document with `o: 100`
+  or `mode: "normal"` round-trips **without** those keys appearing in `serializeDoc`'s output — the
+  same "omitted when it's the default" property `hidden` already has, tested the same way.
+  `lib/artwork-core/fixtures/legacy/pre-layers-draft.tessera.json` still parses, unchanged from
+  phase 1's own test of it — this unit adds no new legacy fixture because it adds no breaking change.
+- `lib/artwork-core/__tests__/blend.test.ts` — new file. Each of the eight `B(Cb, Cs)` functions
+  against hand-computed values; `compositeStack` on a two-layer stack collapses to plain alpha-over
+  when both layers are `normal`/opaque (regression: this must equal what phase 1's renderer always
+  drew); a fully-transparent top layer leaves the backdrop unchanged for every blend mode; a hidden
+  layer contributes nothing regardless of its opacity/mode.
+- `lib/artwork-core/__tests__/merge-layers.test.ts` — new file. `mergeDownCommand` at `at: 0` returns
+  `cmd: null`; a two-layer merge with both layers `normal`/opaque produces the same pixels as
+  `compositeAt` would have shown (the cheap and expensive paths agree in the case where they are
+  supposed to); a merge involving a non-default opacity or blend mode adds at least one new palette
+  colour when none of the blended results are within `REUSE_MAX` of an existing entry; the round trip
+  — apply, invert, apply the inverse — restores the original document byte-for-byte, including the
+  palette, for a three-layer stack with mixed opacity and blend modes; `flattenCommand` on one layer
+  returns `cmd: null`.
+- `lib/artwork-core/__tests__/commands.test.ts` (extend): `layer_opacity` and `layer_blend_mode` are
+  self-inverse under exchange, matching `layer_visible`'s existing test shape; `applyCommand` with an
+  out-of-range layer for either new command type returns the document unchanged (`L-E7`, same guard).
+- `tools/probe-merge.ts` — new browser probe. Builds a document through the real panel (add a layer,
+  set its opacity and blend mode via the new controls, draw on it), reads the live canvas pixel, and
+  asserts it matches `compositeStack`'s prediction — the cross-check §12.5.1 promises. Also drives:
+  opacity slider commits once per drag (one undo entry, not one per `input` event), blend-mode select
+  commits on change, drag-reordering two rows produces one `layer_move`-shaped undo entry, Merge down
+  and Flatten disabled states, and the notice text after each.
+- `npx tsx tools/check-responsive.ts` clean at all six viewports with the taller panel (active-layer
+  strip + second footer row) — this is the unit that most needs the "check-responsive never opens a
+  popover" trap (`HANDOFF §5`) kept in mind: the panel is not a popover, but it is exactly the kind of
+  floating surface that check disabled by default and this unit is why `probe-layers.ts`/`probe-merge.ts`
+  measure it open, not just the app at rest.
+- Screenshots of the panel — rows, active-layer strip, both footer rows, a dropdown open — in both
+  themes, looked at.

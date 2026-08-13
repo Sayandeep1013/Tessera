@@ -259,6 +259,16 @@ editor's own existing answer to "what colour is here" beats inventing a second o
 Layers phase 2 (`14 §6.4`) is the unit to revisit this in, if opacity ever makes the two rules
 actually disagree.
 
+**Revisited in phase 2, and the answer is: stays an approximation, deliberately.** Opacity and blend
+modes (`14 §12`) do make the two rules disagree the moment a layer uses either — `flattenFrame` still
+returns the topmost non-transparent index, which is no longer the same colour the renderer actually
+draws. `14 §12.4` is the decision and its reasoning in full; the summary here is that building a real
+compositor for export would mean synthesizing RGB values that have no palette entry, for a format
+whose entire premise (§1) is that the exported grid *is* the document's own palette. Merge and flatten
+(`14 §12.5`) are the escape hatch: baking a blend into the palette is exactly what they are for, and
+once that has happened `flattenFrame` is exact again because there is only one layer to be topmost of.
+Nothing in this file changed to make that true — it was already correct for the case that matters.
+
 ### 12.2 ASCII was named in the unit's handover and never in this file
 
 `docs/UNITS.md`'s prompt for this unit lists "SVG, CSS, React, ASCII, JSON and PNG" — ASCII was never

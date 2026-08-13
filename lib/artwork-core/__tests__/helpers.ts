@@ -1,6 +1,6 @@
 import fc from 'fast-check'
 import { encodeRows } from '../codec'
-import { FORMAT_VERSION, MAX_PALETTE, type Doc, type PaletteEntry } from '../schema'
+import { FORMAT_VERSION, MAX_PALETTE, type BlendMode, type Doc, type PaletteEntry } from '../schema'
 
 /** A deterministic minimal document, handy for targeted cases. */
 export function docOf(rows: string[], palette: PaletteEntry[]): Doc {
@@ -31,7 +31,7 @@ export function docOf(rows: string[], palette: PaletteEntry[]): Doc {
  * Every layer must be the same size.
  */
 export function docLayers(
-  layers: Array<{ n: string; rows: string[]; hidden?: boolean }>,
+  layers: Array<{ n: string; rows: string[]; hidden?: boolean; o?: number; mode?: BlendMode }>,
   palette: PaletteEntry[],
 ): Doc {
   const first = layers[0]!
@@ -49,6 +49,8 @@ export function docLayers(
           return {
             n: l.n,
             ...(l.hidden ? { hidden: true } : {}),
+            ...(l.o !== undefined ? { o: l.o } : {}),
+            ...(l.mode !== undefined ? { mode: l.mode } : {}),
             px: docOf(l.rows, palette).frames[0]!.layers[0]!.px,
           }
         }),

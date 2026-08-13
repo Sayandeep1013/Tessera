@@ -7,8 +7,27 @@
  * in resolved — reading computed style per frame is both slow and untestable.
  */
 
-import type { Doc } from '../artwork-core/schema'
+import { layerAlpha, layerBlendMode } from '../artwork-core/layers'
+import type { BlendMode, Doc } from '../artwork-core/schema'
 import type { PixelDiff } from '../artwork-core/diff'
+
+/**
+ * `BlendMode` names match `GlobalCompositeOperation`'s own vocabulary (CSS
+ * Compositing spec), so this is an identity cast rather than a translation —
+ * kept as an explicit table anyway so a typo in a future blend mode fails
+ * here, at the one place that has to agree with the schema, rather than
+ * silently drawing 'source-over'. See 14-layers.md §12.2.1.
+ */
+const COMPOSITE_OP: Record<BlendMode, GlobalCompositeOperation> = {
+  normal: 'source-over',
+  multiply: 'multiply',
+  screen: 'screen',
+  overlay: 'overlay',
+  darken: 'darken',
+  lighten: 'lighten',
+  difference: 'difference',
+  exclusion: 'exclusion',
+}
 
 export type Viewport = {
   /** integer >= 1 */
@@ -158,7 +177,7 @@ export function renderDoc(
   if (frame) {
     for (const layer of frame.layers) {
       if (layer.hidden) continue
-      drawLayer(ctx, layer.px, doc.w, doc.h, paletteCss, ax, ay, vp.scale)
+      drawLayer(ctx, layer.px, doc.w, doc.h, paletteCss, ax, ay, vp.scale, layerAlpha(layer), layerBlendMode(layer))
     }
   }
 
@@ -222,6 +241,13 @@ function drawTransparencyGrid(
   ctx.restore()
 }
 
+/**
+ * `globalAlpha`/`globalCompositeOperation` are set once for the whole layer,
+ * not per run — both are context state, not per-fillRect arguments, so a
+ * save/restore around the loop is cheaper and exactly as correct as setting
+ * them before every `fillRect`. Reset unconditionally afterwards so a later
+ * draw step (grid, symmetry axis, border) never inherits a stale blend mode.
+ */
 function drawLayer(
   ctx: CanvasRenderingContext2D,
   px: Uint8Array,
@@ -231,7 +257,12 @@ function drawLayer(
   ax: number,
   ay: number,
   scale: number,
+  alpha: number,
+  blendMode: BlendMode,
 ): void {
+  ctx.save()
+  ctx.globalAlpha = alpha
+  ctx.globalCompositeOperation = COMPOSITE_OP[blendMode]
   for (let y = 0; y < h; y++) {
     let x = 0
     const rowTop = ay + y * scale
@@ -249,6 +280,7 @@ function drawLayer(
       x += len
     }
   }
+  ctx.restore()
 }
 
 /**

@@ -12,6 +12,8 @@
  */
 
 import {
+  DEFAULT_BLEND_MODE,
+  DEFAULT_OPACITY,
   FORMAT_VERSION,
   MAX_PALETTE,
   TRANSPARENT_CHAR,
@@ -163,7 +165,7 @@ export function parseDoc(input: unknown): Result<Doc, DocError> {
           })
         }
       }
-      layers.push({ n: layer.n, hidden: layer.hidden, px: decoded.value })
+      layers.push({ n: layer.n, hidden: layer.hidden, o: layer.o, mode: layer.mode, px: decoded.value })
     }
     frames.push({ ms: frame.ms, layers })
   }
@@ -194,6 +196,11 @@ export function serializeDoc(doc: Doc): string {
       layers: f.layers.map((l) => ({
         n: l.n,
         ...(l.hidden ? { hidden: true } : {}),
+        // Omitted when it's the default, exactly like `hidden` above — a
+        // fully-opaque, normal-blend layer serializes identically to how phase
+        // 1 always wrote it, so a v1 file round-trips byte-for-byte.
+        ...(l.o !== undefined && l.o !== DEFAULT_OPACITY ? { o: l.o } : {}),
+        ...(l.mode !== undefined && l.mode !== DEFAULT_BLEND_MODE ? { mode: l.mode } : {}),
         px: encodeRows(l.px, doc.w, doc.h),
       })),
     })),

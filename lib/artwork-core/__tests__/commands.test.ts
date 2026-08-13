@@ -327,6 +327,24 @@ describe('structural layer commands', () => {
     ).toBeFalsy()
   })
 
+  it('layer_opacity and layer_blend_mode are self-inverse, and omit the default on write', () => {
+    const start = twoLayer()
+
+    const opacity: EditorCommand = {
+      type: 'layer_opacity', label: 'Opacity', frame: 0, at: 1, before: 100, after: 40,
+    }
+    const dimmed = applyCommand(start, opacity)
+    expect(dimmed.frames[0]!.layers[1]!.o).toBe(40)
+    expect(applyCommand(dimmed, invertCommand(opacity)).frames[0]!.layers[1]!.o).toBeUndefined()
+
+    const mode: EditorCommand = {
+      type: 'layer_blend_mode', label: 'Blend', frame: 0, at: 1, before: 'normal', after: 'multiply',
+    }
+    const blended = applyCommand(start, mode)
+    expect(blended.frames[0]!.layers[1]!.mode).toBe('multiply')
+    expect(applyCommand(blended, invertCommand(mode)).frames[0]!.layers[1]!.mode).toBeUndefined()
+  })
+
   it('does not throw when a structural command addresses a missing layer (L-E7)', () => {
     const start = twoLayer()
     for (const cmd of [
@@ -334,6 +352,8 @@ describe('structural layer commands', () => {
       { type: 'layer_move', label: 'x', frame: 0, from: 9, to: 0 },
       { type: 'layer_rename', label: 'x', frame: 0, at: 9, before: 'a', after: 'b' },
       { type: 'layer_visible', label: 'x', frame: 0, at: 9, before: false, after: true },
+      { type: 'layer_opacity', label: 'x', frame: 0, at: 9, before: 100, after: 40 },
+      { type: 'layer_blend_mode', label: 'x', frame: 0, at: 9, before: 'normal', after: 'multiply' },
     ] as EditorCommand[]) {
       expect(() => applyCommand(start, cmd)).not.toThrow()
       expect(pixelsOf(applyCommand(start, cmd))).toEqual(pixelsOf(start))

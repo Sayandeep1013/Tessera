@@ -32,9 +32,35 @@ export const MAX_FRAME_MS = 10_000
 
 export type PaletteEntry = { c: string; n?: string }
 
+/**
+ * The eight supported blend modes. Names match the CSS Compositing spec, which
+ * `GlobalCompositeOperation` also speaks — the renderer needs no translation
+ * table beyond an identity cast. The six non-separable HSL modes (hue,
+ * saturation, color, luminosity) are a deliberate cut: rare in pixel art, and
+ * each one is a row in a dropdown nobody asked for. See 14-layers.md §12.2.1.
+ */
+export const BLEND_MODES = [
+  'normal',
+  'multiply',
+  'screen',
+  'overlay',
+  'darken',
+  'lighten',
+  'difference',
+  'exclusion',
+] as const
+export type BlendMode = (typeof BLEND_MODES)[number]
+export const DEFAULT_BLEND_MODE: BlendMode = 'normal'
+/** Percent, 0-100. Omitted on a layer means fully opaque. */
+export const DEFAULT_OPACITY = 100
+
 export type Layer = {
   n: string
   hidden?: boolean
+  /** Opacity, percent 0-100. Omitted means DEFAULT_OPACITY (opaque). */
+  o?: number
+  /** Omitted means DEFAULT_BLEND_MODE ('normal'). */
+  mode?: BlendMode
   /** Flat, row-major, length w*h. Each value is a palette index. */
   px: Uint8Array
 }
@@ -82,6 +108,8 @@ export const paletteEntrySchema = z.object({
 export const serializedLayerSchema = z.object({
   n: z.string().max(32),
   hidden: z.boolean().optional(),
+  o: z.number().int().min(0).max(100).optional(),
+  mode: z.enum(BLEND_MODES).optional(),
   px: z.array(z.string()).min(1),
 })
 

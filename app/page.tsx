@@ -99,6 +99,11 @@ export default function EditorPage() {
         useDocStore.getState().doc?.frames[useDocStore.getState().frame]?.layers.map((l) => ({
           n: l.n,
           hidden: Boolean(l.hidden),
+          // Opacity and blend mode (14-layers.md §12) aren't visible in px, and
+          // the probe needs to check a commit landed with the right value, not
+          // just that pixels moved.
+          o: l.o ?? 100,
+          mode: l.mode ?? 'normal',
           px: Array.from(l.px),
         })) ?? null,
       active: () => useDocStore.getState().layer,

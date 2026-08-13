@@ -93,8 +93,8 @@ works; it is done when the next agent can start without asking anything.
 | **B3** | Paste image | **DONE** | 9 | [17 §9](./specs/17-file-menu.md) |
 | **C** | Code panel | **DONE** | 9 | [07 §9](./specs/07-code-panel.md) |
 | **D** | Exporters ×6 | **DONE** | 9 | [08](./specs/08-exporters.md) |
-| **E** | Layers phase 2 | **NEXT** | — | [14 §6.4](./specs/14-layers.md) |
-| **F** | Animation | TODO | — | [10](./specs/10-animation.md) |
+| **E** | Layers phase 2 | **DONE** | 9 | [14 §12](./specs/14-layers.md) |
+| **F** | Animation | **NEXT** | — | [10](./specs/10-animation.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
 
@@ -1057,41 +1057,112 @@ not lose an afternoon to it.
 
 ---
 
-## E — Layers phase 2 · NEXT
+## E — Layers phase 2 · DONE
 
-### Context handed over
+**13 Aug 2026 · `<<COMMIT>>` · 9/10**
 
-- The four things `14-layers.md §6.4` declared out of scope: opacity,
-  merge/flatten, blend modes, drag reorder.
-- **Opacity is a format change** — `01-document-format.md` moves with it, and
-  every existing document must still parse. There is a legacy fixture at
-  `lib/artwork-core/fixtures/legacy/` for exactly this.
-- Blend modes need the renderer to composite per layer instead of painting
-  straight through, which is the largest change in this unit.
-- **From D — the exporters now have their own idea of "what's visible here,"
-  and opacity can make it wrong.** `lib/exporters/geometry.ts`'s
-  `flattenFrame` composites a frame with `compositeAt` — topmost
-  non-transparent layer wins, the same rule the eyedropper already uses, and
-  correct today only because no layer carries an opacity value. The renderer's
-  actual compositing (`drawImage`, bottom to top, real alpha blending) can
-  disagree with that the moment a layer gets one. Decide deliberately whether
-  export stays an approximation of the true render or gets its own compositor
-  once opacity exists, and record which in `08-exporters.md §12.1`. This
-  will not announce itself — nothing fails, an export just quietly shows the
-  wrong colour on a semi-transparent overlap.
+Opacity and blend mode on `Layer` (`o?: number`, `mode?: BlendMode`, eight
+modes), the renderer compositing per layer (`ctx.globalAlpha` +
+`ctx.globalCompositeOperation`, save/restore around each layer's draw loop),
+`lib/artwork-core/blend.ts` (a pure `compositeStack` implementing the CSS
+Compositing spec's alpha-over-with-blend-function formula, used by nothing the
+renderer touches — it exists so merge/flatten can compute a result without a
+DOM), `lib/artwork-core/merge-layers.ts` (`mergeDownCommand`, `flattenCommand`,
+both composing existing primitives — `quantise`, `palette_add`, `paint`,
+`layer_delete` — into one `batch` rather than inventing a new command shape),
+two new commands (`layer_opacity`, `layer_blend_mode`), and a rewritten
+`components/Layers.tsx` — an opacity slider and blend-mode select for the
+active layer, Merge down / Flatten buttons, and drag-to-reorder rows. 24 new
+unit tests (`blend.test.ts`, `merge-layers.test.ts`, plus extensions to
+`codec.test.ts` and `commands.test.ts`) and a new 24-check browser probe,
+`tools/probe-merge.ts`. Decisions in `14-layers.md §12`.
 
-### Prompt
+**No format-version bump**, per §12.2's argument: `o` and `mode` are omitted
+from serialized output at their defaults (100, `'normal'`), exactly the
+precedent `hidden` already set for `layer_visible` — a legacy document with
+neither field parses and reads as if both were present at their defaults, and
+a document written by this unit round-trips through an old build's schema
+undamaged wherever every layer happens to sit at the defaults.
 
-> Read `docs/UNITS.md` and `docs/specs/14-layers.md §6.4`, then build unit **E**:
-> layers phase 2 — opacity, merge and flatten, blend modes, drag reorder.
-> Opacity changes the format, so spec 01 moves with it and old documents must
-> still parse.
->
-> Then follow the finishing protocol in `docs/UNITS.md §0`.
+**The exporters question D flagged is answered, not deferred again** — §12.4,
+also recorded in `08-exporters.md` after §12.1: `flattenFrame` **stays** the
+topmost-non-transparent-wins approximation. Giving every exporter a true
+alpha-blend compositor would mean six formats each re-deriving what "visible
+here" means, RGBA in a domain that is otherwise entirely palette indices, and
+CSS/React losing the one property that makes them worth having — real DOM
+layers a browser still composites, rather than a flattened raster. Merge and
+flatten are the escape hatch: quantise pixels down before export represents
+the exact rendered pixel exactly, using the same compositor the renderer's own
+correctness is checked against (see below). The gap this leaves — a
+semi-transparent or blended overlap in an *unflattened* export can show the
+wrong colour, silently — is now a documented, deliberate cost rather than an
+unnoticed one.
+
+**Three real bugs, all found by actually running the probe, not by
+typechecking or the unit suite:**
+
+1. **Drag reorder did nothing after the first pointer move.** The grip button
+   held `setPointerCapture`, and every `pointermove` triggered a state update
+   that re-rendered and re-ordered the row list — the captured element was no
+   longer in the same place in the DOM the next event needed to reach. Fixed
+   by dropping `setPointerCapture` for window-level `pointermove`/`pointerup`
+   listeners registered in a `useEffect`, reading the latest drag state
+   through a ref to dodge the stale closure the listener would otherwise
+   capture.
+2. **A simulated opacity drag reported "committed" at 100 no matter what the
+   probe set the slider to.** Not a bug in the panel — the *probe* was setting
+   `el.value` directly, which a React-controlled `<input>` cannot see, since
+   React shadows the native setter to detect real changes. Fixed in the probe
+   with the standard workaround (the native prototype's setter, called
+   explicitly, before dispatching `input`). The panel's own commit-on-blur
+   behaviour was correct throughout.
+3. **Merge down looked permanently disabled after a drag-then-undo sequence**,
+   which read like a bug and is not one: active-layer selection is UI state,
+   not document history (the same design `select_layer` already has), so
+   undoing a reorder can legitimately leave the bottom layer selected, where
+   Merge down is correctly disabled. Fixed the probe to select a known
+   non-bottom layer before asserting on the button.
+
+**The renderer and the standalone compositor are cross-checked against each
+other, not just against hand-computed values.** `probe-merge.ts` samples a
+real rendered canvas pixel and compares it — within a two-unit rounding slack
+— to `compositeStack()` run in Node against the same layer data, imported
+directly rather than reimplemented for the check. This is the one place in
+the unit that could have shipped two blend implementations that quietly
+disagreed, and it is the check that would have caught it.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | All four items §6.4 deferred are built: opacity, blend modes (all eight CSS Compositing modes), merge/flatten, drag reorder. The exporters question D left open is answered in §12.4 rather than carried forward again. Not 10: mobile still withholds the layer panel entirely (a phase-1 decision, unchanged, but phase 2 adds more controls to a panel that still has no small-screen form). |
+| 2 | Correctness | 9 | The renderer's per-layer compositing and the standalone `compositeStack` agree on a real rendered pixel, not just on paper; merge/flatten produce byte-identical round-trips through undo including the palette; hidden layers about to be consumed by a merge are revealed first, in the same batch, so the visible result cannot change; opacity and blend-mode commits are exactly one undo entry regardless of how many intermediate slider events fired. Not 10: `flattenFrame`'s exporter approximation (§12.4) is a known, accepted gap on unflattened multi-layer exports with opacity or a non-normal blend mode — documented, not eliminated. |
+| 3 | Tests | 9 | 24 new unit tests covering the blend math (hand-computed per mode, hidden/transparent no-ops, an opacity half-mix) and merge/flatten (null cases, hidden-layer reveal, round-trip, undo restoring layer position), plus schema/codec/commands extensions for the new fields, plus 24 browser checks across both themes exercising every control including the cross-check against the real canvas. Not 10: the eight blend modes are each checked at one colour pair; a wider matrix would catch a transposed formula sooner, though the CSS spec formula being shared code means all eight fail together if it were wrong, not silently apart. |
+| 4 | Integration | 9 | `commit()` is still the only writer — merge/flatten are `batch` commands composed from existing primitives, not a new mutation path; `artwork-core/blend.ts` imports nothing but the schema and `parseHex` from `quantise.ts`, no DOM; the renderer's compositing is `save`/`restore`-scoped so it cannot leak `globalAlpha` onto layers it does not own; tokens only. Not 10: `Layers.tsx` grew substantially — active-layer strip, drag state, two footer rows — and is now the largest single component change layers has had; it works and is tested, but it is one more thing to reason about as a whole. |
+| 5 | Design fidelity | 9 | Opacity slider, blend-mode select, and the second footer row read cleanly in both themes at the screenshot check, and the merge notice ("Merged 1 layer.") renders as the same `role="status"` line every other notice uses. Not 10: no reference measurement exists for this panel's phase-2 layout (there was nothing to measure against — newt's own layers panel was not part of the original audit), so the layout is this app's own judgement rather than a confirmed match. |
+| 6 | No regressions | 9 | 681 tests (657 → 681), clean production build, six viewports clean, and every gating probe green in one `npm run probes` run — including `probe-layers.ts`, unchanged since phase 1 and re-run specifically because `Layers.tsx` was rewritten under it. `probe-agent-ui` and `e2e-agent` each failed once on this run and passed clean on an immediate re-run with no code change in between — a pre-existing timing flake in the mock-agent probes, confirmed unrelated to this unit by rerunning in isolation. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **A mobile layers panel.** Unchanged from phase 1's decision (`14-layers.md
+  §6.4`, `HANDOFF §6.4`) — still withheld below the tablet breakpoint, and
+  phase 2 makes the panel taller, not smaller, so the gap did not close.
+- **Per-blend-mode preview thumbnails or a visual mode picker.** A `<select>`
+  matches every other control in this panel's register; a swatch grid is a
+  bigger design commitment than this unit's four deferred items asked for.
+- **Locking a layer independent of hiding it.** Not asked for in §6.4 or §12,
+  and hide already prevents accidental edits to a layer you are not looking
+  at.
+- **A confirm dialog before Merge down or Flatten.** Both are undoable in one
+  press, the same reasoning A2 already settled for the resize apply button —
+  the count of what changes is visible in the panel before the click, and one
+  undo is the escape hatch rather than a second modal.
 
 ---
 
-## F — Animation · TODO
+## F — Animation · NEXT
 
 ### Context handed over
 
@@ -1102,6 +1173,24 @@ not lose an afternoon to it.
 - `frame_add`, `frame_delete` and `frame_duration` commands already exist in
   `commands.ts` and are unused.
 - The Timeline button is the last member of `showUnbuilt`.
+- **From E — layers now carry opacity and a blend mode, and whatever the
+  per-frame-vs-shared decision turns out to be, both fields travel with the
+  layer either way.** `layerAlpha`/`layerBlendMode` in
+  `lib/artwork-core/layers.ts` read a layer's own fields with the same
+  default-when-absent pattern `hidden` and now `o`/`mode` all share; nothing
+  about them assumes one frame. If the decision lands on "layers are shared
+  across frames," a frame-independent opacity is free. If it lands on
+  "per-frame," `mergeDownCommand`/`flattenCommand` in
+  `lib/artwork-core/merge-layers.ts` are the worked example of composing a
+  multi-layer result into one `batch` — the same shape a per-frame flatten (if
+  animation ever wants one, e.g. for a thumbnail) would need.
+- **`compositeStack` (`lib/artwork-core/blend.ts`) is the real compositor now,
+  separate from the renderer's own `drawLayer` loop and separate from
+  `lib/exporters/geometry.ts`'s `flattenFrame` approximation.** If a frame
+  thumbnail or timeline preview needs a flattened raster of one frame's
+  layers, `compositeStack` is the correct one to reach for — it is the one
+  proven, by `probe-merge.ts`'s cross-check, to agree with what the canvas
+  actually renders.
 
 ### Prompt
 

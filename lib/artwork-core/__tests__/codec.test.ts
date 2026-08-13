@@ -207,6 +207,51 @@ describe('round trip', () => {
   })
 })
 
+describe('layer opacity and blend mode (14-layers.md §12.2, §12.9)', () => {
+  it('a v1 document with neither field parses, and both default at read time', () => {
+    const s = serializeDoc(docOf(['1'], PAL))
+    expect(s).not.toContain('"o"')
+    expect(s).not.toContain('"mode"')
+    const r = parseDoc(s)
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      const layer = r.value.frames[0]!.layers[0]!
+      expect(layer.o).toBeUndefined()
+      expect(layer.mode).toBeUndefined()
+    }
+  })
+
+  it('o:100 and mode:"normal" round-trip WITHOUT appearing in the serialized output', () => {
+    const doc = docOf(['1'], PAL)
+    doc.frames[0]!.layers[0]!.o = 100
+    doc.frames[0]!.layers[0]!.mode = 'normal'
+    const s = serializeDoc(doc)
+    expect(s).not.toContain('"o"')
+    expect(s).not.toContain('"mode"')
+  })
+
+  it('a non-default o and mode DO appear, and round-trip', () => {
+    const doc = docOf(['1'], PAL)
+    doc.frames[0]!.layers[0]!.o = 40
+    doc.frames[0]!.layers[0]!.mode = 'multiply'
+    const s = serializeDoc(doc)
+    const r = parseDoc(s)
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.value.frames[0]!.layers[0]!.o).toBe(40)
+      expect(r.value.frames[0]!.layers[0]!.mode).toBe('multiply')
+    }
+    expect(serializeDoc((r as { ok: true; value: typeof doc }).value)).toBe(s)
+  })
+
+  it('an unrecognised blend mode fails schema validation rather than being coerced', () => {
+    const raw = JSON.parse(serializeDoc(docOf(['1'], PAL)))
+    raw.frames[0].layers[0].mode = 'hue'
+    const r = parseDoc(JSON.stringify(raw))
+    expect(r.ok).toBe(false)
+  })
+})
+
 describe('cloneDoc', () => {
   it('does not share pixel buffers', () => {
     const a = docOf(['12', '21'], PAL)
