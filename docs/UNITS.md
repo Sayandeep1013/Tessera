@@ -1059,7 +1059,7 @@ not lose an afternoon to it.
 
 ## E — Layers phase 2 · DONE
 
-**13 Aug 2026 · `<<COMMIT>>` · 9/10**
+**13 Aug 2026 · `ceab238` · 9/10**
 
 Opacity and blend mode on `Layer` (`o?: number`, `mode?: BlendMode`, eight
 modes), the renderer compositing per layer (`ctx.globalAlpha` +

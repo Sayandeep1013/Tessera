@@ -1,6 +1,6 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `<<COMMIT>>` (unit **E**, layers phase 2 —
+**Written:** 13 Aug 2026 · last commit `ceab238` (unit **E**, layers phase 2 —
 opacity, blend modes, merge/flatten, drag reorder) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
