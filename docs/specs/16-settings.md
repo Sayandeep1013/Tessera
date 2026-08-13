@@ -120,6 +120,44 @@ Rules that fall out of the format and the invariants:
 5. **It is view state, not document state.** A document does not remember it was
    drawn symmetrically, and the format gains no field.
 
+### 3.1 The axis line — added after ship, 13 Aug 2026
+
+The spec above describes what symmetry *does* to a stroke and says nothing about
+what the canvas *shows* while it is on — a real gap: with no visible line,
+"where is the mirror" is a question the user can only answer by testing a
+stroke and watching where the second mark lands. The reference shows a guide
+line; this was built to match that capability, not its pixels — there is no
+measured research for it (`docs/research/newt/VISUAL-SPEC.md` never covered
+it), so the treatment below is this app's own, in its own visual language.
+
+- **`H`'s axis is the VERTICAL line at doc-x = w/2`** — `H` mirrors
+  left-right (`x → w-1-x`), so the seam it reflects across runs top to
+  bottom. `V`'s axis is the horizontal line at doc-y = h/2, for the same
+  reason the other way round. `Both` draws both.
+- **`difference` composite against `--accent`, not `--grid-ink`.** Same
+  technique the grid uses and for the same reason (§8.4 of the renderer
+  research applies here too: the artwork is arbitrary user data, so a flat
+  colour vanishes against whatever half of it happens to match). Using
+  `accent` rather than the grid's neutral magnitude gives the axis its own
+  colour cast, so it reads as "a guide" and not as "one more grid line" —
+  confirmed by eye against real artwork (a starter with black, yellow, navy
+  and red all present), not just a blank canvas.
+- **Dashed, 2px, and drawn at every zoom** — unlike the grid, which fades in
+  above `GRID_MIN_SCALE` and is meaningless below it. The axis is most useful
+  zoomed OUT, mid-stroke, deciding where a broad shape will land, which is
+  exactly the zoom level the grid stays silent at.
+- **Implementation:** `lib/renderer/canvas.ts`'s `drawSymmetryAxes`, called
+  from `renderDoc`'s own pipeline as a new step 4.5 (between the grid and the
+  border) via a `symmetry` field on `RenderOptions` — plumbed the same way
+  `gridMode` and `transparencyGrid` already were, not a second draw call
+  bolted on from `Canvas.tsx`.
+- **A real trap, recorded in `HANDOFF.md §5`:** for any document whose `w` or
+  `h` is even, the axis position is an *integer* doc coordinate, which is
+  exactly where a regular interior grid line already sits. Any future
+  browser-probe pixel check that samples the axis position with the pixel
+  grid still on is comparing against a point already coloured by something
+  else, and will not be testing what it thinks it is testing.
+
 ---
 
 ## 4. Canvas resize
@@ -282,6 +320,9 @@ panel's, and a preset that quietly exceeded it would then fail loudly.
   unmirrored one, and exactly 1× down the centre of an odd canvas.
 - Symmetry `Both` on a 5×5 canvas paints the expected 4 (or 1, or 2) cells for
   a corner, an edge and the centre.
+- The axis line: present at `x = w/2` in `H`, at `y = h/2` in `V`, both in
+  `Both`, neither in `Off`, with the pixel grid disabled so it cannot confound
+  the read (§3.1) — `tools/probe-symmetry.ts`, both themes.
 - Undo of a resize that cropped restores every cropped pixel, verified by
   serialising and reparsing.
 - Resize preserves centring: a 1-pixel dot at the centre of 16×16 is still at

@@ -986,6 +986,77 @@ toast (§10).
 
 ---
 
+## Between D and E — the symmetry axis line
+
+**Not a lettered unit** — a small, user-requested addition to already-shipped
+Settings work, done between finishing D and starting E. Recorded here so nothing
+between the two is invisible to whoever reads this file next; **E is still
+`NEXT`** and its own block below is unchanged and still the thing to read next.
+
+**13 Aug 2026 · `<<COMMIT>>` · 9/10**
+
+The request: while `Symmetry` is on, show the mirror line(s) on the canvas —
+the reference product does, and without one, "where does a stroke mirror
+across" is a question you can only answer by testing a stroke and watching
+where the second mark lands. `docs/specs/16-settings.md §3` (the existing
+symmetry spec) said nothing about this; it is entirely view state, so it
+belongs next to the grid rather than as a document field. Added as `16
+§3.1`, marked as an addition rather than a correction — the original spec
+simply never considered it, there was nothing wrong to route around.
+
+**Built:** `drawSymmetryAxes` in `lib/renderer/canvas.ts`, called from
+`renderDoc`'s own pipeline (a new step 4.5, between the grid and the border)
+via a `symmetry` field added to `RenderOptions` — the same plumbing shape
+`gridMode` and `transparencyGrid` already use, not a second draw call bolted
+on from `Canvas.tsx`. `H`'s axis is the *vertical* line at `x = w/2` (it
+mirrors left-right); `V`'s is the *horizontal* line at `y = h/2`; `Both`
+draws the pair. `difference` composite against `--accent`, not the grid's
+`--grid-ink` — same contrast-guarantee technique, deliberately a different
+colour cast so the axis reads as "a guide" and not "one more grid line"
+(confirmed by eye against real, multi-colour artwork, not just a blank
+canvas). Dashed, 2px, and drawn at **every** zoom, unlike the grid — the axis
+matters most zoomed out, mid-stroke, exactly where the grid stays silent.
+
+**A new browser probe, `tools/probe-symmetry.ts` (20 checks, both themes),**
+because there is no golden-image harness for `lib/renderer/canvas.ts` and
+`window.__tessera` already exposes what it needs (`viewport()`, `size()`).
+**It found a real methodology trap on its first run, not a product bug**: at
+the default 32×32 document, `w/2` and `h/2` are both 16 — an even document's
+axis position is *always* an integer doc coordinate, which is exactly where a
+regular interior grid line already sits. Sampling that pixel with the pixel
+grid still on meant every "off" and every "wrong axis" check was reading a
+line that would have been there regardless of this feature, and every check
+passed even though nothing had been verified. Fixed by disabling the pixel
+grid as part of the probe's own setup — recorded as a trap in `HANDOFF.md §5`
+so the next thing that samples canvas pixels near a document's midpoint does
+not lose an afternoon to it.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | The one requirement — show the axis, like the reference does — is built and documented as a genuine addition to `16 §3`, not routed around. Not 10: there is no measured reference data for this (`VISUAL-SPEC.md` never covered it), so the treatment is this app's own judgement, not a verified match to the reference's actual pixels. |
+| 2 | Correctness | 9 | Right axis for each mode, correct for both odd and even dimensions (the mirror maths already handles both; the axis position is simply `w/2` in continuous space either way), on at every zoom, gone when switched off, confirmed legible against real varied-colour artwork and not just a blank canvas. Not 10: no automated check that the axis repositions correctly after a resize — plausible from the code (it derives from `doc.w`/`doc.h` on every render) but not exercised. |
+| 3 | Tests | 9 | 20 browser checks, both themes, driven through the real Settings UI rather than the dev hook, with the grid-confound trap found and fixed rather than shipped. Not 10: no unit test exists or can cheaply exist — `drawSymmetryAxes` takes a `CanvasRenderingContext2D`, and this repo has no canvas shim (`04-renderer.md §8`'s golden-image harness was never built); the browser probe is the whole test surface. |
+| 4 | Integration | 9 | Plumbed through `RenderOptions` exactly like the two options beside it; `renderDoc` stays a pure function of its arguments; no store read inside the renderer; tokens only (`--accent`, already declared). Not 10: `Canvas.tsx` now destructures one more field off `useEditorStore.getState()` in the render loop — trivial, but it is one more thing that function knows about. |
+| 5 | Design fidelity | 9 | Reads clearly in both themes, against a blank canvas and against real multi-colour artwork, at a zoom level where the grid itself stays hidden. Not 10: "like newt does" was not measured, so fidelity to the actual reference is unverifiable — this is a good-faith, independently-designed guide in the same visual family as the grid and selection overlays, not a confirmed match. |
+| 6 | No regressions | 9 | 657 tests, clean build, all 13 browser probes green in one run including the two new ones. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **A colour or line-style option for the axis.** One treatment, matching how
+  the grid itself has exactly one look. Worth revisiting only if someone
+  reports it clashing with a specific palette.
+- **A small centre marker/hub where `Both`'s two lines cross.** The dash
+  phase of each line is independent, so at some document sizes the exact
+  centre pixel can fall in a gap on both lines at once — cosmetic, not
+  functional (the mirror still works; nothing reads the drawing to find the
+  centre), and not worth a special case for.
+
+---
+
 ## E — Layers phase 2 · NEXT
 
 ### Context handed over

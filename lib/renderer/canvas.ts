@@ -38,6 +38,8 @@ export type RenderOptions = {
   gridMode?: 'auto' | 'on' | 'off'
   /** A checkerboard behind transparent pixels. Spec 16 §2. */
   transparencyGrid?: boolean
+  /** The mirror line(s) a symmetric stroke reflects across. Spec 16 §3.1. */
+  symmetry?: 'off' | 'h' | 'v' | 'both'
 }
 
 /**
@@ -169,6 +171,13 @@ export function renderDoc(
     drawGrid(ctx, ax, ay, doc.w, doc.h, vp.scale, theme)
   }
 
+  // 4.5. symmetry axis — unlike the grid, drawn at every zoom: the whole point
+  // is knowing where a stroke will land, which matters most zoomed OUT, doing
+  // a broad stroke, not zoomed in on one cell. Spec 16 §3.1.
+  if (opts.symmetry && opts.symmetry !== 'off') {
+    drawSymmetryAxes(ctx, ax, ay, aw, ah, opts.symmetry, theme)
+  }
+
   // 5. artwork border. Two-tone: top/left is lighter than bottom/right — a
   // uniform strokeRect does not match the reference.
   ctx.fillStyle = theme.edgeTL
@@ -289,6 +298,59 @@ function drawGrid(
   // interior lines only — the outer edge is the border, drawn separately
   for (let cx = 1; cx < w; cx++) ctx.fillRect(ax + cx * scale, ay, 1, height)
   for (let cy = 1; cy < h; cy++) ctx.fillRect(ax, ay + cy * scale, width, 1)
+
+  ctx.restore()
+}
+
+/** One dashed segment's length, and the gap after it, in CSS px. Fixed rather
+ *  than scaled with zoom — the guide is a UI affordance, not a pixel row. */
+const AXIS_DASH = 6
+const AXIS_GAP = 4
+const AXIS_WIDTH = 2
+
+/**
+ * The line(s) a symmetric stroke mirrors across. Spec 16 §3.1.
+ *
+ * `H` mirrors left-right (`x → w-1-x`), so its axis is the VERTICAL line
+ * through the middle; `V` mirrors top-bottom, so its axis is horizontal.
+ * `Both` draws the pair, which is also the exact seam a `Both`-mirrored
+ * stroke reflects across into all four quadrants.
+ *
+ * `difference` against `theme.accent`, the same technique the grid uses
+ * against `theme.grid` and for the same reason — the artwork is arbitrary
+ * user data, so a flat colour vanishes against whatever half of it happens to
+ * match it. Using `accent` rather than `grid` gives the axis a colour cast
+ * the plain grid does not have, which is the whole point: a user glancing at
+ * the canvas should read "guide" and "grid" as two different things, not
+ * notice one more grid line. Thicker (2px) and dashed for the same reason,
+ * and — unlike the grid — drawn at every zoom: the axis matters most zoomed
+ * OUT, mid-stroke, not zoomed in on one cell where the grid earns its keep.
+ */
+function drawSymmetryAxes(
+  ctx: CanvasRenderingContext2D,
+  ax: number,
+  ay: number,
+  aw: number,
+  ah: number,
+  mode: 'h' | 'v' | 'both',
+  theme: ThemeColors,
+): void {
+  ctx.save()
+  ctx.globalCompositeOperation = 'difference'
+  ctx.fillStyle = theme.accent
+
+  if (mode === 'h' || mode === 'both') {
+    const x = ax + Math.round(aw / 2) - AXIS_WIDTH / 2
+    for (let y = 0; y < ah; y += AXIS_DASH + AXIS_GAP) {
+      ctx.fillRect(x, ay + y, AXIS_WIDTH, Math.min(AXIS_DASH, ah - y))
+    }
+  }
+  if (mode === 'v' || mode === 'both') {
+    const y = ay + Math.round(ah / 2) - AXIS_WIDTH / 2
+    for (let x = 0; x < aw; x += AXIS_DASH + AXIS_GAP) {
+      ctx.fillRect(ax + x, y, Math.min(AXIS_DASH, aw - x), AXIS_WIDTH)
+    }
+  }
 
   ctx.restore()
 }

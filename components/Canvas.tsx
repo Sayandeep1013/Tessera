@@ -132,7 +132,9 @@ export function Canvas() {
 
       const { doc, frame } = useDocStore.getState()
       if (!doc) return
-      const { viewport, gridMode, transparencyGrid, cursor, brushSize, tool } = useEditorStore.getState()
+      const {
+        viewport, gridMode, transparencyGrid, cursor, brushSize, tool, symmetry,
+      } = useEditorStore.getState()
       const ai = useAiStore.getState()
 
       // During review the canvas shows the PREVIEW, never the document — the
@@ -141,7 +143,7 @@ export function Canvas() {
       const showAfter = reviewing && ai.view === 'after'
       const shown = showAfter ? ai.proposal!.preview : doc
 
-      renderDoc(ctx, shown, frame, viewport, theme, { gridMode, transparencyGrid })
+      renderDoc(ctx, shown, frame, viewport, theme, { gridMode, transparencyGrid, symmetry })
 
       if (showAfter) {
         renderDiffOverlay(ctx, ai.proposal!.diff, viewport, theme)

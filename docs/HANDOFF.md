@@ -1,15 +1,15 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `cea7495` (unit **D** — the exporters) ·
-branch `main`, pushed.
+**Written:** 13 Aug 2026 · last commit `<<COMMIT>>` (unit **D**, the exporters,
+plus the symmetry axis line built right after it) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
 **Green:** 657 tests across 42 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
 `probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
-`probe-export` 68/68, `probe-layers` 42/42, `probe-tooltip` 23/23,
-`probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
-`probe-zoom`. Zero runtime errors.
+`probe-export` 68/68, `probe-symmetry` 20/20, `probe-layers` 42/42,
+`probe-tooltip` 23/23, `probe-agent-ui` 18/18, `probe-crisp` 4/4,
+`probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime errors.
 
 ---
 
@@ -149,7 +149,7 @@ looked fine in a screenshot until magnified.
 | AI agent | 25 actions, registry-driven, look-act-verify loop, session collapse to one undo, BYOK. **Scored 9/10.** |
 | Layers | Active-layer state, 6 layer commands, the panel (add/copy/delete/reorder/rename/hide/select), 4 registry actions. **Scored 9/10** — see §6. |
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
-| Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. **Scored 9/10** — `docs/specs/16-settings.md`. |
+| Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. Symmetry now draws its own mirror line(s) on the canvas — dashed, difference-blended against `--accent`, visible at every zoom. **Scored 9/10** — `docs/specs/16-settings.md §3.1`. |
 | Persistence | IndexedDB autosave. |
 | Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG — six pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated. **Scored 9/10** — `docs/specs/08-exporters.md §12`. |
 
@@ -291,6 +291,12 @@ Every one of these has already cost time in this repo.
   measurement that settled it was a Playwright network trace of a cold load, watching for the
   request itself. What actually worked: a plain `import()` inside the click handler, not at module
   scope anywhere reachable from the page — see `08-exporters.md §12.4`.
+- **A `difference`-blended overlay at an even document's midpoint lands exactly on a regular grid
+  line.** The symmetry axis (`16-settings.md §3.1`) sits at `x = w/2` / `y = h/2`, which is an
+  *integer* doc coordinate whenever `w`/`h` is even — precisely where `drawGrid`'s own interior lines
+  already are. A browser probe that samples that pixel with the pixel grid still on is not testing
+  the axis at all; it is reading a line that would be there regardless. Turn the grid off first, or
+  sample a mid-cell point, whichever the check actually needs.
 - **The editor does not server-render.** `app/page.tsx` mounts it after hydration. Everything it
   shows comes from somewhere the server cannot see (IndexedDB, localStorage, a measured rect), so
   prerendering produced hydration mismatches on every load. Do not "optimise" this back.
@@ -428,6 +434,7 @@ npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both theme
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
 npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
 npx tsx tools/probe-export.ts     # 68 checks: six formats, real downloads, React pixel-identity, the CSS cap
+npx tsx tools/probe-symmetry.ts   # 20 checks: the axis line at H/V/Both/Off, both themes
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
