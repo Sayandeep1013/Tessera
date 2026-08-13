@@ -59,6 +59,7 @@ const PROBES: Probe[] = [
   { file: 'probe-symmetry.ts', what: 'the symmetry axis line: h, v, both, off', gates: true },
   { file: 'probe-layers.ts', what: 'layer panel, both themes', gates: true },
   { file: 'probe-merge.ts', what: 'opacity, blend mode, merge, flatten, drag reorder', gates: true },
+  { file: 'probe-timeline.ts', what: 'timeline: frames, playback, onion, shortcuts', gates: true },
   { file: 'probe-tools-ui.ts', what: 'all 8 tools with real pointer events', gates: true },
   { file: 'probe-tooltip.ts', what: 'tooltip appears, places, dismisses', gates: true },
   { file: 'probe-crisp.ts', what: 'pixel edges stay crisp', gates: true },

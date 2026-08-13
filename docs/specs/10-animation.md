@@ -13,13 +13,95 @@ allows.
 
 ---
 
+## 0. Corrections and decisions made building unit F
+
+Rule 10: when a spec turns out to be wrong, say so and fix it rather than route around it. Six
+things here were either decided (the spec left them open on purpose) or corrected (the spec assumed
+something that measuring, or the rest of the codebase, showed was not true).
+
+### 0.1 The layer question — resolved
+
+`14-layers.md §9` left three questions open and made them a precondition for this unit. Resolved
+there, not here, because that section is where the questions were asked and future readers of
+either file should find one answer, not two that could drift apart. Summary: **a layer belongs to
+the frame it was added to; layers diverge per frame.** It cost nothing to build — every command and
+panel this spec depends on already addressed `frames[activeFrame].layers`.
+
+### 0.2 The codebase was already frame-shaped before this unit started
+
+Not a correction so much as a fact worth recording so the next reader does not go looking for work
+that turned out not to exist: `frame_add`/`frame_delete`/`frame_duration` were already real commands
+with tested inverses (`commands.ts`), `useDocStore` already carried a `frame` index that `commit`,
+`undo` and `redo` already threaded through, every pixel-writing command already required a `frame`
+field, the renderer's `renderDoc` already took a `frameIndex` argument, `spriteRects`/`spriteToSvg`
+already took a `frame` argument, and the action registry already read `ctx.frame()` throughout. Only
+one command was missing entirely: reordering. `frame_move` is new, added mirroring `layer_move`
+(self-inverse under exchange) exactly.
+
+### 0.3 No `renderThumbnail` — `spriteRects` already is one
+
+§2 asks for thumbnails "via `renderThumbnail` (04 §7)". That function was never built, and does not
+need to be: `lib/renderer/sprite-svg.ts`'s `spriteRects(doc, frame)` is already an inline-SVG
+thumbnail renderer, already frame-aware, and already proven at exactly this job — it is what draws
+every thumbnail in the Open recent submenu (`17-file-menu.md §8.2`, `components/Chrome.tsx`'s
+`Thumb`). The timeline's frame thumbnails reuse it rather than inventing a second renderer for the
+same picture.
+
+### 0.4 The timeline docks to the top of `<main>`, not "above the AI composer"
+
+§2's mockup shows the strip sitting directly above the composer. Measured against what actually
+occupies `<main>`: the agent panel's height is not fixed — `AgentPanel.tsx`'s `shellFor` computes it
+from the tool rail's measured height and caps it so a long step log cannot grow into the rail, and
+that cap already changes between tiers and between idle and busy states. Anchoring a second panel
+"above" a box whose own top edge moves is the same class of bug `HANDOFF.md §5` has already caught
+twice in this repo by measuring (the notice sitting on the zoom pill at 320px, the Export popover
+anchored to the wrong ancestor) — both were invisible at rest and only showed up against real
+content.
+
+The timeline docks to the **top** of `<main>` instead: full width, `top: inset`, the one edge no
+other overlay anchors to on any tier. Layers panel already anchors there too (`top: inset, right:
+inset`), so opening both at once is the one real collision — handled by giving Layers panel's `top`
+an offset equal to the timeline strip's height when both are open, the same kind of coordination
+`railLift` already does between the tool rail and the agent panel. Withheld below the tablet
+breakpoint, same as Layers and Share (`HANDOFF.md §6.4`) — a 72px strip has nowhere to go on a phone
+that is not already spoken for by the horizontal tool rail and the agent panel.
+
+### 0.5 GIF, sprite sheet, and the animated React/CSS export hooks are out of this unit's scope
+
+`08-exporters.md §8` and `§9` mark sprite sheet and GIF **Phase 5** in the spec's own header, the
+same header that marked SVG/CSS/React/JSON/PNG **Phase 3** — and unit D, building Phase 3, already
+drew that line explicitly: *"GIF and sprite sheet. Phase 5 by the spec's own header, and the unit's
+prompt named six exporters, not eight."* `PLAN.md`'s line for this unit — "Frames, the timeline
+strip, playback, onion skinning if cheap, GIF export" — named GIF but not sprite sheet or the
+animated hooks, and was written before any of the four had a real cost estimate against them.
+
+Costed now: GIF export needs a Web Worker, a hand-written LZW encoder (no dependency in this repo
+does this, and pulling one in is a different decision than writing one), a progress-reporting
+protocol across the worker boundary, and its own test surface — on top of settling the load-bearing
+layer question, building the timeline UI, wall-clock playback, onion skinning and every keyboard
+shortcut in this same spec. Bundling a worker-and-codec project into the same unit as the
+per-frame-layers decision risks rushing both, which is exactly the failure mode `WORKFLOW.md`'s
+scoring gate exists to catch before it ships. **Deferred, the same way D deferred it**, now with a
+concrete reason rather than a phase number: GIF, sprite sheet, React's `animated` option and CSS's
+Phase-5 hooks are a follow-up unit, not built here. The export popover does not grow rows for them —
+absent rather than disabled, per `17-file-menu.md §7`'s own rule that a control that looks live and
+is not is worse than no control.
+
+---
+
 ## 1. Model
 
 No format change. `doc.frames` is already an ordered array with per-frame `ms`
 ([01 §3](./01-document-format.md)); Phases 1–4 simply never create a second frame.
 
 Constraints: `1 ≤ frames.length ≤ 64`, `10 ≤ ms ≤ 10000`. The 64-frame cap keeps a 256×256 document
-under ~4MB in memory and keeps GIF export inside a few seconds.
+under ~4MB in memory and keeps a future GIF export (§0.5) inside a few seconds. `ms` is already
+`serializedFrameSchema`'s own `min`/`max` (`MIN_FRAME_MS`/`MAX_FRAME_MS`), enforced by zod. The
+64-frame cap is **not** in the zod schema, deliberately, on the same reasoning `14-layers.md §3`
+gives for `MAX_LAYERS`: tightening `serializedFrameSchema` would make a hand-authored 65-frame file
+fail to *open*, and refusing to open somebody's artwork is worse than a long filmstrip. `MAX_FRAMES`
+lives in `lib/artwork-core/frames.ts` and is enforced where a frame is *added* — the `+` button and
+the context menu's Duplicate — the same split `add_layer` already uses.
 
 ---
 

@@ -471,22 +471,46 @@ Two things that came out of actually running these, both worth recording:
 
 ---
 
-## 9. Interaction with #47 (frames), noted and not built
+## 9. Interaction with #47 (frames) — resolved by unit F
 
 Layers are per-frame. Everything in this spec addresses `frames[activeFrame].layers`, and nothing
-here assumes frames are uniform.
+here assumes frames are uniform. Unit F (`10-animation.md`) had to decide three things before any
+timeline UI could exist; all three are settled now, in writing, per `docs/UNITS.md §0`'s protocol.
 
-When #47 lands it must decide, in its own sub-spec:
+**1. Adding a layer adds it to the current frame only. Layers diverge per frame, matching the
+format's actual shape.** The alternative — propagating every layer operation to every frame — is
+what an Aseprite-style "cel" model needs, and that model only makes sense next to a timeline that
+draws layers as rows in a grid. `10-animation.md §2`'s timeline is a filmstrip of whole frames, not
+a layer×frame grid, so there is no on-screen representation implying uniformity in the first place.
+This choice costs nothing to build: the Layers panel, `layer_add`/`layer_delete`/`layer_move`/etc.,
+and the agent's layer actions already operate on `frames[activeFrame].layers` exactly as this
+section always said — unit F changed none of them.
 
-- Whether adding a layer adds it to **every** frame or only the current one. The format permits
-  divergence; a timeline that shows layers as rows does not.
-- What the active layer becomes when the frame changes. `commit` already clamps, so the failure mode
-  is a silently-moved selection rather than a crash — but "clamped" is not "correct".
-- Whether `sameLayerShape` should compare across all frames (it does today) or only the active one.
-  The strict version is what makes the session fallback safe; the loose version may be wanted once
-  frames can differ.
+The one place this is genuinely felt is frame creation: `+` in the timeline **duplicates** the
+current frame (`10-animation.md §2`), which means its layer stack — names, opacity, blend modes,
+pixels — travels with it as a starting point. A frame is never born with a different layer stack
+than the one it was duplicated from; it only diverges from there if the user then adds, deletes or
+edits a layer on that one frame specifically. That is what "duplicating is overwhelmingly the common
+case" already implied before this decision made it explicit.
 
-Do not half-build any of it here.
+**2. The active layer, on a frame change, keeps the same index if it exists in the new frame; else
+it clamps to the last layer.** `clampLayer(doc, frame, layer)` already takes a frame argument and
+already does exactly this — `setFrame` in `lib/store/editor.ts` calls it the same way `commit`,
+`undo` and `redo` already did for the frame the command was addressed to. "Clamped" being "not
+correct" (this section's original wording) is accepted here for the same reason it was accepted for
+every other clamp in this file: a silently-moved selection is a UI nuisance, not a document
+correctness issue, and the alternative — refusing to change frames when the layer count differs — is
+a worse nuisance for a normal, expected case (a duplicated frame that then had a layer deleted).
+
+**3. `sameLayerShape` stays strict across all frames, unchanged.** The loose, active-frame-only
+version was the alternative on the table; it was not needed. The agent still only ever touches one
+frame per session (`10-animation.md §5`: the AI edits one frame at a time and the composer does not
+advertise frame or animation verbs), so a session that adds no frames and touches no layer shape on
+frames it never visited will always pass the strict check trivially — the frames it did not touch are
+byte-identical before and after, strict or loose. Loosening it would only matter if the agent were
+ever allowed to run a session that changes frame count or another frame's layer shape mid-session,
+which it is not, and which unit F's own scope (`10-animation.md §5`) explicitly keeps out. Left as
+`14-layers.md` already had it, rather than changed for a case that cannot occur.
 
 ---
 

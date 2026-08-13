@@ -12,6 +12,7 @@ import { create } from 'zustand'
 import type { Doc } from '../artwork-core/schema'
 import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
 import { clampLayer } from '../artwork-core/layers'
+import { clampFrame } from '../artwork-core/frames'
 import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
@@ -66,6 +67,8 @@ type DocState = {
 
   setDoc: (doc: Doc) => void
   setLayer: (i: number) => void
+  /** Which frame is shown and edited. UI state, like `layer` — not undoable. */
+  setFrame: (i: number) => void
   /**
    * The one writer. See docs/specs/07-code-panel.md §9.4 for `coalesce`.
    *
@@ -107,8 +110,9 @@ export const useDocStore = create<DocState>((set, get) => {
     saveError: null,
 
     setDoc: (doc) => {
-      // Layer 0, not the previous index: another document's indices mean nothing.
-      set({ doc, layer: 0, past: [], future: [] })
+      // Frame 0, layer 0, not the previous indices: another document's indices
+      // mean nothing.
+      set({ doc, frame: 0, layer: 0, past: [], future: [] })
       scheduleSave()
     },
 
@@ -117,21 +121,33 @@ export const useDocStore = create<DocState>((set, get) => {
       set({ layer: clampLayer(doc, frame, i) })
     },
 
+    // 10-animation.md §0.1: the active layer keeps its own index across a frame
+    // change when that index still exists in the new frame, and clamps to the
+    // last one when it does not — clampLayer already does exactly this, given
+    // the NEW frame rather than the old one.
+    setFrame: (i) => {
+      const { doc, layer } = get()
+      const f = clampFrame(doc, i)
+      set({ frame: f, layer: clampLayer(doc, f, layer) })
+    },
+
     commit: (cmd, coalesce = false) => {
       if (!cmd) return // an empty stroke must not consume an undo step
       const { doc, past, frame, layer, agentDepth } = get()
       if (!doc) return
       const next = applyCommand(doc, cmd)
       // One clamp on every write path. Deleting the top layer, undoing an add,
-      // replacing the document from an agent session — each of them can leave
-      // the active index past the end, and enumerating them is how one gets
-      // missed.
-      const nextLayer = clampLayer(next, frame, layer)
+      // deleting or reordering a frame, replacing the document from an agent
+      // session — each of them can leave the active index past the end, and
+      // enumerating them is how one gets missed. Frame first, since a clamped
+      // layer index depends on which frame it is being clamped into.
+      const nextFrame = clampFrame(next, frame)
+      const nextLayer = clampLayer(next, nextFrame, layer)
 
       // Still the only writer — an agent session changes what happens to history,
       // not who writes the document.
       if (agentDepth > 0) {
-        set({ doc: next, layer: nextLayer })
+        set({ doc: next, frame: nextFrame, layer: nextLayer })
         scheduleSave()
         return
       }
@@ -145,6 +161,7 @@ export const useDocStore = create<DocState>((set, get) => {
           top.label === cmd.label) {
         set({
           doc: next,
+          frame: nextFrame,
           layer: nextLayer,
           past: [...past.slice(0, -1), { ...cmd, before: top.before }],
           future: [],
@@ -154,7 +171,7 @@ export const useDocStore = create<DocState>((set, get) => {
       }
 
       const trimmed = past.length >= HISTORY_CAP ? past.slice(past.length - HISTORY_CAP + 1) : past
-      set({ doc: next, layer: nextLayer, past: [...trimmed, cmd], future: [] })
+      set({ doc: next, frame: nextFrame, layer: nextLayer, past: [...trimmed, cmd], future: [] })
       scheduleSave()
     },
 
@@ -163,9 +180,11 @@ export const useDocStore = create<DocState>((set, get) => {
       if (!doc || past.length === 0) return
       const cmd = past[past.length - 1]!
       const next = applyCommand(doc, invertCommand(cmd))
+      const nextFrame = clampFrame(next, frame)
       set({
         doc: next,
-        layer: clampLayer(next, frame, layer),
+        frame: nextFrame,
+        layer: clampLayer(next, nextFrame, layer),
         past: past.slice(0, -1),
         future: [cmd, ...future],
       })
@@ -177,9 +196,11 @@ export const useDocStore = create<DocState>((set, get) => {
       if (!doc || future.length === 0) return
       const cmd = future[0]!
       const next = applyCommand(doc, cmd)
+      const nextFrame = clampFrame(next, frame)
       set({
         doc: next,
-        layer: clampLayer(next, frame, layer),
+        frame: nextFrame,
+        layer: clampLayer(next, nextFrame, layer),
         past: [...past, cmd],
         future: future.slice(1),
       })
@@ -240,6 +261,17 @@ type EditorState = {
    */
   layersOpen: boolean
   settingsOpen: boolean
+  /** Whether the animation timeline strip is on screen. Same shape as `layersOpen`. */
+  timelineOpen: boolean
+  /**
+   * Onion skinning — previous/next frame drawn tinted beneath the current one.
+   * Spec 10 §4: off by default, per-session rather than persisted, and the
+   * renderer disables it during playback regardless of this flag.
+   */
+  onionSkin: boolean
+  /** Ping-pong toggle for playback — spec 10 §3's `⟲`. Lives here rather than
+   *  in the playback store because it is a setting, not scheduling state. */
+  pingPong: boolean
   /**
    * Whether the code panel is on screen, and how wide it is.
    *
@@ -296,6 +328,9 @@ type EditorState = {
   setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
   setLayersOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
+  setTimelineOpen: (open: boolean) => void
+  setOnionSkin: (on: boolean) => void
+  setPingPong: (on: boolean) => void
   setCodeOpen: (open: boolean) => void
   setCodeWidth: (w: number) => void
   setCodeCell: (c: { x: number; y: number } | null) => void
@@ -319,6 +354,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   selection: null,
   layersOpen: false,
   settingsOpen: false,
+  timelineOpen: false,
+  onionSkin: false,
+  pingPong: false,
   codeOpen: false,
   codeWidth: CODE_DEFAULT_W,
   codeCell: null,
@@ -344,6 +382,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelection: (sel) => set({ selection: sel }),
   setLayersOpen: (open) => set({ layersOpen: open }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setTimelineOpen: (open) => set({ timelineOpen: open }),
+  setOnionSkin: (on) => set({ onionSkin: on }),
+  setPingPong: (on) => set({ pingPong: on }),
   setCodeOpen: (open) => set({ codeOpen: open }),
   setCodeWidth: (w) =>
     set({

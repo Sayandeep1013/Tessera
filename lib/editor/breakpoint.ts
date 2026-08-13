@@ -119,7 +119,12 @@ export function chromeFor(tier: Tier) {
      * phone can do something the canvas cannot, which is read the document.
      */
     showCode: true,
-    /** Timeline — still not built, and now the only one. */
-    showUnbuilt: tier === 'wide',
+    /**
+     * The timeline is built (unit F). Withheld below the tablet breakpoint,
+     * same as Layers and Share — a 72px strip has nowhere to go on a phone
+     * that is not already spoken for by the horizontal tool rail and the
+     * agent panel. See docs/specs/10-animation.md §0.4.
+     */
+    showTimeline: tier !== 'mobile',
   }
 }

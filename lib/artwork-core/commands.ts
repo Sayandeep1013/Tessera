@@ -52,6 +52,7 @@ export type EditorCommand =
   | { type: 'frame_add'; label: string; at: number; frame: Frame }
   | { type: 'frame_delete'; label: string; at: number; frame: Frame }
   | { type: 'frame_duration'; label: string; at: number; before: number; after: number }
+  | { type: 'frame_move'; label: string; from: number; to: number }
   /**
    * The document's name. Its own command rather than a `replace_doc`, because
    * cloning every pixel to record a changed string makes the undo stack
@@ -62,7 +63,7 @@ export type EditorCommand =
   | { type: 'replace_doc'; label: string; before: Doc; after: Doc }
   | { type: 'resize'; label: string; before: Doc; after: Doc }
 
-const cloneFrame = (f: Frame): Frame => ({
+export const cloneFrame = (f: Frame): Frame => ({
   ms: f.ms,
   layers: f.layers.map((l) => ({ ...l, px: new Uint8Array(l.px) })),
 })
@@ -205,6 +206,14 @@ export function applyCommand(doc: Doc, cmd: EditorCommand): Doc {
       return stamp(next)
     }
 
+    case 'frame_move': {
+      const next = cloneDoc(doc)
+      if (!next.frames[cmd.from] || cmd.to < 0 || cmd.to >= next.frames.length) return next
+      const [moved] = next.frames.splice(cmd.from, 1)
+      next.frames.splice(cmd.to, 0, moved!)
+      return stamp(next)
+    }
+
     case 'doc_rename': {
       const next = cloneDoc(doc)
       next.name = cmd.after
@@ -293,6 +302,11 @@ export function invertCommand(cmd: EditorCommand): EditorCommand {
 
     case 'frame_duration':
       return { ...cmd, before: cmd.after, after: cmd.before }
+
+    case 'frame_move':
+      // Self-inverse under exchange, like layer_move: splice-out-then-splice-in
+      // is symmetric.
+      return { ...cmd, from: cmd.to, to: cmd.from }
 
     // Self-inverse under exchange, like layer_rename and frame_duration. Not
     // merged with them: sharing a branch widens before/after across three

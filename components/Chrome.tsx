@@ -164,6 +164,8 @@ export function TopBar() {
   const setLayersOpen = useEditorStore((s) => s.setLayersOpen)
   const codeOpen = useEditorStore((s) => s.codeOpen)
   const setCodeOpen = useEditorStore((s) => s.setCodeOpen)
+  const timelineOpen = useEditorStore((s) => s.timelineOpen)
+  const setTimelineOpen = useEditorStore((s) => s.setTimelineOpen)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [fileOpen, setFileOpen] = useState(false)
@@ -484,10 +486,16 @@ export function TopBar() {
           />
         )}
 
-        {/* Not built yet. It holds newt's layout on a wide screen, but it is
-            the first thing to go when space is short — a dead control must never
-            cost a live one its place. */}
-        {c.showUnbuilt && <GlyphBtn title="Animation timeline" Icon={FilmStrip} disabled />}
+        {/* Live — unit F. Withheld below tablet, same as Layers and Share. */}
+        {c.showTimeline && (
+          <GlyphBtn
+            title="Timeline"
+            tip="Animation timeline"
+            Icon={FilmStrip}
+            active={timelineOpen}
+            onClick={() => setTimelineOpen(!timelineOpen)}
+          />
+        )}
 
         {/* Live, so it is no longer gated with the dead controls above — it
             survives down to tablet on its own terms. */}

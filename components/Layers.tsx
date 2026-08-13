@@ -33,7 +33,15 @@ const WIDTH: Record<Tier, number> = { wide: 248, compact: 248, tablet: 224, mobi
  *  same order `rows` renders in — converted to array order only on commit. */
 type Drag = { pointerId: number; from: number; to: number }
 
-export function LayersPanel({ onClose }: { onClose: () => void }) {
+export function LayersPanel({
+  onClose, topOffset = 0,
+}: {
+  onClose: () => void
+  /** Pushed down by the timeline strip's height when it is also open — spec
+   *  10 §0.4. Both panels dock to the same top edge, so one of them has to
+   *  give way rather than overlap the other. */
+  topOffset?: number
+}) {
   const doc = useDocStore((s) => s.doc)
   const frame = useDocStore((s) => s.frame)
   const active = useDocStore((s) => s.layer)
@@ -231,7 +239,7 @@ export function LayersPanel({ onClose }: { onClose: () => void }) {
       aria-label="Layers"
       style={{
         position: 'absolute',
-        top: c.inset,
+        top: c.inset + topOffset,
         right: c.inset,
         zIndex: 30,
         width: WIDTH[tier],

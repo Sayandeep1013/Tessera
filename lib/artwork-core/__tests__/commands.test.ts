@@ -361,6 +361,40 @@ describe('structural layer commands', () => {
   })
 })
 
+describe('frame_move', () => {
+  const threeFrames = () => {
+    const doc = docOf(['1.', '..'], PAL)
+    doc.frames = [
+      { ms: 100, layers: [{ n: 'a', px: docOf(['1.', '..'], PAL).frames[0]!.layers[0]!.px }] },
+      { ms: 200, layers: [{ n: 'b', px: docOf(['.2', '..'], PAL).frames[0]!.layers[0]!.px }] },
+      { ms: 300, layers: [{ n: 'c', px: docOf(['..', '.3'], PAL).frames[0]!.layers[0]!.px }] },
+    ]
+    return doc
+  }
+
+  it('reorders frames, keeping ms and pixels with the frame', () => {
+    const doc = threeFrames()
+    const moved = applyCommand(doc, { type: 'frame_move', label: 'Reorder', from: 0, to: 2 })
+    expect(moved.frames.map((f) => f.ms)).toEqual([200, 300, 100])
+    expect(moved.frames.map((f) => f.layers[0]!.n)).toEqual(['b', 'c', 'a'])
+  })
+
+  it('inverts by exchange, restoring original order', () => {
+    const doc = threeFrames()
+    const cmd: EditorCommand = { type: 'frame_move', label: 'Reorder', from: 0, to: 2 }
+    const back = applyCommand(applyCommand(doc, cmd), invertCommand(cmd))
+    expect(back.frames.map((f) => f.layers[0]!.n)).toEqual(['a', 'b', 'c'])
+    expect(back.frames.map((f) => f.ms)).toEqual([100, 200, 300])
+  })
+
+  it('is a no-op for an out-of-range index, never throws', () => {
+    const doc = threeFrames()
+    const cmd: EditorCommand = { type: 'frame_move', label: 'x', from: 9, to: 0 }
+    expect(() => applyCommand(doc, cmd)).not.toThrow()
+    expect(applyCommand(doc, cmd).frames.map((f) => f.layers[0]!.n)).toEqual(['a', 'b', 'c'])
+  })
+})
+
 describe('unchanged command types still round-trip', () => {
   it('palette, frame and replace commands invert as before', () => {
     fc.assert(

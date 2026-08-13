@@ -5,11 +5,14 @@ import { Canvas } from '@/components/Canvas'
 import { TopBar, ToolRail, ZoomBar } from '@/components/Chrome'
 import { AgentPanel } from '@/components/AgentPanel'
 import { LayersPanel } from '@/components/Layers'
+import { TimelinePanel, TIMELINE_DOM_ID, TIMELINE_HEIGHT } from '@/components/Timeline'
 import { CodePanel, useCodeShortcut } from '@/components/CodePanel'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { MosaicLoader } from '@/components/Loaders'
 import { useDocStore, useEditorStore } from '@/lib/store/editor'
+import { usePlaybackStore } from '@/lib/store/playback'
 import { createDoc } from '@/lib/artwork-core/create'
+import { cloneFrame } from '@/lib/artwork-core/commands'
 import { nanoid } from 'nanoid'
 import { loadLatestDraft } from '@/lib/persist/idb'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
@@ -22,10 +25,13 @@ import { serializeDoc } from '@/lib/artwork-core/codec'
 export default function EditorPage() {
   const doc = useDocStore((s) => s.doc)
   const layersOpen = useEditorStore((s) => s.layersOpen)
-  // The panel is withheld on a phone (see breakpoint.ts). Gating here as well as
-  // on the button means a resize while it is open puts it away rather than
-  // leaving it stranded over a 320px canvas.
-  const { showLayers } = chromeFor(useTier())
+  const timelineOpen = useEditorStore((s) => s.timelineOpen)
+  // Both panels are withheld on a phone (see breakpoint.ts). Gating here as
+  // well as on the button means a resize while one is open puts it away
+  // rather than leaving it stranded over a 320px canvas.
+  const c = chromeFor(useTier())
+  const { showLayers, showTimeline } = c
+  const timelineShown = timelineOpen && showTimeline
 
   /**
    * The editor does not server-render.
@@ -107,6 +113,14 @@ export default function EditorPage() {
           px: Array.from(l.px),
         })) ?? null,
       active: () => useDocStore.getState().layer,
+      // Unit F: the timeline probe needs the active frame index and the
+      // document's frame count/durations without pulling every layer's pixels
+      // for every frame — `layers()` already answers the active frame's own
+      // layers.
+      frame: () => useDocStore.getState().frame,
+      frames: () =>
+        useDocStore.getState().doc?.frames.map((f) => ({ ms: f.ms, layerCount: f.layers.length })) ?? null,
+      playing: () => usePlaybackStore.getState().playing,
       // Layers alone cannot answer "is this 64x36 or 36x64" — a px array of
       // 2304 entries is the same either way — and that is exactly what the
       // resize probe has to check.
@@ -145,12 +159,49 @@ export default function EditorPage() {
       const ed = useEditorStore.getState()
       const ds = useDocStore.getState()
 
+      // Spec 10 §2: Space collides with hold-to-pan, and the resolution is
+      // decided here rather than left to discovery — it toggles playback only
+      // when the timeline has focus, and pans everywhere else. `e.repeat` is
+      // guarded because holding the key fires many keydowns, and play/pause is
+      // a flip, not a hold, the way panning is.
       if (e.key === ' ' && !isTyping(e.target)) {
+        const inTimeline = (e.target as HTMLElement | null)?.closest(`#${TIMELINE_DOM_ID}`)
+        if (inTimeline) {
+          e.preventDefault()
+          if (!e.repeat) usePlaybackStore.getState().toggle()
+          return
+        }
         e.preventDefault()
         if (!ed.panning) ed.setPanning(true)
         return
       }
       if (isTyping(e.target)) return
+
+      // `⌥D` / `⌥⌫` — spec 10 §2. `e.code` rather than `e.key`: Option remaps
+      // `e.key` to a different character on a Mac (Option+D types "∂"), and
+      // `KeyD`/`Backspace` are the same physical keys on every layout.
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        if (e.code === 'KeyD') {
+          e.preventDefault()
+          const d = ds.doc
+          const source = d?.frames[ds.frame]
+          if (source) {
+            const at = ds.frame + 1
+            ds.commit({ type: 'frame_add', label: 'Duplicate frame', at, frame: cloneFrame(source) })
+            ds.setFrame(at)
+          }
+          return
+        }
+        if (e.code === 'Backspace') {
+          e.preventDefault()
+          const d = ds.doc
+          const target = d?.frames[ds.frame]
+          if (d && target && d.frames.length > 1) {
+            ds.commit({ type: 'frame_delete', label: 'Delete frame', at: ds.frame, frame: cloneFrame(target) })
+          }
+          return
+        }
+      }
 
       const mod = e.ctrlKey || e.metaKey
       if (mod && e.key.toLowerCase() === 'z') {
@@ -187,6 +238,27 @@ export default function EditorPage() {
             const r = el.getBoundingClientRect()
             ed.setViewport(fitViewport(ds.doc, r.width, r.height))
           }
+          break
+        }
+        // Spec 10 §2: `,` / `.` step the active frame, `⇧,` / `⇧.` move it.
+        // Shift changes what a comma/period key REPORTS as `e.key` (US layout:
+        // `<` / `>`), so the shifted cases are separate switch arms rather than
+        // an `e.shiftKey` check inside one — the same reason `⌥D` above reads
+        // `e.code` instead.
+        case ',': ds.setFrame(ds.frame - 1); break
+        case '.': ds.setFrame(ds.frame + 1); break
+        case '<': {
+          const to = ds.frame - 1
+          if (to < 0) break
+          ds.commit({ type: 'frame_move', label: 'Reorder frame', from: ds.frame, to })
+          ds.setFrame(to)
+          break
+        }
+        case '>': {
+          const to = ds.frame + 1
+          if (!ds.doc || to >= ds.doc.frames.length) break
+          ds.commit({ type: 'frame_move', label: 'Reorder frame', from: ds.frame, to })
+          ds.setFrame(to)
           break
         }
       }
@@ -235,8 +307,14 @@ export default function EditorPage() {
               <Canvas />
               <ToolRail />
               <ZoomBar />
+              {timelineShown && (
+                <TimelinePanel onClose={() => useEditorStore.getState().setTimelineOpen(false)} />
+              )}
               {layersOpen && showLayers && (
-                <LayersPanel onClose={() => useEditorStore.getState().setLayersOpen(false)} />
+                <LayersPanel
+                  onClose={() => useEditorStore.getState().setLayersOpen(false)}
+                  topOffset={timelineShown ? TIMELINE_HEIGHT + c.inset : 0}
+                />
               )}
               <AgentPanel />
             </>

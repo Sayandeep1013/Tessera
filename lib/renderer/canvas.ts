@@ -7,7 +7,7 @@
  * in resolved — reading computed style per frame is both slow and untestable.
  */
 
-import { layerAlpha, layerBlendMode } from '../artwork-core/layers'
+import { compositeAt, layerAlpha, layerBlendMode } from '../artwork-core/layers'
 import type { BlendMode, Doc } from '../artwork-core/schema'
 import type { PixelDiff } from '../artwork-core/diff'
 
@@ -59,6 +59,11 @@ export type RenderOptions = {
   transparencyGrid?: boolean
   /** The mirror line(s) a symmetric stroke reflects across. Spec 16 §3.1. */
   symmetry?: 'off' | 'h' | 'v' | 'both'
+  /**
+   * Onion skin — spec 10 §4. The caller (Canvas.tsx) is responsible for never
+   * passing `true` during playback; the renderer does not know about playback.
+   */
+  onion?: boolean
 }
 
 /**
@@ -171,6 +176,13 @@ export function renderDoc(
     drawTransparencyGrid(ctx, ax, ay, aw, ah, vp.scale, theme)
   }
 
+  // 2.5. onion skin — previous frame tinted diffRemove, next tinted diffAdd,
+  // both beneath the current frame's own layers. Spec 10 §4.
+  if (opts.onion) {
+    drawOnionFrame(ctx, doc, frameIndex - 1, ax, ay, vp.scale, theme.diffRemove)
+    drawOnionFrame(ctx, doc, frameIndex + 1, ax, ay, vp.scale, theme.diffAdd)
+  }
+
   // 3. layers, bottom to top, with horizontal run merging
   const paletteCss = doc.palette.map((p) => p.c)
   const frame = doc.frames[frameIndex]
@@ -236,6 +248,50 @@ function drawTransparencyGrid(
   for (let y = 0; y < ah; y += CELL) {
     for (let x = ((y / CELL) % 2) * CELL; x < aw; x += CELL * 2) {
       ctx.fillRect(ax + x, ay + y, Math.min(CELL, aw - x), Math.min(CELL, ah - y))
+    }
+  }
+  ctx.restore()
+}
+
+/** Alpha for the onion-skin silhouette. Spec 10 §4: "30% alpha". */
+const ONION_ALPHA = 0.3
+
+/**
+ * A flat, single-colour silhouette of one frame's composite — not its own
+ * palette. Onion skinning answers "where was/will the shape be", not "what
+ * colour was it there"; a full-colour ghost frame competes with the current
+ * one for attention instead of reading as a guide, the same reasoning that
+ * puts the symmetry axis in one flat colour rather than the grid's per-cell
+ * treatment.
+ *
+ * `frameIndex` may be out of range (there is no frame before 0 or after the
+ * last) — `compositeAt` already returns 0 for a missing frame, so this is
+ * silently a no-op rather than needing its own guard.
+ */
+function drawOnionFrame(
+  ctx: CanvasRenderingContext2D,
+  doc: Doc,
+  frameIndex: number,
+  ax: number,
+  ay: number,
+  scale: number,
+  tint: string,
+): void {
+  ctx.save()
+  ctx.globalAlpha = ONION_ALPHA
+  ctx.fillStyle = tint
+  for (let y = 0; y < doc.h; y++) {
+    let x = 0
+    const rowTop = ay + y * scale
+    while (x < doc.w) {
+      if (compositeAt(doc, frameIndex, x, y) === 0) {
+        x++
+        continue
+      }
+      let len = 1
+      while (x + len < doc.w && compositeAt(doc, frameIndex, x + len, y) !== 0) len++
+      ctx.fillRect(ax + x * scale, rowTop, len * scale, scale)
+      x += len
     }
   }
   ctx.restore()

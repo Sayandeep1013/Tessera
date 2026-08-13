@@ -118,6 +118,90 @@ describe('commit clamps the active layer', () => {
   })
 })
 
+/** 10-animation.md §0.1 — the frame index gets the same one-clamp treatment
+ *  layer already had, plus the "active layer follows the new frame" rule. */
+function threeFrames(): Doc {
+  const doc = createDoc({ id: 'frames', w: 2, h: 2, now: '2026-08-11T00:00:00.000Z' })
+  doc.frames[0]!.layers.push({ n: 'over', px: new Uint8Array(4) })
+  doc.frames.push({ ms: 100, layers: [{ n: 'a', px: new Uint8Array(4) }] })
+  doc.frames.push({ ms: 100, layers: [{ n: 'a', px: new Uint8Array(4) }] })
+  return doc
+}
+
+const delFrame = (at: number, doc: Doc): EditorCommand => ({
+  type: 'frame_delete',
+  label: 'Delete frame',
+  at,
+  frame: doc.frames[at]!,
+})
+
+describe('setDoc resets the active frame', () => {
+  it("another document's frame index means nothing", () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setFrame(2)
+    expect(useDocStore.getState().frame).toBe(2)
+
+    useDocStore.getState().setDoc(createDoc({ id: 'fresh', w: 2, h: 2 }))
+    expect(useDocStore.getState().frame).toBe(0)
+  })
+})
+
+describe('setFrame', () => {
+  it('clamps rather than rejecting', () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setFrame(99)
+    expect(useDocStore.getState().frame).toBe(2)
+    useDocStore.getState().setFrame(-4)
+    expect(useDocStore.getState().frame).toBe(0)
+  })
+
+  it('keeps the active layer index when it still exists in the new frame', () => {
+    useDocStore.getState().setDoc(threeFrames()) // frame 0 has 2 layers, frames 1-2 have 1
+    useDocStore.getState().setLayer(1)
+    useDocStore.getState().setFrame(0)
+    expect(useDocStore.getState().layer).toBe(1)
+  })
+
+  it('clamps the active layer to the new frame\'s last one when it does not', () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setLayer(1) // valid on frame 0 (2 layers)
+    useDocStore.getState().setFrame(1) // frame 1 has only 1 layer
+    expect(useDocStore.getState().layer).toBe(0)
+  })
+})
+
+describe('commit clamps the active frame', () => {
+  it('deleting the active last frame moves the selection into range', () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setFrame(2)
+    useDocStore.getState().commit(delFrame(2, useDocStore.getState().doc!))
+
+    expect(useDocStore.getState().doc!.frames).toHaveLength(2)
+    expect(useDocStore.getState().frame).toBe(1)
+  })
+
+  it('undo of that delete leaves the selection in range', () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setFrame(2)
+    useDocStore.getState().commit(delFrame(2, useDocStore.getState().doc!))
+    useDocStore.getState().undo()
+
+    expect(useDocStore.getState().doc!.frames).toHaveLength(3)
+    expect(useDocStore.getState().frame).toBeLessThan(3)
+  })
+
+  it('redo also clamps', () => {
+    useDocStore.getState().setDoc(threeFrames())
+    useDocStore.getState().setFrame(2)
+    useDocStore.getState().commit(delFrame(2, useDocStore.getState().doc!))
+    useDocStore.getState().undo()
+    useDocStore.getState().setFrame(2)
+    useDocStore.getState().redo()
+
+    expect(useDocStore.getState().frame).toBe(1)
+  })
+})
+
 describe('paint commands still record their own layer', () => {
   it('undo writes back to the recorded layer, not the active one', () => {
     const s = useDocStore.getState()

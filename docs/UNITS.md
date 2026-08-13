@@ -94,7 +94,8 @@ works; it is done when the next agent can start without asking anything.
 | **C** | Code panel | **DONE** | 9 | [07 §9](./specs/07-code-panel.md) |
 | **D** | Exporters ×6 | **DONE** | 9 | [08](./specs/08-exporters.md) |
 | **E** | Layers phase 2 | **DONE** | 9 | [14 §12](./specs/14-layers.md) |
-| **F** | Animation | **NEXT** | — | [10](./specs/10-animation.md) |
+| **F** | Animation | **DONE** | 9 | [10](./specs/10-animation.md) |
+| **G** | GIF, sprite sheet, animated export hooks | **NEXT** | — | [10 §0.5](./specs/10-animation.md), [08 §8–9](./specs/08-exporters.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
 
@@ -1162,43 +1163,145 @@ disagreed, and it is the check that would have caught it.
 
 ---
 
-## F — Animation · NEXT
+## F — Animation · DONE
+
+**13 Aug 2026 · see `git log` · 9/10**
+
+The layer question settled first, in writing, per its own prompt:
+`14-layers.md §9` — **a layer belongs to the frame it was added to; layers
+diverge per frame.** Cost nothing to build — every command and panel this unit
+touched already addressed `frames[activeFrame].layers`.
+
+The codebase turned out to already be frame-shaped: `frame_add`,
+`frame_delete` and `frame_duration` already existed with tested inverses, the
+`frame` index already threaded through `useDocStore`/`renderDoc`/`spriteRects`,
+and the action registry already read `ctx.frame()`. Only reordering was
+missing. Full account of what was already true versus what this unit actually
+built is `10-animation.md §0` — five corrections/decisions recorded there per
+rule 10, including why GIF/sprite sheet/animated-export hooks are explicitly
+**out of this unit** (§0.5, costed and deferred the same way D deferred them —
+now unit **G**, below).
+
+**What shipped:**
+
+- `frame_move` command (self-inverse under exchange, mirroring `layer_move`)
+  and `lib/artwork-core/frames.ts` — `MAX_FRAMES` (64, enforced at the point a
+  frame is added, not in the zod schema — the same split `MAX_LAYERS` uses)
+  and `clampFrame`.
+- `useDocStore`: `frame` is now clamped on every write path — `commit`, `undo`,
+  `redo` — the same one-clamp-covers-every-path shape `layer` already had,
+  frame computed first since a clamped layer index depends on which frame it
+  lands in. `setFrame(i)` is UI state, not undoable, exactly like `setLayer`.
+- `lib/editor/playback.ts` — `frameAtElapsed(durations, elapsedMs, pingPong)`,
+  pure and wall-clock scheduled (never `setTimeout` per frame, which drifts
+  and compounds a dropped frame). `lib/store/playback.ts` —
+  `usePlaybackStore`, a module-scope `requestAnimationFrame` loop that calls
+  `setFrame` only, never `commit`; pauses on `document.visibilitychange` and
+  on any edit (subscribed to `useDocStore`'s `past.length`).
+- Onion skin in the renderer — `drawOnionFrame`, a flat single-tint
+  run-composited silhouette of the previous/next frame at 30% alpha
+  (`--diff-remove`/`--diff-add`), using the existing `compositeAt` rather than
+  a second compositor. Off by default, disabled during playback by the caller.
+- `components/Timeline.tsx` — the 72px strip: play/pause, ping-pong toggle,
+  frame thumbnails (`spriteRects`, no new thumbnail renderer — §0.3), drag
+  reorder, right-click/long-press context menu (Duplicate/Delete/Set
+  duration…), a duration field with shift-click range-select batched into one
+  `frame_move`-style undo step. Docks to the **top** of `<main>`, not "above
+  the composer" as the mockup shows — §0.4 — because the agent panel's height
+  is dynamic and anchoring a second panel above a moving target is the same
+  overlap-bug class already caught twice (`HANDOFF.md §5`). Layers panel gets
+  a `topOffset` prop so the two stack instead of overlapping when both are
+  open.
+- Keyboard: `,`/`.` step the frame, `⇧,`/`⇧.` move it, `⌥D`/`⌥⌫`
+  duplicate/delete (via `e.code`, not `e.key` — Option remaps `e.key` on a
+  Mac), `Space` toggles playback only when the timeline has focus and pans
+  everywhere else (the one real conflict the spec calls out, resolved in
+  `app/page.tsx` by checking `e.target.closest('#tessera-timeline')`).
+- `showUnbuilt` in `breakpoint.ts` is retired — renamed `showTimeline`, live,
+  withheld below the tablet breakpoint like Layers and Share. **The dead-control
+  group is now empty.**
+- 27 new unit tests (`frames.test.ts`, `frame_move` in `commands.test.ts`,
+  frame-clamping in `doc-store.test.ts`, 13 in `playback.test.ts` covering the
+  spec's own examples — 250ms on `[100,100,100]` lands on frame 2, a
+  400ms-gap self-corrects rather than lagging, ping-pong does not hold either
+  end twice) and a new 63-check browser probe, `tools/probe-timeline.ts`.
+
+**One real bug, found by the probe, not by the unit tests:** the context
+menu's outside-click listener closed on *any* `mousedown`, with no containment
+check — so clicking one of its own items (Duplicate, Delete, Set duration…)
+closed the menu before the click ever ran. `frame_delete`'s own guard against
+deleting the last frame turned this into an infinite loop in the probe (right-
+click, click Delete, nothing happens, repeat) rather than a fast failure — the
+probe now buffers nothing (`check()` prints immediately) and caps that loop at
+10 iterations, so a repeat of this class of bug fails in seconds, not
+minutes. Fixed the same way `Chrome.tsx`'s `FileMenu`/`PalettePopover` already
+do it: a ref and `ref.current.contains(e.target)`, not just "a mousedown
+happened somewhere." Recorded in `HANDOFF.md §5`.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Timeline UI, wall-clock playback, onion skin, all five keyboard shortcuts, drag reorder and the context menu are all built to spec. GIF/sprite sheet/animated hooks are deliberately out (§0.5), the same documented deferral D already set precedent for. Not 10: the deferral means "Frames, the timeline strip, playback, onion skinning if cheap, GIF export" from `PLAN.md`'s own one-line scope for this unit is not fully delivered, even though the reason is written down rather than silent. |
+| 2 | Correctness | 9 | `frameAtElapsed` is tested against the spec's own worked examples including the dropped-frame self-correction and the ping-pong no-double-hold case; frame commands round-trip through undo; the active frame/layer clamp on every write path, verified by tests that delete/undo/redo across frame boundaries. Not 10: the 64-frame cap is unit-tested at the constant but not exercised end-to-end through the UI (65 additions would be tedious to drive through a probe), and the drag-vs-click-on-one-element interaction in `Timeline.tsx` is a genuinely new pattern this codebase had not used before — trusted because the probe drives it with real pointer events, not because it mirrors a proven precedent the way `Layers.tsx`'s separate grip button does. |
+| 3 | Tests | 9 | 27 new unit tests plus 63 browser checks across both themes, tablet and mobile withholding, and a both-panels-open placement check. Not 10: the shift-click duration-range batch command has no dedicated unit test of its own, only end-to-end coverage through the probe. |
+| 4 | Integration | 9 | `commit()` is still the only writer — playback calls `setFrame` alone and never `commit`, verified by reading `usePlaybackStore`'s own code path rather than assumed; frame index is UI state clamped the same way layer index already was; onion skin reuses `compositeAt` rather than inventing a second compositor; thumbnails reuse `spriteRects`. Not 10: `Timeline.tsx` is a new, sizeable component combining several interaction patterns (drag, click, long-press, right-click, shift-click range) on one 48px element, which is more surface to reason about at once than the panel it most resembles. |
+| 5 | Design fidelity | 9 | Screenshotted in both themes at multiple states (open, three frames, both panels docked). The mockup's `▶`/`⟲`/`◐` notation is rendered as those literal glyphs rather than invented as Phosphor-style paths — `icons.tsx` stays Phosphor-only, generated, and untouched. The timeline's dock point is a corrected, written-down deviation from the mockup (§0.4), not an unmeasured shortcut. Not 10: no reference measurement exists for this panel — newt's own timeline was never part of the original audit, so the layout is this app's own judgement, the same caveat unit E's phase-2 layers panel carried. |
+| 6 | No regressions | 9 | 709 tests (681 → 709) across 46 files, clean production build, 6 viewports clean, and every gating probe green in one `npm run probes` run, `probe-timeline` included. The real bug the probe caught (above) was fixed before this score was written, not carried forward. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **GIF, sprite sheet, and the animated React/CSS export hooks.** §0.5, costed
+  and deferred — now unit **G**, below.
+- **A mobile timeline.** Withheld below the tablet breakpoint, the same
+  decision Layers and Share already made and for the same reason: a control
+  built for a desk, not a thumb, on a screen with no room to spare.
+- **Multi-frame AI edits ("animate it blinking").** Spec §5 — the agent edits
+  one frame at a time; temporal coherence across frames is a separate,
+  harder decision with its own probe matrix.
+
+---
+
+## G — GIF, sprite sheet, animated export hooks · NEXT
 
 ### Context handed over
 
-- **Settle this first, in writing, before any timeline UI exists.** Layers are
-  per-frame in the format, so "add a layer" is ambiguous once a second frame
-  exists: this frame, or all of them? `14-layers.md §9` states the three open
-  questions. Everything else in this unit is downstream of that answer.
-- `frame_add`, `frame_delete` and `frame_duration` commands already exist in
-  `commands.ts` and are unused.
-- The Timeline button is the last member of `showUnbuilt`.
-- **From E — layers now carry opacity and a blend mode, and whatever the
-  per-frame-vs-shared decision turns out to be, both fields travel with the
-  layer either way.** `layerAlpha`/`layerBlendMode` in
-  `lib/artwork-core/layers.ts` read a layer's own fields with the same
-  default-when-absent pattern `hidden` and now `o`/`mode` all share; nothing
-  about them assumes one frame. If the decision lands on "layers are shared
-  across frames," a frame-independent opacity is free. If it lands on
-  "per-frame," `mergeDownCommand`/`flattenCommand` in
-  `lib/artwork-core/merge-layers.ts` are the worked example of composing a
-  multi-layer result into one `batch` — the same shape a per-frame flatten (if
-  animation ever wants one, e.g. for a thumbnail) would need.
-- **`compositeStack` (`lib/artwork-core/blend.ts`) is the real compositor now,
-  separate from the renderer's own `drawLayer` loop and separate from
-  `lib/exporters/geometry.ts`'s `flattenFrame` approximation.** If a frame
-  thumbnail or timeline preview needs a flattened raster of one frame's
-  layers, `compositeStack` is the correct one to reach for — it is the one
-  proven, by `probe-merge.ts`'s cross-check, to agree with what the canvas
-  actually renders.
+- **This is the one thing F's own spec named and then explicitly declined to
+  build**, with a cost estimate already written down: `10-animation.md §0.5`.
+  Read it first — it explains why bundling this into F would have risked
+  rushing both the per-frame-layers decision and the timeline UI.
+- **Scope, per `08-exporters.md §8–9`:** sprite sheet (a single PNG tiling
+  every frame, plus a JSON manifest of cell size and count) and GIF (a real
+  animated GIF, frame delays matching the document's `ms`, a delay below 20ms
+  clamped with the UI saying so once). Both are marked **Phase 5** in that
+  spec's own header — the same header that marked SVG/CSS/React/JSON/PNG
+  Phase 3, which unit D built, and ASCII, which shipped with them.
+- **GIF needs a hand-written LZW encoder.** Nothing in this repo's dependency
+  tree does GIF encoding — check before reaching for a package; `08 §9`
+  discusses the tradeoff. It also needs a Web Worker (encoding a multi-frame
+  GIF on the main thread would freeze the UI) and a progress-reporting
+  protocol across that boundary — `08 §6` shows a determinate progress bar
+  already exists for other long exports, if one does.
+- **The export popover only grows rows for these when `frames.length > 1`**
+  (`10-animation.md §6`) — a single-frame document should not be offered a
+  GIF of itself. `ExportPopover.tsx` and `lib/editor/export-menu.ts` are where
+  the existing six rows are built from data; add to that table rather than
+  hand-rolling two more rows next to it.
+- **`spriteRects(doc, frame)` and `compositeStack` (`lib/artwork-core/blend.ts`)
+  are the two things worth reusing.** A sprite sheet's per-frame tile is the
+  same picture `spriteRects` already draws for a thumbnail, just rasterised
+  instead of vectorised; a GIF frame that needs one flattened raster per frame
+  is exactly what `compositeStack` computes, proven by `probe-merge.ts`'s
+  cross-check against the real canvas.
 
 ### Prompt
 
-> Read `docs/UNITS.md`, `docs/specs/10-animation.md` and
-> `docs/specs/14-layers.md §9`, then build unit **F**: animation.
->
-> Before any UI: decide and write down whether a layer belongs to one frame or
-> to all of them. That decision is load-bearing and cannot be retrofitted.
+> Read `docs/UNITS.md`, `docs/specs/10-animation.md §0.5` and
+> `docs/specs/08-exporters.md §8–9`, then build unit **G**: sprite sheet and
+> GIF export, plus the animated React/CSS export hooks `08 §8`'s `animated`
+> flag already names.
 >
 > Then follow the finishing protocol in `docs/UNITS.md §0`.
 

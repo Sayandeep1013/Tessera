@@ -1,16 +1,16 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `ceab238` (unit **E**, layers phase 2 —
-opacity, blend modes, merge/flatten, drag reorder) · branch `main`, pushed.
+**Written:** 13 Aug 2026 · last commit — see `git log` (unit **F**, animation —
+frames, the timeline strip, wall-clock playback, onion skin) · branch `main`.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 681 tests across 44 files · production build clean · 6 viewports
+**Green:** 709 tests across 46 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
 `probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
 `probe-export` 68/68, `probe-symmetry` 20/20, `probe-layers` 42/42,
-`probe-merge` 24/24, `probe-tooltip` 23/23, `probe-agent-ui` 18/18,
-`probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime
-errors.
+`probe-merge` 24/24, `probe-timeline` 63/63, `probe-tooltip` 23/23,
+`probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
+`probe-zoom`. Zero runtime errors.
 
 ---
 
@@ -29,8 +29,8 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **F — animation**. Its prompt is in `UNITS.md`, in the F
-block, directly under "Context handed over".
+The next unit is **G — GIF, sprite sheet and the animated export hooks**. Its
+prompt is in `UNITS.md`, in the G block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
 > one unit — it was still asking B2 to decide something B1 had already settled.
@@ -153,17 +153,21 @@ looked fine in a screenshot until magnified.
 | Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. Symmetry now draws its own mirror line(s) on the canvas — dashed, difference-blended against `--accent`, visible at every zoom. **Scored 9/10** — `docs/specs/16-settings.md §3.1`. |
 | Persistence | IndexedDB autosave. |
 | Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG — six pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated. **Scored 9/10** — `docs/specs/08-exporters.md §12`. |
+| Animation | Frames (per-frame layers — `14-layers.md §9`), the timeline strip (`components/Timeline.tsx` — thumbnails, drag reorder, right-click context menu, shift-click duration range), wall-clock playback (`lib/editor/playback.ts` + `lib/store/playback.ts`, ping-pong, never touches history), onion skin, and every keyboard shortcut in `10-animation.md §2`. **Scored 9/10** — `docs/specs/10-animation.md`. |
 
 ### Not built, and what is next
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
-part of finishing a unit, and this section is not. In brief: **Timeline is the
-last dead control**, Share is built but parked (`DEFERRED.md`), and unit F
-(animation) remains.
+part of finishing a unit, and this section is not. In brief: the dead-control
+group is now **empty** (Timeline was the last member), Share is built but
+parked (`DEFERRED.md`), and unit G (GIF, sprite sheet, animated export hooks)
+remains — the one thing F's own spec named and explicitly declined to build,
+costed in `10-animation.md §0.5`.
 
-Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
-below 1100px, so a dead control never costs a live one its place. When you build
-one, move it out — Layers went to `showLayers`, Share to `showShare`.
+`showTimeline` in `lib/editor/breakpoint.ts` replaces the old `showUnbuilt` —
+there is nothing left to gate that way. The next dead control, if one is ever
+added, should follow the same pattern: gated separately, moved out to its own
+`show*` flag the moment it goes live.
 
 ---
 
@@ -276,6 +280,28 @@ Every one of these has already cost time in this repo.
 - **An outside-click closer must use `mousedown`, not `click`.** The click that opens a menu is
   still propagating when the effect registers, so a `click` listener closes it in the same gesture
   and the menu never appears.
+- **`mousedown` alone is not "outside" — it needs a containment check too.** The timeline's
+  context-menu listener was `document.addEventListener('mousedown', () => setMenu(null))` with no
+  `ref.current.contains(e.target)` guard, so clicking one of the menu's *own* items — Duplicate,
+  Delete, Set duration… — closed the menu on that same mousedown, before the item's `click` ever
+  ran. Combined with `frame_delete`'s own "cannot delete the last frame" guard, this turned into an
+  infinite loop in the probe (right-click, click Delete, nothing happens, repeat) rather than a
+  fast, loud failure — caught only because `tools/probe-timeline.ts` prints each check as it runs
+  instead of buffering to the end, so the hang was visible as "nothing printed for ten minutes"
+  rather than a silent pass. Every other menu in this codebase (`Chrome.tsx`'s `FileMenu`,
+  `PalettePopover`, `DitherMenu`) already does this correctly with a `ref` and a containment check —
+  copy one of those, not the shape of "just listen for mousedown."
+- **A Playwright locator built from `getByRole('button', { name })` goes stale the instant that
+  name changes.** A toggle whose accessible label flips with its own state (`Ping-pong` /
+  `Loop end to end`, the same pattern `LayerRow`'s Show/Hide button already uses) needs the probe to
+  re-query with the *new* name after the click, not reuse a locator captured before it — the old one
+  times out waiting for text that no longer exists on screen. `tools/probe-timeline.ts`'s onion-skin
+  check already did this correctly; the ping-pong check did not, until it was made to match.
+- **A probe's own unbounded `while` loop is exactly as dangerous as one in production code.** The
+  Delete-down-to-one loop above had no iteration cap, so the mousedown bug turned a fast failure
+  into a ten-minute hang with zero output — `check()` only printed at the very end in the first
+  draft. Two independent fixes, both worth keeping as habits: print each check as it happens, and
+  cap any probe loop that depends on the app actually doing what it was asked.
 - **A popover's `right: 0` is only as good as what it is positioned relative to.** The Export
   popover's first wiring put `position: relative` on the trigger's own 28px wrapper rather than the
   header, so `right: 0` meant "flush with the trigger," not the header — Close sits to the trigger's
@@ -489,18 +515,22 @@ components/
   CodePanel.tsx        the document as text, both ways — see docs/specs/07-code-panel.md
   ExportPopover.tsx    six exporters, off the code panel's header
   Layers.tsx           the layer panel
+  Timeline.tsx         the animation timeline — frames, playback, onion/ping-pong toggles
   AgentPanel.tsx       composer, step log, confirm, completion, BYOK modal
   Loaders.tsx          the two pixel loaders + elapsed counter
   icons.tsx            GENERATED by tools/gen-icons.ts — 26 Phosphor icons
 lib/
   artwork-core/        document model. imports nothing but zod. no React.
+    frames.ts             MAX_FRAMES, clampFrame
   renderer/            canvas drawing + sprite→SVG. pure.
   exporters/           six pure (doc, opts) => ExportResult functions. no exporter imports another.
   editor/              viewport, brush masks, dither, breakpoints
+    playback.ts           frameAtElapsed — pure wall-clock frame scheduling, no DOM
   actions/             the 25-action registry — one definition per capability
   agent/               loop, session, prompt, limits, BYOK
   ai/                  context, prompt, schemas, validator, provider adapter
   store/               zustand. ctx.ts is the ONE bridge from stores to actions.
+    playback.ts           usePlaybackStore — the rAF loop; calls setFrame only, never commit
   persist/             IndexedDB
 docs/
   SPEC.md              index + global rules
