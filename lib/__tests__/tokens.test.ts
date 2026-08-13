@@ -69,12 +69,18 @@ describe('design tokens', () => {
     const dangling: string[] = []
 
     for (const file of FILES) {
-      const text = readFileSync(file, 'utf8')
+      const lines = readFileSync(file, 'utf8').split('\n')
+      const exempt = exemptLines(lines)
+      const text = lines.join('\n')
       // `var(--x, fallback)` cannot fail — the fallback IS the definition.
       for (const m of text.matchAll(/var\(\s*(--[a-z0-9-]+)\s*(,?)/g)) {
         if (m[2] === ',') continue
         if (defined.has(m[1]!)) continue
         const line = text.slice(0, m.index).split('\n').length
+        // A `token-exempt:` line: the exporters build a `--p`/`--c*` custom
+        // property vocabulary for the FILE THEY EXPORT, not this app's own
+        // tokens — the same reasoning as the hex-colour exemption below.
+        if (exempt.has(line - 1)) continue
         dangling.push(`${file.slice(ROOT.length + 1)}:${line} → ${m[1]}`)
       }
     }

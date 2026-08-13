@@ -10,7 +10,8 @@
 
 ```ts
 type Exporter<O> = (doc: Doc, opts: O) => ExportResult
-type ExportResult = { filename: string; mime: string; data: string | Uint8Array }
+type ExportOk = { filename: string; mime: string; data: string | Uint8Array; warning?: string }
+type ExportResult = Result<ExportOk, string>   // reuses artwork-core's Result — see §12.3
 ```
 
 Rules, all test-enforced:
@@ -131,7 +132,8 @@ export function PixelArt({ size = 16 }: { size?: number }) {
   stable.
 
 **Acceptance:** the exported component, rendered in a Playwright test, is pixel-identical to the
-canvas at the same scale. This is the test that proves the whole pipeline is consistent.
+canvas at the same scale. This is the test that proves the whole pipeline is consistent — built for
+real in unit D, §12.7, not approximated.
 
 ---
 
@@ -144,7 +146,26 @@ The same bytes the code panel displays. A test asserts all three — export, pan
 
 ---
 
-## 7. Sprite sheet (Phase 5)
+## 7. ASCII
+
+Added by unit D (§12.2) — the ledger's handover for this unit named it and the original spec never
+carried a section for it.
+
+```ts
+type AsciiOptions = { frame?: number }
+```
+
+The `px` rows already **are** ASCII — one character per pixel, `.` transparent, `1`–`9`/`a`–`z`
+palette indices. The exporter composites the frame's layers to what is actually visible
+(`flattenFrame`, §12.1) and reuses `encodeRows` ([03 §3](./03-artwork-core.md)) — there is no
+second encoding of a pixel to a character anywhere in the codebase. Filename
+`{name||'artwork'}.txt`, rows joined with `\n`, a trailing newline.
+
+No options beyond `frame`: there is nothing to optimise, group, or scale about a grid of characters.
+
+---
+
+## 8. Sprite sheet (Phase 5)
 
 ```ts
 type SheetOptions = { columns?: number; padding?: number; spacing?: number }
@@ -161,7 +182,7 @@ values break naive consumers and should be opt-in.
 
 ---
 
-## 8. GIF (Phase 5)
+## 9. GIF (Phase 5)
 
 Encoded in a **Web Worker** so the editor never blocks.
 
@@ -177,9 +198,10 @@ Encoded in a **Web Worker** so the editor never blocks.
 
 ---
 
-## 9. Export UI
+## 10. Export UI
 
-Popover, not a modal ([02 §7](./02-design-system.md)).
+Popover, not a modal ([02 §7](./02-design-system.md)). Lives off the code panel's header, not the
+top bar — §12.5 says why and where the trigger sits at 320px.
 
 ```
 ┌─────────────────────────────┐
@@ -189,6 +211,7 @@ Popover, not a modal ([02 §7](./02-design-system.md)).
 │  CSS                        │
 │  React      TS ▾            │
 │  JSON                       │
+│  ASCII                      │  (added by unit D, §7 — same row group as JSON: both are text)
 │  ─────────────────────────  │
 │  GIF                        │  (Phase 5, hidden until then)
 │  Sprite sheet               │
@@ -202,7 +225,7 @@ Failures (the CSS pixel cap, a GIF worker error) surface inline in the popover, 
 
 ---
 
-## 10. Test requirements
+## 11. Test requirements
 
 - Every exporter × every fixture → golden output, byte-compared
 - SVG: `optimize: true` and `false` render identically (rasterised comparison), and optimised output
@@ -212,6 +235,101 @@ Failures (the CSS pixel cap, a GIF worker error) surface inline in the popover, 
 - React: output is valid TS and JS; `componentName` sanitisation over hostile inputs (`"1 bad-name"`,
   `""`, `"class"`); Playwright pixel-identity against the canvas
 - JSON: byte-identical to code panel and autosave payload
+- ASCII: round-trips through `decodeRows`/`charToIndex` back to the same flattened pixel grid
 - PNG: alpha preserved; `1×1` fixture; all-transparent fixture is fully transparent
 - GIF: frame count and delays match the document; palette maps 1:1 with no quantisation
 - **No exporter imports another** — asserted by a module-graph walk
+
+---
+
+## 12. What unit D corrected
+
+Four corrections, made rather than routed around (rule 10 — `CLAUDE.md` rule 10, `HANDOFF.md §2`).
+
+### 12.1 A composite primitive the contract never named
+
+Every exporter but JSON needs the pixel actually **visible** at each cell, and the format has carried
+layers since [14](./14-layers.md) — this spec predates that and never says how an exporter is
+supposed to flatten a stack. `lib/exporters/geometry.ts` gains `flattenFrame(doc, frame): Uint8Array`
+alongside `horizontalRuns`, built from `compositeAt` ([14 §3](./14-layers.md)) — the same
+topmost-non-transparent-wins rule the eyedropper already samples by, not a re-derivation of it. It is
+a real simplification, not a full alpha composite: layers phase 1 has no opacity field, so the only
+place a true blend could differ is an `#rrggbbaa` layer painted over another layer, and reusing the
+editor's own existing answer to "what colour is here" beats inventing a second one for export alone.
+Layers phase 2 (`14 §6.4`) is the unit to revisit this in, if opacity ever makes the two rules
+actually disagree.
+
+### 12.2 ASCII was named in the unit's handover and never in this file
+
+`docs/UNITS.md`'s prompt for this unit lists "SVG, CSS, React, ASCII, JSON and PNG" — ASCII was never
+given a section here. Added as §7, immediately after JSON: both are the document as text, and it
+costs one call to `encodeRows` on the flattened frame.
+
+### 12.3 The contract had no way to fail
+
+§4 requires the CSS exporter to *return an error* above 16,384 painted pixels, and §9 requires
+failures to surface inline — but §1's original contract, `{ filename, mime, data }`, has no error
+shape and no field for §4's separate 4,096-pixel warning either. Rather than smuggling an error string
+into `data` (which a caller would then have to sniff, and which would make a failed CSS export
+indistinguishable from a one-line stylesheet), `ExportResult` now reuses `artwork-core`'s own
+`Result<T, E>` ([03 §2](./03-artwork-core.md)) and `ExportOk` carries an optional `warning`. Every
+exporter in the codebase already speaks this shape; a sixth one inventing its own was the thing to
+avoid, not the thing to add.
+
+### 12.4 The PNG encoder decision, and why it is not `<canvas>`
+
+§2's line about Node and the pngjs shim implies one encoder shared by both environments, but no such
+shim exists yet — `04-renderer.md §8`'s golden-image tests were never built, so there was nothing to
+reuse. The obvious browser-side alternative, an offscreen `<canvas>` + `toBlob` (what the pre-D "Export
+PNG" File-menu row actually did), fails rule 1 outright: it is DOM, not a pure function, and it cannot
+run in the Node test process at all, so "golden test each" would be unmet for PNG specifically.
+
+`pngjs` is already a dependency and ships a self-contained browserified build at `pngjs/browser` —
+verified to run unmodified in both a plain Node process and a browser bundle, with its own bundled
+zlib and Buffer shims. `lib/exporters/png.ts` imports `pngjs/browser` and nothing else, so there
+really is one PNG encoder, not two, exactly as this section originally asked — the correction is
+narrower than it first reads: which encoder, not whether there is one.
+
+**Kept out of the initial bundle with a plain `import()`, not `next/dynamic`.** `ExportPopover.tsx`'s
+`runPng` and the File menu's PNG row in `Chrome.tsx` both call `import('@/lib/exporters/png')` inside
+the click handler rather than importing it at module scope — the same reasoning `07-code-panel.md
+§9.1` used to keep CodeMirror out. **Verified with a real browser, not by reading the build output**:
+`index.html`'s static `<script>` list is not conclusive on its own for a single-route app — it lists
+several large chunks whose contents only *look* PNG-related from a loose grep (`deflateSync` and
+`IHDR` both turn up as substrings of unrelated bundled code). A Playwright network trace of a cold
+load settles it: zero requests for the chunk carrying pngjs's real internals (`bitpacker`,
+`paethPredictor`) before Export is ever opened, and exactly one — fired the moment PNG is actually
+clicked.
+
+### 12.5 Where the Export trigger lives, and the bug found there
+
+`docs/UNITS.md`'s handover for this unit already named the answer — the code panel's own header, not
+the top bar, because a new top-bar control has no room left at 320px (`07-code-panel.md §9.7`). It is
+a small icon button beside Close, opening the popover in §10's mockup.
+
+**The first wiring anchored the popover to the trigger's own wrapper**, a 28px box well inside the
+header — Close sits to its right. `right: 0` on the popover then meant "flush with the *trigger's*
+right edge," not the header's, and a 260px-wide popover anchored there ran 7px off the left edge of a
+320px sheet. `check-responsive.ts` cannot see this class of bug at all — it never opens a popover
+(`HANDOFF §5`) — and `probe-export.ts` caught it on its first run, measured, not assumed. Fixed by
+making `<header>` the positioning ancestor instead of the trigger's own small wrapper.
+
+### 12.6 `--p` instead of `transform: scale`
+
+§4's illustrative snippet holds `--p` at a hairline 1px and magnifies the whole element with
+`transform: scale(16)`. The shipped exporter sets `--p` directly to the requested pixel size (default
+8) and drops the transform entirely — every `box-shadow` offset is `calc(var(--p) * n)` regardless of
+which approach is used, so the two produce the same picture, and setting `--p` once is one fewer moving
+part than a hairline plus a separate magnification factor with no obvious default of its own.
+
+### 12.7 React's acceptance test, built for real
+
+§5 names this unit's real test: the exported component, rendered, is pixel-identical to the canvas.
+Built without instantiating a JSX runtime — a mounted JSX `<rect x={5} y={1} fill="#…" />` and a
+hand-built DOM `<rect x="5" y="1" fill="#…" />` are the same node once the browser has them; React's
+runtime is not what makes two rects agree on colour, the numbers in them are. `probe-export.ts` decodes
+the exported `.tsx` text's `<rect>` props back into real, injected SVG, rasterises it with the
+browser's own SVG renderer, and reads it back pixel by pixel against the app's live canvas at its own
+viewport transform (`window.__tessera.viewport()`). Only painted cells are compared: a transparent
+cell is the exporter's business by design (§1.4), not the canvas's, which paints a flat backdrop
+there instead — comparing the two would be asserting two deliberately different things are equal.

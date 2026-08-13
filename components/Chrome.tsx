@@ -38,7 +38,9 @@ import { listRecent } from '@/lib/persist/idb'
 import { runUi } from '@/lib/store/ctx'
 import { DITHER_MODES, ditherPasses, type DitherMode } from '@/lib/editor/dither'
 import { spriteRects } from '@/lib/renderer/sprite-svg'
-import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
+import { parseDoc } from '@/lib/artwork-core/codec'
+import { exportJson } from '@/lib/exporters/json'
+import { saveExport } from '@/lib/editor/save-export'
 import {
   ArrowUturnLeft, ArrowUturnRight, CaretDown, CaretDownSmall, Code, Cursor,
   DotsThree, Eraser, Export, Eyedropper, FilmStrip, Gradient, Minus, PaintBrush,
@@ -711,12 +713,16 @@ function FileMenu({
     examples: () => toggle('examples'),
     download: () => {
       const d = useDocStore.getState().doc
-      if (d) download(`${d.name || 'artwork'}.tessera.json`, serializeDoc(d))
+      if (d) saveExport(exportJson(d))
       onClose()
     },
+    // Dynamic import, deliberately: `exportPng` pulls in `pngjs/browser`
+    // (docs/specs/08-exporters.md §12.4), which is large enough to keep out of
+    // Chrome.tsx's own bundle — this is the one File-menu row that would
+    // otherwise pay for it on every page load rather than only when clicked.
     png: () => {
       const d = useDocStore.getState().doc
-      if (d) downloadPng(d)
+      if (d) void import('@/lib/exporters/png').then((m) => saveExport(m.exportPng(d, { frame })))
       onClose()
     },
     clear: () => setConfirming('clear'),
@@ -1214,38 +1220,6 @@ function openFile() {
     }
   }
   input.click()
-}
-
-function download(filename: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-/** One document pixel per image pixel — the export is the artwork, not a screenshot. */
-function downloadPng(doc: ReturnType<typeof useDocStore.getState>['doc']) {
-  if (!doc) return
-  const c = document.createElement('canvas')
-  c.width = doc.w
-  c.height = doc.h
-  const ctx = c.getContext('2d')
-  if (!ctx) return
-  for (const r of spriteRects(doc)) {
-    ctx.fillStyle = r.fill
-    ctx.fillRect(r.x, r.y, r.w, r.h)
-  }
-  c.toBlob((blob) => {
-    if (!blob) return
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${doc.name || 'artwork'}.png`
-    a.click()
-    URL.revokeObjectURL(url)
-  })
 }
 
 /**

@@ -1,15 +1,15 @@
 # Session handoff — Tessera
 
-**Written:** 12 Aug 2026 · last commit `9e1f983` (unit **C** — the code panel, with its follow-up) ·
+**Written:** 13 Aug 2026 · last commit `<<COMMIT>>` (unit **D** — the exporters) ·
 branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 588 tests across 34 files · production build clean · 6 viewports
+**Green:** 657 tests across 42 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
 `probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
-`probe-layers` 42/42, `probe-tooltip` 23/23, `probe-agent-ui` 18/18,
-`probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`, `probe-zoom`. Zero runtime
-errors.
+`probe-export` 68/68, `probe-layers` 42/42, `probe-tooltip` 23/23,
+`probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
+`probe-zoom`. Zero runtime errors.
 
 ---
 
@@ -28,7 +28,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **D — the exporters**. Its prompt is in `UNITS.md`, in the D
+The next unit is **E — layers phase 2**. Its prompt is in `UNITS.md`, in the E
 block, directly under "Context handed over".
 
 > This section used to paste that prompt as well, and the copy went stale within
@@ -151,13 +151,14 @@ looked fine in a screenshot until magnified.
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. **Scored 9/10** — `docs/specs/16-settings.md`. |
 | Persistence | IndexedDB autosave. |
+| Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG — six pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated. **Scored 9/10** — `docs/specs/08-exporters.md §12`. |
 
 ### Not built, and what is next
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: **Timeline is the
-last dead control**, Share is built but parked (`DEFERRED.md`), and units D
-through F remain.
+last dead control**, Share is built but parked (`DEFERRED.md`), and units E
+and F remain.
 
 Dead controls live in `showUnbuilt` in `lib/editor/breakpoint.ts` and are hidden
 below 1100px, so a dead control never costs a live one its place. When you build
@@ -274,6 +275,22 @@ Every one of these has already cost time in this repo.
 - **An outside-click closer must use `mousedown`, not `click`.** The click that opens a menu is
   still propagating when the effect registers, so a `click` listener closes it in the same gesture
   and the menu never appears.
+- **A popover's `right: 0` is only as good as what it is positioned relative to.** The Export
+  popover's first wiring put `position: relative` on the trigger's own 28px wrapper rather than the
+  header, so `right: 0` meant "flush with the trigger," not the header — Close sits to the trigger's
+  right, so a 260px popover anchored there ran 7px off a 320px sheet's left edge.
+  `check-responsive.ts` cannot catch this at all; it never opens a popover. `probe-export.ts` found
+  it on its first run. Anchor a popover to the widest reasonable ancestor, not to whatever small
+  element happens to trigger it.
+- **A component behind `next/dynamic` is not automatically network-lazy on a single-static-route
+  app.** `lib/exporters/png.ts` pulls in `pngjs`, big enough to be worth keeping out of the initial
+  bundle — wrapping the whole Export popover in `next/dynamic(..., { ssr: false })` still shipped it
+  in the page's own `<script>` list in the production build. **Grepping a chunk's contents for a
+  library's symbol names is not reliable evidence either** — `deflateSync` and `IHDR` both turned up
+  as substrings of unrelated bundled code, in a *different* chunk than the real one. The only
+  measurement that settled it was a Playwright network trace of a cold load, watching for the
+  request itself. What actually worked: a plain `import()` inside the click handler, not at module
+  scope anywhere reachable from the page — see `08-exporters.md §12.4`.
 - **The editor does not server-render.** `app/page.tsx` mounts it after hydration. Everything it
   shows comes from somewhere the server cannot see (IndexedDB, localStorage, a measured rect), so
   prerendering produced hydration mismatches on every load. Do not "optimise" this back.
@@ -397,7 +414,7 @@ toolcalling and that working rather than the actual output… if it can modify t
 
 ```bash
 npm run dev                       # localhost:3000 — see §5, it may not be free
-npm test                          # vitest — 588 tests (3 skip without a .next build)
+npm test                          # vitest — 657 tests (3 skip without a .next build)
 npm run typecheck
 npm run build                     # rm -rf .next first if a dev server has been running
 
@@ -410,6 +427,7 @@ npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
 npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
+npx tsx tools/probe-export.ts     # 68 checks: six formats, real downloads, React pixel-identity, the CSS cap
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
 npx tsx tools/probe-agent-ui.ts   # agent panel geometry + outcome wording (wants AI_PROVIDER=mock)
@@ -446,6 +464,8 @@ app/
 components/
   Canvas.tsx           pointer input, all 8 tools, wheel handling
   Chrome.tsx           top bar, tool rail, zoom bar, File menu, palette, dither menu
+  CodePanel.tsx        the document as text, both ways — see docs/specs/07-code-panel.md
+  ExportPopover.tsx    six exporters, off the code panel's header
   Layers.tsx           the layer panel
   AgentPanel.tsx       composer, step log, confirm, completion, BYOK modal
   Loaders.tsx          the two pixel loaders + elapsed counter
@@ -453,6 +473,7 @@ components/
 lib/
   artwork-core/        document model. imports nothing but zod. no React.
   renderer/            canvas drawing + sprite→SVG. pure.
+  exporters/           six pure (doc, opts) => ExportResult functions. no exporter imports another.
   editor/              viewport, brush masks, dither, breakpoints
   actions/             the 25-action registry — one definition per capability
   agent/               loop, session, prompt, limits, BYOK
@@ -553,6 +574,15 @@ Recorded so they are not rediscovered as surprises.
 - **`components/Layers.tsx` has no outside-click closer**, deliberately: the panel is a working
   surface you click away from constantly. Escape and the toolbar button close it. If that turns out
   to be wrong, the fix is `mousedown`, never `click` — see §5.
+- **`artwork-core/fixtures/` still only has `face`, `bird`, `logo` and the one legacy fixture** —
+  `03-artwork-core.md §8` describes a fuller set (`knight`, `tile`, `edge/1x1`, `edge/empty`,
+  `edge/full-palette`, `edge/single-color`, `edge/animated`, `edge/multilayer`, `invalid/*`) that was
+  never built. D's golden tests worked around it with hand-built documents rather than expanding the
+  fixture set incidentally; a unit that actually needs it (multi-frame export, the renderer's own
+  golden-image tests) should build it deliberately, once, for everyone downstream.
+- **`flattenFrame` (`lib/exporters/geometry.ts`) composites with topmost-non-transparent-wins, not a
+  true alpha blend.** Correct today because no layer carries an opacity value; E adds one. See
+  `08-exporters.md §12.1` and E's context handover in `UNITS.md`.
 
 ---
 

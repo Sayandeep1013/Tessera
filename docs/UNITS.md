@@ -92,8 +92,8 @@ works; it is done when the next agent can start without asking anything.
 | **B2** | Open recent, rename, shortcuts | **DONE** | 9 | [17 §2, §3, §8](./specs/17-file-menu.md) |
 | **B3** | Paste image | **DONE** | 9 | [17 §9](./specs/17-file-menu.md) |
 | **C** | Code panel | **DONE** | 9 | [07 §9](./specs/07-code-panel.md) |
-| **D** | Exporters ×6 | **NEXT** | — | [08](./specs/08-exporters.md) |
-| **E** | Layers phase 2 | TODO | — | [14 §6.4](./specs/14-layers.md) |
+| **D** | Exporters ×6 | **DONE** | 9 | [08](./specs/08-exporters.md) |
+| **E** | Layers phase 2 | **NEXT** | — | [14 §6.4](./specs/14-layers.md) |
 | **F** | Animation | TODO | — | [10](./specs/10-animation.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
@@ -881,62 +881,112 @@ loss of typed text, and tests carried an alignment gap the unit had named itself
 
 ---
 
-## D — Exporters · NEXT
+## D — Exporters · DONE
 
-### Context handed over
+**13 Aug 2026 · `<<COMMIT>>` · 9/10**
 
-- `spriteRects` in `lib/renderer/sprite-svg.ts` already merges runs and is
-  already shared by the favicon, the share viewer, Export PNG and the Open
-  recent thumbnails. SVG and CSS build on it rather than re-walking pixels.
-- **ASCII is nearly free** — the `px` rows are the ASCII. One line, and the best
-  demonstration of the whole premise.
-- Each exporter consumes `Doc` and nothing else; no exporter imports another.
-- Exported React must be pixel-identical to the canvas — that is the Phase 3
-  acceptance criterion.
+`lib/exporters/` — `geometry.ts` (`horizontalRuns`, `flattenFrame`), `types.ts`
+(`ExportResult`/`ExportOk`/`Exporter<O>`), and one file per format: `svg.ts`,
+`css.ts`, `react.ts`, `json.ts`, `ascii.ts`, `png.ts`. `lib/editor/export-menu.ts`
+(the popover's rows, wording, DOM ids) and `lib/editor/save-export.ts` (the one
+place any of it touches the DOM). `components/ExportPopover.tsx`, wired from a
+new `Export` button in the code panel's header. 68 new unit tests and a new
+68-check browser probe, `tools/probe-export.ts`. Decisions in `08-exporters.md
+§12`.
 
-**From C — the panel these are supposed to live next to now exists:**
+**The spec had four real problems, corrected there rather than routed around**
+(rule 10):
 
-- **`components/CodePanel.tsx` is where an export UI belongs**, and its header
-  currently holds a title, the size and a Close button. Spec 07 §7.6 renamed the
-  File menu's item to `Download .tessera.json` *specifically* so that "Export"
-  would be free for this unit — the two words mean different things and the menu
-  would have been ambiguous if both had been spent.
-- **`serializeDoc` is already one of the six.** JSON is done; do not write a
-  second one. §1's equality between the panel's text and the JSON export is
-  asserted by `probe-code-panel` against `window.__tessera.source()`, so a new
-  JSON exporter that differed by a byte would break the code panel's own test.
-- **Everything that decides anything goes in a pure module.** Five units in a
-  row have landed on this and it is no longer a suggestion: `npm test` runs in
-  node, every browser probe needs a dev server, so a rule inside a `.tsx` has no
-  CI guard. The exporters are pure by nature, which makes golden tests trivial —
-  take the advantage.
-- **`window.__tessera.source()` exists** for exactly this shape of check, and
-  `palette()` and `identity()` are there too.
+1. **§1's contract had no way to fail.** §4 requires the CSS exporter to return
+   an error above 16,384 painted pixels, but `{ filename, mime, data }` has
+   nowhere to put one. `ExportResult` now reuses `artwork-core`'s own
+   `Result<T, E>` — the shape every other fallible function in this codebase
+   already speaks — rather than inventing a sixth one, or smuggling an error
+   string into `data` where a caller would have to sniff for it.
+2. **ASCII was named in this unit's own handover and never given a section.**
+   Added as §7: reuses `encodeRows`, the same character mapping `serializeDoc`
+   uses, over the frame flattened to what is actually visible. No second
+   encoding of a pixel to a character anywhere in the codebase.
+3. **No exporter had a way to flatten layers**, because the spec predates
+   layers phase 1. `flattenFrame` in `geometry.ts` composites with
+   `compositeAt` — the same topmost-non-transparent-wins rule the eyedropper
+   already samples by, not a full alpha blend. Deliberate: layers phase 1 has
+   no opacity field, so the two can only disagree once one exists — **E's
+   problem, flagged below, not solved here.**
+4. **The PNG encoder decision needed one more turn than "use pngjs."** A
+   `<canvas>` fails rule 1 outright (DOM, cannot run in the Node test process).
+   `pngjs/browser` is a self-contained browserified build that runs unmodified
+   in both — genuinely one encoder, not two — but it is heavy enough
+   (`bitpacker`, its own bundled zlib) that a naive `next/dynamic` around the
+   whole popover still shipped it in the page's initial script list on this
+   app's single static route. **Measured with a real network trace, not
+   assumed**: a plain `import('@/lib/exporters/png')` inside the click handler
+   (in both `ExportPopover.tsx` and the File menu's PNG row) is what actually
+   defers it — confirmed by zero requests for pngjs's real internals before
+   Export is opened, and exactly one the moment PNG is clicked.
 
-**Things that will bite:**
+**Two more decisions the spec left to the code, in §12.5 and §12.6:** the
+Export trigger lives in the code panel's own header, not the top bar — the
+handover already named this as the safe spot, and it held at 320px after one
+fix (below); and CSS's illustrative `transform: scale(16)` behind a 1px `--p`
+became `--p` set directly to the pixel size, which draws the same picture with
+one fewer moving part.
 
-- **A new control in the header costs 40px, and 320 has none left.** C's Code
-  button pushed the header off a 320px screen and the wordmark had to go to pay
-  for it (`07 §9.7`). If Export becomes a header button rather than something
-  inside the code panel, `check-responsive.ts` will fail at 320 and there is
-  nothing cheap left to cut.
-- **Timeline is the last member of `showUnbuilt`.** If unit F ever moves it out,
-  that flag and its comment should go with it.
-- **`lib/__tests__/probe-handles.test.ts` cannot see an id built from a
-  constant.** Declare handles in a `lib/` module and contribute them through a
-  `…DomHandles()` function, as `file-menu.ts` and `code-panel.ts` both do — it
-  caught C for exactly this.
+**One real bug, and it is the reason the acceptance test exists.** The Export
+popover, first wired with its trigger in its own 28px-wide wrapper, opened
+7px off the left edge of a 320px sheet — `right: 0` was anchored to the
+trigger, not to the header, and the trigger sits well inside it (Close is to
+its right). `probe-export.ts` caught it on the first run, at exactly the
+viewport `check-responsive.ts` cannot see (HANDOFF §5: it never opens a
+popover). Fixed by anchoring to the header instead.
 
-### Prompt
+**§5's own acceptance test — "the exported component, rendered, is
+pixel-identical to the canvas" — is built for real, not approximated.** No JSX
+runtime is instantiated; instead the probe decodes the exported `.tsx`'s
+`<rect>` props back into real DOM `<rect>` elements (a mounted JSX `<rect>` and
+a hand-built DOM `<rect>` with the same attributes are the same node — React's
+runtime is not what makes two rects the same colour, the numbers are),
+rasterises that real, browser-rendered SVG to a canvas, and compares it pixel
+for pixel against the app's own live canvas at its own viewport transform,
+read through `window.__tessera.viewport()`. Only painted cells are compared —
+transparent cells are the exporter's business by design (§1.4), not the
+canvas's, which paints a flat backdrop there instead.
 
-> Read `docs/UNITS.md` and `docs/specs/08-exporters.md`, then build unit **D**:
-> SVG, CSS, React, ASCII, JSON and PNG exporters, with a golden test each.
->
-> Then follow the finishing protocol in `docs/UNITS.md §0`.
+**The CSS pixel cap is exercised through the real UI, not the dev hook.** The
+probe resizes the canvas to 200×200 through the Canvas tab and flood-fills it
+with one click of the Fill tool — 40,000 painted cells, over `CSS_ERROR_PIXELS`
+— then asserts nothing downloads and the popover shows why, inline, never a
+toast (§10).
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Every Phase 3 exporter is built plus ASCII, which the spec never named; the Export UI matches §10's mockup with ASCII added to it, recorded. GIF and sprite sheet are Phase 5 and declared out of scope by the spec itself. Not 10: the CSS exporter's `--p`/`transform:scale` divergence from §4's illustration, though behaviour-equivalent, is still a divergence. |
+| 2 | Correctness | 9 | Nine of §11's ten test requirements met — the tenth is GIF's, not yet applicable, Phase 5 — including the ones that needed a real browser: SVG's `optimize` true/false pixel-equivalence, CSS's shadow-count-equals-painted-pixels and hard error above the cap, React's TS/JS validity via the TypeScript compiler API, PNG's alpha and 1×1 and all-transparent cases, and — the one this unit could not have claimed without building it — React's pixel-identity against the live canvas, genuinely rendered and sampled. Not 10: `flattenFrame`'s topmost-wins compositing is a documented simplification against a true alpha blend, correct today because no layer has opacity yet, and a coarse edge for E to inherit knowingly rather than rediscover. |
+| 3 | Tests | 9 | 68 unit tests in node (golden snapshots for SVG/CSS/React/ASCII, exact byte assertions for PNG via `pngjs` decode, a module-graph walk proving no exporter imports another) plus 68 browser checks across both themes, two phone widths, and one large document built through real UI actions for the CSS cap. Not 10: the golden fixtures are `face`/`bird`/`logo` plus hand-built edge cases rather than the fuller fixture set `03-artwork-core.md §8` describes (`knight`, `tile`, the `edge/*` set) — most of those files do not exist on disk yet, a pre-existing gap this unit did not create and chose not to expand its scope to close. |
+| 4 | Integration | 9 | Every exporter is a pure function of `(doc, opts)`; the module-graph test enforces the no-cross-import rule rather than trusting it; `commit()` is untouched — no exporter ever writes the document; the one DOM boundary (`save-export.ts`) is a single small module; `tokens.test.ts` extended with the same `token-exempt` mechanism it already had, rather than a parallel allowlist, to cover a CSS exporter that legitimately emits `var(--p)` for a file that is not this app's own stylesheet. Not 10: `ExportPopover.tsx` necessarily treats PNG's dynamic import differently from the other five exporters' static ones — documented coupling between a UI decision and a dependency's weight, the same shape HANDOFF §11 already tracks for `pasteImageCommand`. |
+| 5 | Design fidelity | 9 | Matches §10's popover to the mockup, read in both themes and at 390 and 320 after the anchor fix, with the CSS failure state shown inline rather than imagined. Not 10: PNG's own row doubles as a 1× shortcut alongside its four scale buttons, which the mockup does not distinguish either way — a reasonable reading, not a measured one. |
+| 6 | No regressions | 9 | 657 tests (588 → 657), clean build, and all twelve browser probes green in one `npm run probes` run, including the new one. The File menu's PNG row now goes through the same pure exporter as the popover — one encoder, confirmed not to duplicate the pngjs weight across two code paths. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **GIF and sprite sheet.** Phase 5 by the spec's own header, and the unit's
+  prompt named six exporters, not eight.
+- **React's `animated` option and CSS's Phase-5 hooks.** Both wait on frames
+  existing to animate, which is unit F.
+- **Expanding `artwork-core/fixtures/` to the full set `03 §8` describes.**
+  Real debt, not this unit's to close incidentally — noted in HANDOFF §11.
+- **A GUI-driven equivalent check for SVG/CSS/ASCII the way React got one.**
+  React's is the spec's named acceptance test; the other four are covered by
+  golden snapshots and, for the UI wiring specifically, real downloads read
+  back and asserted in the browser probe — a lighter but still real check.
 
 ---
 
-## E — Layers phase 2 · TODO
+## E — Layers phase 2 · NEXT
 
 ### Context handed over
 
@@ -947,6 +997,17 @@ loss of typed text, and tests carried an alignment gap the unit had named itself
   `lib/artwork-core/fixtures/legacy/` for exactly this.
 - Blend modes need the renderer to composite per layer instead of painting
   straight through, which is the largest change in this unit.
+- **From D — the exporters now have their own idea of "what's visible here,"
+  and opacity can make it wrong.** `lib/exporters/geometry.ts`'s
+  `flattenFrame` composites a frame with `compositeAt` — topmost
+  non-transparent layer wins, the same rule the eyedropper already uses, and
+  correct today only because no layer carries an opacity value. The renderer's
+  actual compositing (`drawImage`, bottom to top, real alpha blending) can
+  disagree with that the moment a layer gets one. Decide deliberately whether
+  export stays an approximation of the true render or gets its own compositor
+  once opacity exists, and record which in `08-exporters.md §12.1`. This
+  will not announce itself — nothing fails, an export just quietly shows the
+  wrong colour on a semi-transparent overlap.
 
 ### Prompt
 

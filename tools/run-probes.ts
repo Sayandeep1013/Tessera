@@ -55,6 +55,7 @@ const PROBES: Probe[] = [
   { file: 'probe-file-menu.ts', what: 'File menu: structure, submenu, confirms, phones', gates: true },
   { file: 'probe-canvas-size.ts', what: 'Canvas tab: presets, crop count, undo, phones', gates: true },
   { file: 'probe-code-panel.ts', what: 'code panel: both sync directions, errors, sheet', gates: true },
+  { file: 'probe-export.ts', what: 'exporters: six formats, real downloads, the CSS cap', gates: true },
   { file: 'probe-layers.ts', what: 'layer panel, both themes', gates: true },
   { file: 'probe-tools-ui.ts', what: 'all 8 tools with real pointer events', gates: true },
   { file: 'probe-tooltip.ts', what: 'tooltip appears, places, dismisses', gates: true },

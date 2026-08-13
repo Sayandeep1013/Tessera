@@ -39,8 +39,10 @@ import {
   caretCell, caretLine, cellRange, errorLine, lineAt, readCodeWidth,
   shouldCoalesce, type SyncOrigin,
 } from '@/lib/editor/code-panel'
+import { CODE_EXPORT_DOM_ID } from '@/lib/editor/export-menu'
 import type { DocError } from '@/lib/artwork-core/schema'
-import { Code } from './icons'
+import { Code, Export } from './icons'
+import { ExportPopover } from './ExportPopover'
 
 export function CodePanel() {
   const open = useEditorStore((s) => s.codeOpen)
@@ -65,6 +67,7 @@ function CodePanelBody() {
   const [text, setText] = useState(() => (doc ? serializeDoc(doc) : ''))
   const [error, setError] = useState<DocError | null>(null)
   const [caret, setCaret] = useState(0)
+  const [exportOpen, setExportOpen] = useState(false)
 
   /**
    * §2's loop guard, as a value and not a comparison.
@@ -358,7 +361,7 @@ function CodePanelBody() {
 
       <header
         style={{
-          flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
+          position: 'relative', flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
           height: chromeFor(tier).headerHeight, padding: '0 10px',
           borderBottom: '1px solid var(--line)',
         }}
@@ -372,6 +375,27 @@ function CodePanelBody() {
             {doc.w}×{doc.h}
           </span>
         )}
+        <button
+          id={CODE_EXPORT_DOM_ID}
+          aria-label="Export"
+          aria-haspopup="dialog"
+          aria-expanded={exportOpen}
+          onClick={() => setExportOpen((v) => !v)}
+          disabled={!doc}
+          style={{
+            height: 28, width: 28, display: 'grid', placeItems: 'center',
+            borderRadius: 'var(--r-md)',
+            color: exportOpen ? 'var(--fg)' : doc ? 'var(--muted)' : 'var(--disabled)',
+            background: exportOpen ? 'var(--hover)' : 'transparent',
+          }}
+        >
+          <Export size={16} />
+        </button>
+        {/* Anchored to the HEADER's right edge, not the trigger's — the trigger
+            sits well inside the header (Close is to its right), so a popover
+            wide enough to hold six export rows anchored to the trigger itself
+            ran 7px off a 320px sheet's left edge. Measured, HANDOFF §5. */}
+        {exportOpen && <ExportPopover onClose={() => setExportOpen(false)} />}
         <button
           onClick={() => setCodeOpen(false)}
           style={{

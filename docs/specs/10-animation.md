@@ -98,7 +98,7 @@ this one.
 
 ## 6. Export
 
-GIF and sprite sheet are specified in [08 §7–8](./08-exporters.md). Timeline-specific notes:
+GIF and sprite sheet are specified in [08 §8–9](./08-exporters.md). Timeline-specific notes:
 
 - The export popover reveals `GIF` and `Sprite sheet` only when `frames.length > 1`.
 - GIF export shows a determinate progress bar fed by worker messages.
