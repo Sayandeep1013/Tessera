@@ -1165,7 +1165,7 @@ disagreed, and it is the check that would have caught it.
 
 ## F — Animation · DONE
 
-**13 Aug 2026 · see `git log` · 9/10**
+**13 Aug 2026 · `90f733d` · 9/10**
 
 The layer question settled first, in writing, per its own prompt:
 `14-layers.md §9` — **a layer belongs to the frame it was added to; layers
