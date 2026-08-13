@@ -993,7 +993,7 @@ Settings work, done between finishing D and starting E. Recorded here so nothing
 between the two is invisible to whoever reads this file next; **E is still
 `NEXT`** and its own block below is unchanged and still the thing to read next.
 
-**13 Aug 2026 · `<<COMMIT>>` · 9/10**
+**13 Aug 2026 · `c9fa7f7` · 9/10**
 
 The request: while `Symmetry` is on, show the mirror line(s) on the canvas —
 the reference product does, and without one, "where does a stroke mirror

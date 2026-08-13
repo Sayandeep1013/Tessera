@@ -1,6 +1,6 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `<<COMMIT>>` (unit **D**, the exporters,
+**Written:** 13 Aug 2026 · last commit `c9fa7f7` (unit **D**, the exporters,
 plus the symmetry axis line built right after it) · branch `main`, pushed.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
