@@ -30,10 +30,21 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-**There is no unit marked `NEXT` right now.** G, the last lettered unit in the ledger, is done. What
-remains is `Share` (built, parked, do not resume without asking — `DEFERRED.md`) and AI edit quality
-(deferred by standing user instruction — §7 below). If you are opening this repo cold with nothing
-else to go on, that means the next move is asking the user what they want built next, not guessing.
+**There is no unit marked `NEXT` right now.** G, the last lettered unit in the ledger, is done.
+**`UNITS.md §0.1`** is the protocol for exactly this state — what to do if the user's prompt names a
+task (scope it as a new lettered unit, same loop, same ledger shape), what to do if it doesn't (answer
+the question; don't build), and what NOT to do (`Share` and AI edit quality are parked/deferred by
+explicit user instruction — `DEFERRED.md`, §7 below — resuming either without being asked is not "no
+unit is next, so I'll pick one").
+
+**`UNITS.md §0.2–§0.4`** are the other three things a cold session most often needs and used to have to
+reconstruct by reading between the lines: the exact, complete verification sequence (not a subset
+chosen by guessing which files changed), the six-dimension review criteria restated next to the
+protocol that uses them, and — new as of unit G — a troubleshooting order of operations for "a check
+that used to pass now fails": is it pre-existing, is it flaky (§0.4.1 lists every timing race this
+repo's own probes have already hit), check the environment before the code, bisect on the one failing
+command rather than the whole suite, fix the root cause, then re-run everything, not just the one
+check that failed.
 
 > This section used to paste that prompt as well, and the copy went stale within
 > one unit — it was still asking B2 to decide something B1 had already settled.

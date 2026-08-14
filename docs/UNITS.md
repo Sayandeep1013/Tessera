@@ -7,6 +7,10 @@ If you are an agent starting a session: read §0, then find the first unit whose
 status is `NEXT`, then paste-follow the prompt in its block. Do not ask which
 unit to do — the ledger says.
 
+**If no unit is marked `NEXT`** (true as of G, 14 Aug 2026 — every lettered unit
+A–G is `DONE`): there is nothing queued, and guessing one into existence is not
+this file's job. §0.1 is what to do instead.
+
 ---
 
 ## 0. The protocol — read this before anything else
@@ -19,6 +23,174 @@ unit to do — the ledger says.
 3. Follow its prompt block. Its spec is linked; read that too.
 4. Work the loop in `docs/WORKFLOW.md`: scope → sub-spec → build → score across
    six dimensions taking the **lowest** as the overall → iterate until ≥ 9.
+
+### 0.1 Starting cold with no unit marked `NEXT`
+
+This is the state of the ledger right now. It will not always be — the moment a
+new lettered unit is scoped, it gets its own block and a `NEXT` marker, and
+§0.1 stops applying until the ledger empties out again. Until then:
+
+1. **Do not invent a unit.** A plausible-sounding next step ("harden the AI
+   quota counter", "add a mobile timeline") is still a guess, and `PLAN.md` /
+   `DEFERRED.md` already record what was *deliberately* left out and why —
+   read both before assuming a gap is an oversight rather than a decision.
+2. **If the user's own prompt names a task, that is your scope** — run it
+   through `WORKFLOW.md`'s loop exactly as if it were a lettered unit: scope
+   → spec (new `docs/specs/NN-name.md`, or an extension of an existing one if
+   the work is a correction rather than a feature) → review → plan → build →
+   score. Give it a letter (the next unused one) and a block in this ledger
+   using the same shape every other `DONE` unit has, so the chain stays
+   unbroken for whoever reads this file next.
+3. **If the user's prompt is a question, not a task** — answer it. Reading
+   this file cold does not obligate you to build something.
+4. **If you are running with no user in the loop at all** (a scheduled or
+   autonomous invocation) — verify the state this file and `HANDOFF.md` claim
+   is still true (§0.2), report what you found, and stop. Do not pick a
+   deferred item (`Share`, AI edit quality) and build it; both are parked by
+   explicit user instruction recorded in `DEFERRED.md` and `HANDOFF.md §7`,
+   and "nobody told me not to" is not the same as being asked.
+
+### 0.2 Full verification, command by command
+
+Whether you are confirming the ledger's claims are still true, or closing out
+a unit of your own, this is the complete sequence — not a subset chosen by
+guessing which files you touched.
+
+```bash
+# 1. Working tree and remote state — know what you're checking before you check it
+git status
+git log --oneline -5
+git fetch origin && git status   # confirms local is not behind origin/main
+
+# 2. Dependencies match the lockfile — a stale node_modules fails in ways
+#    that look like a code bug and aren't
+npm ci                           # not `npm install` — ci is the exact-lockfile install
+
+# 3. Unit tests — no browser needed
+npm test
+
+# 4. Types
+npm run typecheck
+
+# 5. Production build — proves the app actually compiles for real, and is
+#    the only step that would catch a dynamic-import/bundle regression
+#    (§9's GIF worker, §12.4's PNG chunk) that dev mode papers over
+rm -rf .next
+npm run build
+
+# 6. Every browser probe, against one server, in one command.
+#    AI_PROVIDER=mock goes on the SERVER — the agent runs server-side, so
+#    setting it on the probe process instead leaves a real key in play and
+#    quietly spends the 5-per-minute quota (HANDOFF §5).
+AI_PROVIDER=mock npx next dev --turbopack -p 3100
+MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
+
+# 7. Shut down anything you started
+#    (find the dev server's PID and stop it — do not leave it running)
+```
+
+**Run every probe, not the ones you think are relevant.** `npm run probes` is
+one command precisely so the choice of which probes matter is never left to a
+guess — B1 broke two probes that had nothing to do with its own unit, and only
+running everything found it. A single probe passing does not mean the suite
+does; a single test file passing does not mean `npm test` does. Run the whole
+command, read its actual exit code, and do not report green from a partial run.
+
+**Then look.** Screenshot both themes (`docs/shots/` is where every probe
+already writes them) and read the images — not just the pass/fail count.
+Measured and looked-at have caught different bugs in this repo more than
+once (`HANDOFF.md §3`), and a probe with the wrong assertion still exits 0.
+
+### 0.3 Review criteria — the six dimensions, restated
+
+The full rubric lives in `WORKFLOW.md §6`; this is the reminder, not a second
+copy. Score each 1–10, **overall is the lowest, never the average**:
+
+| # | Dimension | Ask |
+|---|---|---|
+| 1 | Spec conformance | Did every stated requirement get built, with nothing silently dropped? |
+| 2 | Correctness | Does the happy path work, and every edge case the spec enumerated? |
+| 3 | Tests | Does every test the spec requires exist, pass, and actually catch a regression if the code broke? |
+| 4 | Integration | Are module boundaries respected — `commit()` still the only writer, no exporter importing another, tokens only, no new coupling that wasn't asked for? |
+| 5 | Design fidelity | Does it match the design spec to the measurement, in both themes, at every viewport that applies? |
+| 6 | No regressions | Does everything that worked before still work — full suite green, not just the new tests? |
+
+**A 9 requires an honest account of what was deliberately left out**, not a
+silent one. A score below 9 gets gaps listed and fixed before it ships, not
+rationalised up to the threshold — this repo has caught real bugs specifically
+by refusing to round a 6 up to a 9 (`HANDOFF.md §3`).
+
+### 0.4 If a check fails — after G, or at any point past here
+
+This is what "the initial tests passed and then something broke" actually
+means in practice, and the order to work through it in. Do not start editing
+code on the first failure — find out what you are actually looking at first.
+
+1. **Is it new, or was it already broken?** `git stash` (if you have
+   uncommitted changes) and re-run the same failing command against the
+   commit *before* yours. If it already failed there, it is pre-existing debt
+   — record it in `HANDOFF.md §11`, do not silently fix it as a drive-by
+   inside an unrelated unit, and do not let it block your own score unless
+   your unit's own scope caused it.
+2. **Is it flaky, or is it real?** Re-run the exact same command a second
+   time, unchanged. A browser probe that passes on a re-run with zero code
+   changes is describing a timing race, not a regression — §0.4.1 below is
+   the specific list of races this repo has already hit. A unit test that
+   flips between runs with no external state involved almost never should be;
+   treat that as a real bug in the test or the code, not noise to retry away.
+3. **Check the environment before the code.** In order: is a stale process
+   already holding the port you're about to use (`HANDOFF.md §5` — a
+   *different* project's dev server sat on 3000 for an entire session once);
+   is `.next` stale from a dev server that was running during a build; is
+   `node_modules` out of sync with `package-lock.json` (`npm ci`, not
+   `npm install`, rules this out); did the mock/live AI provider get set on
+   the wrong process (server-side, never the probe).
+4. **Bisect if the cause isn't obvious.** `git log --oneline` back to the last
+   known-green commit (every `DONE` unit's finishing protocol means main was
+   green at that point, by construction) and `git checkout` a few commits at
+   a time, or use `git bisect` directly, re-running the one failing command
+   at each step. Do not bisect with the *whole* verification sequence — pick
+   the single command that actually fails and bisect on that alone, or you
+   will spend an hour re-running `npm run probes` at every step.
+5. **Fix the root cause, not the symptom.** `CLAUDE.md`'s own preamble on
+   executing actions with care applies here as much as to destructive git
+   commands: do not `--no-verify` past a failing hook, do not comment out a
+   failing assertion, do not loosen a test's tolerance until it passes. If the
+   fix reveals the *spec* was wrong (a requirement that turns out to conflict
+   with something else, an edge case nobody enumerated), that is rule 10 —
+   say so, fix the spec, and record the correction in the spec file itself,
+   the same way every prior correction in this repo is recorded (§12 of
+   `08-exporters.md` alone has seven).
+6. **Re-run the FULL verification sequence (§0.2) after any fix**, not just
+   the one command that was failing. A fix to a shared module (`geometry.ts`,
+   `timeline.ts`, `ctx.ts`) can silently affect a probe you didn't touch —
+   this is the exact failure mode `npm run probes` as a single command exists
+   to catch, and it applies just as much to a post-hoc fix as to the original
+   build.
+7. **If you cannot reproduce a failure the user reports**, do not conclude it
+   didn't happen. Ask for the exact command, the exact error text, and —if a
+   browser is involved — the browser and viewport. `HANDOFF.md §12`: this
+   user's bug reports have been real every time; the burden is on
+   reproducing, not on doubting.
+
+#### 0.4.1 Timing races already found in this repo's own probes — check these first
+
+- A GIF/Worker chunk compiles once, on its first request, against a cold dev
+  server — several real seconds, not a hang. A probe polling a transient UI
+  state on a *fixed* time budget can burn the whole budget on that compile
+  stall alone; poll concurrently with the actual awaited result instead.
+- Once a worker chunk is warm, a short multi-message `postMessage` sequence
+  can complete faster than external polling's own round-trip latency —
+  seeing only the first message is not evidence the rest never arrived.
+- `Promise.all([page.waitForEvent('download'), page.waitForEvent('download')])`
+  does not capture two distinct downloads from one click that fires two; both
+  promises resolve off the same first event. Use `page.on('download', ...)`
+  and collect.
+- A `mousedown` outside-click closer needs an explicit containment check, not
+  just "a mousedown happened somewhere" — clicking a menu's own item can close
+  the menu before the item's own `click` handler runs.
+
+Full list, with the fix for each: `HANDOFF.md §5`.
 
 ### Finishing — do all of this, in this order, before you stop
 
