@@ -1,17 +1,16 @@
 # Session handoff — Tessera
 
-**Written:** 14 Aug 2026 · last commit `d273153` (unit **G**, GIF, sprite
-sheet and the animated React/CSS export hooks) · branch `main`.
+**Written:** 14 Aug 2026 · last commit `bd8333a` (unit **H**, the code panel
+became a format-tab modal, replacing the Export popover) · branch `main`.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 780 tests across 51 files · production build clean · 6 viewports
+**Green:** 783 tests across 51 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
-`probe-export` 122/122, `probe-symmetry` 20/20, `probe-layers` 42/42,
+`probe-file-menu` 134/134, `probe-code-panel` 104/104, `probe-canvas-size` 70/70,
+`probe-export` 128/128, `probe-symmetry` 20/20, `probe-layers` 42/42,
 `probe-merge` 24/24, `probe-timeline` 63/63, `probe-tooltip` 23/23,
 `probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
-`probe-zoom`. A cold-load network trace additionally confirmed the GIF
-encoder and its Worker never reach the initial bundle. Zero runtime errors.
+`probe-zoom`. Zero runtime errors, both themes, wide/mobile/narrow viewports.
 
 ---
 
@@ -30,7 +29,7 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-**There is no unit marked `NEXT` right now.** G, the last lettered unit in the ledger, is done.
+**There is no unit marked `NEXT` right now.** H, the last lettered unit in the ledger, is done.
 **`UNITS.md §0.1`** is the protocol for exactly this state — what to do if the user's prompt names a
 task (scope it as a new lettered unit, same loop, same ledger shape), what to do if it doesn't (answer
 the question; don't build), and what NOT to do (`Share` and AI edit quality are parked/deferred by
@@ -166,14 +165,14 @@ looked fine in a screenshot until magnified.
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. Symmetry now draws its own mirror line(s) on the canvas — dashed, difference-blended against `--accent`, visible at every zoom. **Scored 9/10** — `docs/specs/16-settings.md §3.1`. |
 | Persistence | IndexedDB autosave. |
-| Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG, sprite sheet (PNG + JSON atlas) and GIF (real GIF89a, a hand-written LZW encoder, a Web Worker) — pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React and CSS both carry an `animated: true` mode once a document has more than one frame, hard-cutting between frames rather than interpolating. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated; GIF's Worker chunk is verified absent from the initial bundle by a real network trace. **Scored 9/10** — `docs/specs/08-exporters.md §12` (unit D) and **§13** (unit G). |
+| Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG, sprite sheet (PNG + JSON atlas) and GIF (real GIF89a, a hand-written LZW encoder, a Web Worker) — pure functions of `(doc, opts)` in `lib/exporters/`, reached through a persistent tab strip under the code panel's own header (Code · SVG · CSS · React · PNG · ASCII, then GIF · Sprite sheet once gated), and the File menu's PNG/JSON rows still calling the same functions directly. React and CSS both carry an `animated: true` mode once a document has more than one frame, hard-cutting between frames rather than interpolating. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated; GIF's Worker chunk is verified absent from the initial bundle by a real network trace. **Scored 9/10** — `docs/specs/08-exporters.md §12` (unit D), **§13** (unit G) and **§14** (unit H, the tab strip and the modal). |
 | Animation | Frames (per-frame layers — `14-layers.md §9`), the timeline strip (`components/Timeline.tsx` — thumbnails, drag reorder, right-click context menu, shift-click duration range), wall-clock playback (`lib/editor/playback.ts` + `lib/store/playback.ts`, ping-pong, never touches history), onion skin, and every keyboard shortcut in `10-animation.md §2`. **Scored 9/10** — `docs/specs/10-animation.md`. |
 
 ### Not built, and what is next
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: the dead-control
-group is **empty** (Timeline was the last member), unit G is done, and there
+group is **empty** (Timeline was the last member), unit H is done, and there
 is **no unit marked `NEXT`**. What remains is Share, built but parked
 (`DEFERRED.md`), and AI edit quality, deferred by standing user instruction
 (§7 below). Neither resumes without being asked for.
@@ -515,8 +514,8 @@ npx tsx tools/probe-tools-ui.ts   # drives every tool with real pointer events
 npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both themes
 npx tsx tools/probe-merge.ts      # 24 checks: opacity, blend mode, merge, flatten, drag reorder
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
-npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
-npx tsx tools/probe-export.ts     # 122 checks: every format incl. GIF/sprite sheet/animated, gating, React pixel-identity, the CSS cap
+npx tsx tools/probe-code-panel.ts  # 104 checks: sync both ways, colouring, errors, the modal, the sheet
+npx tsx tools/probe-export.ts     # 128 checks: every tab incl. GIF/sprite sheet/animated, gating, React pixel-identity, the CSS cap
 npx tsx tools/probe-symmetry.ts   # 20 checks: the axis line at H/V/Both/Off, both themes
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes

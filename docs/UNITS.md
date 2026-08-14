@@ -7,8 +7,8 @@ If you are an agent starting a session: read §0, then find the first unit whose
 status is `NEXT`, then paste-follow the prompt in its block. Do not ask which
 unit to do — the ledger says.
 
-**If no unit is marked `NEXT`** (true as of G, 14 Aug 2026 — every lettered unit
-A–G is `DONE`): there is nothing queued, and guessing one into existence is not
+**If no unit is marked `NEXT`** (true as of H, 14 Aug 2026 — every lettered unit
+A–H is `DONE`): there is nothing queued, and guessing one into existence is not
 this file's job. §0.1 is what to do instead.
 
 ---
@@ -268,6 +268,7 @@ works; it is done when the next agent can start without asking anything.
 | **E** | Layers phase 2 | **DONE** | 9 | [14 §12](./specs/14-layers.md) |
 | **F** | Animation | **DONE** | 9 | [10](./specs/10-animation.md) |
 | **G** | GIF, sprite sheet, animated export hooks | **DONE** | 9 | [10 §0.5](./specs/10-animation.md), [08 §8–9, §13](./specs/08-exporters.md) |
+| **H** | Format tabs replace the Export popover; the panel becomes a modal | **DONE** | 9 | [08 §14](./specs/08-exporters.md), [07 §9.11](./specs/07-code-panel.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
 
@@ -1529,6 +1530,84 @@ what polling *can* prove deterministically (the bar existed, with the right tota
 - **Compressing the sprite sheet PNG's atlas into the image itself (a single-file format).** Considered
   and rejected in §13.1 — a second, invented file format for one export row is a worse trade than two
   ordinary files with an obvious relationship.
+
+---
+
+## H — Format tabs replace the Export popover; the panel becomes a modal · DONE
+
+**14 Aug 2026 · `bd8333a` · 9/10**
+
+Not a lettered-unit-from-a-plan — a task named directly in the user's own prompt, scoped and built
+through the same loop as every other unit (`UNITS.md §0.1`, point 2). The user's words: "in newt u can
+see the svg the png the ascii the code the css everything by clicking the code button… where is that
+for us?" — followed, mid-turn, by "instead of just showing it while u click export show it from the
+very start like a menu displayed side by side… and when u click export it just exports the one u
+currently are at… and show it in a modal at the middle of the page instead of opening a sideview… and
+the modal closes if not modal areas are clicked." Four instructions, taken literally rather than
+reinterpreted: a persistent tab strip, not a popover; Export acts on one current selection; a centred
+modal, not the existing right-hand split; dismiss on an outside click. `08-exporters.md §14` is the
+full spec and the record of what it corrects (rule 10) in `§10` and `07-code-panel.md §1`.
+
+`lib/editor/export-menu.ts` rewritten — `FormatTabId`, `FORMAT_TABS` (Code first, JSON retired as its
+own tab since it was always `serializeDoc(doc)` under another name), `visibleTabs`/`clampTab`, and the
+DOM-handle builders the probes and `probe-handles.test.ts` read from. `useEditorStore` gained `codeTab`
+(reset to `'code'` on every open). `components/CodePanel.tsx` rewritten: a tab strip under the header,
+a slim per-tab options row (PNG's scale buttons, React's TS/JS toggle, the CSS/React Animated toggle —
+each shown only while its own tab is active), one Export button acting on whichever tab is showing, and
+the panel's own frame changed from a flex-row split to a centred `position: fixed` modal with a scrim,
+closing on an outside `mousedown` or `Escape` in addition to the existing Close button and `⌘/`.
+`components/FormatPreview.tsx` is new — `TextPreview` for SVG/CSS/React/ASCII (plain read-only
+monospace, no palette-swatch colouring, which stays unique to the Code tab per `07 §9.8`) and
+`ImagePreview` for PNG/GIF/sprite sheet (a real `<img>` from the same bytes the download uses, loaded
+behind a plain `import()` so `pngjs` stays out of the initial bundle exactly as `§12.4`/`§13.3` already
+established, just triggered by a tab click now instead of an Export click). `components/ExportPopover.tsx`
+is deleted; `app/page.tsx` no longer wraps the canvas and the code panel in a flex row, since the panel
+is an overlay now and no longer takes width from anything.
+
+**Two real bugs, both found only by a real browser laying the modal out, neither visible to `tsc` or
+`npm test`:** the dimming scrim had no `pointerEvents` set and was silently swallowing every hover over
+the canvas, not just clicks, contradicting its own "visual only" comment — fixed with
+`pointer-events: none`. And the modal's flex body rendered at a measured 129px because `maxHeight`
+alone gives a `flex: 1 1 0` child nothing to grow into — fixed by giving the frame a real `height`
+(`min(80vh, 720px)`) instead of only a ceiling on one. `08-exporters.md §14.6` has the full account,
+including the `tools/probe-code-panel.ts` divider-resize check that a 30-second timeout, not a clean
+failure, actually caught the second one with.
+
+**One cost that is not a bug, and is recorded rather than discovered later:** a centred modal and
+"outside click closes it" together mean there is no click, anywhere on the canvas, that both reaches
+the canvas and leaves the panel open — the modal's own centre and the canvas's centre are the same
+point by construction. `08-exporters.md §14.3` is the full account, including why a bare hover still
+reaches whatever canvas the modal doesn't physically cover, once the scrim stopped being interactive.
+`tools/probe-code-panel.ts`'s "paint one pixel, watch it sync live" check assumed the old split-panel
+interaction and had to become close-paint-reopen; its hover-highlight check had to zoom in until a
+corner pixel's screen position cleared the modal's own bounding box, because the artwork's centre —
+same as the modal's — is unreachable by a real pointer while the panel is up.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | All four instructions built literally: a persistent tab strip, Export acting on the current tab, a centred modal, outside-click-to-close. JSON's retirement and the tab ordering are judgement calls the user left open, both written down as such rather than guessed silently. Not 10: the ordering (Code · SVG · CSS · React · PNG · ASCII · GIF · Sprite sheet) is this session's own judgement, unconfirmed against what the user actually pictured. |
+| 2 | Correctness | 9 | Every tab switches and previews correctly; Export downloads the right format from the right tab with the right per-tab options; PNG/GIF/sprite-sheet previews are the same bytes the download uses; the CSS pixel cap surfaces inline before Export is even clicked; outside click and Escape close the panel, a click inside does not; the modal is genuinely centred; the canvas keeps its full width. The one accepted, documented gap: the canvas is not reachable by click, and only partly by hover, while the panel is open — `§14.3`. |
+| 3 | Tests | 9 | 6 new unit tests for `export-menu.ts`'s ordering/gating/clamp logic, plus the DOM-handle guard updated for the new module; 104 browser checks in `probe-code-panel.ts` (96 → 104) and 128 in `probe-export.ts` (122 → 128), covering the modal, the tab strip, dismissal, and every format, in both themes and at two phone widths. Not 10: `FormatPreview.tsx` has no unit test of its own — it is DOM/React, exercised only by the browser probes, the same shape every other panel-wiring gap in this repo already carries. |
+| 4 | Integration | 9 | `commit()` untouched; `artwork-core` untouched; no exporter imports another; `export-menu.ts` follows the same pure-logic-in-`lib/editor` split `code-panel.ts`/`file-menu.ts` already use; `FormatPreview.tsx` composes the existing exporters rather than duplicating any of them; the dead `ExportPopover.tsx` is deleted, not left half-used; tokens only, verified. Not 10: `CodePanel.tsx` grew substantially — tabs, per-tab options, the export dispatcher and the original sync machinery are all now in one file, more surface than before in one place, the same growth `Layers.tsx` was flagged for in phase 2. |
+| 5 | Design fidelity | 9 | No measured reference exists for this layout — it is a direct, unmeasured user instruction, not a newt audit — but every explicit instruction is met and the result reads cleanly in both themes at 1440×900, 390px and 320px: centred, scrimmed, tabs wrapping correctly, every preview type rendering as intended. Not 10: same caveat several units before this carried — no independent measurement to check against, only the user's words and this session's own judgement on what was left open. |
+| 6 | No regressions | 9 | 783 tests (780 → 783), clean production build, all 15 browser probes green in one `npm run probes` run, zero console errors in either theme. Both defects `§14.6` records were introduced by this unit's own work and caught and fixed within it, not shipped and found later. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **Arrow-key navigation between tabs.** `role="tablist"`/`role="tab"` are there for a screen reader;
+  there is no roving-tabindex or arrow-key handler implementing the full WAI-ARIA tabs pattern.
+- **A confirm before an outside click discards an in-progress Code edit.** Not needed — the existing
+  flush-on-unmount behaviour (`07 §9.9`) already applies a pending valid edit before the panel closes,
+  by any route, and an invalid buffer was never silently discarded either (`07 §3`).
+- **Resizing the modal's height.** Only width is user-resizable, as `07 §1` originally specified;
+  height is the fixed `min(80vh, 720px)` frame `§14.6` settled on.
+- **A confirmed, final tab ordering.** The user's own instruction named "code css svg" as illustrative,
+  not exhaustive, and left the rest to judgement. `08-exporters.md §14.7` says so plainly — this is the
+  part of the unit most likely to be revisited on a second look, not a settled answer.
 
 ---
 
