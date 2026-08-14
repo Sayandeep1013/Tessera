@@ -95,7 +95,7 @@ works; it is done when the next agent can start without asking anything.
 | **D** | Exporters ×6 | **DONE** | 9 | [08](./specs/08-exporters.md) |
 | **E** | Layers phase 2 | **DONE** | 9 | [14 §12](./specs/14-layers.md) |
 | **F** | Animation | **DONE** | 9 | [10](./specs/10-animation.md) |
-| **G** | GIF, sprite sheet, animated export hooks | **NEXT** | — | [10 §0.5](./specs/10-animation.md), [08 §8–9](./specs/08-exporters.md) |
+| **G** | GIF, sprite sheet, animated export hooks | **DONE** | 9 | [10 §0.5](./specs/10-animation.md), [08 §8–9, §13](./specs/08-exporters.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
 
@@ -1264,46 +1264,99 @@ happened somewhere." Recorded in `HANDOFF.md §5`.
 
 ---
 
-## G — GIF, sprite sheet, animated export hooks · NEXT
+## G — GIF, sprite sheet, animated export hooks · DONE
 
-### Context handed over
+**14 Aug 2026 · see `git log` · 9/10**
 
-- **This is the one thing F's own spec named and then explicitly declined to
-  build**, with a cost estimate already written down: `10-animation.md §0.5`.
-  Read it first — it explains why bundling this into F would have risked
-  rushing both the per-frame-layers decision and the timeline UI.
-- **Scope, per `08-exporters.md §8–9`:** sprite sheet (a single PNG tiling
-  every frame, plus a JSON manifest of cell size and count) and GIF (a real
-  animated GIF, frame delays matching the document's `ms`, a delay below 20ms
-  clamped with the UI saying so once). Both are marked **Phase 5** in that
-  spec's own header — the same header that marked SVG/CSS/React/JSON/PNG
-  Phase 3, which unit D built, and ASCII, which shipped with them.
-- **GIF needs a hand-written LZW encoder.** Nothing in this repo's dependency
-  tree does GIF encoding — check before reaching for a package; `08 §9`
-  discusses the tradeoff. It also needs a Web Worker (encoding a multi-frame
-  GIF on the main thread would freeze the UI) and a progress-reporting
-  protocol across that boundary — `08 §6` shows a determinate progress bar
-  already exists for other long exports, if one does.
-- **The export popover only grows rows for these when `frames.length > 1`**
-  (`10-animation.md §6`) — a single-frame document should not be offered a
-  GIF of itself. `ExportPopover.tsx` and `lib/editor/export-menu.ts` are where
-  the existing six rows are built from data; add to that table rather than
-  hand-rolling two more rows next to it.
-- **`spriteRects(doc, frame)` and `compositeStack` (`lib/artwork-core/blend.ts`)
-  are the two things worth reusing.** A sprite sheet's per-frame tile is the
-  same picture `spriteRects` already draws for a thumbnail, just rasterised
-  instead of vectorised; a GIF frame that needs one flattened raster per frame
-  is exactly what `compositeStack` computes, proven by `probe-merge.ts`'s
-  cross-check against the real canvas.
+`lib/exporters/spritesheet.ts` (`sheetLayout`, `exportSpriteSheet`, `exportSpriteSheetAtlas`),
+`lib/exporters/gif/lzw.ts` (a hand-written variable-code-length LZW encoder and its own decoder, kept
+only for the round-trip tests), `lib/exporters/gif.ts` (`encodeGif` — a full GIF89a byte stream, pure
+and synchronous), `lib/exporters/gif-worker.ts` and `lib/editor/gif-export.ts` (the Web Worker and its
+browser-side wrapper), `lib/exporters/timeline.ts` (`frameWindows`/`hardCutEpsilon`, shared by the two
+animated hooks), animated modes added to `react.ts` and `css.ts`, `visibleFormats` in
+`lib/editor/export-menu.ts`, and a rewritten `ExportPopover.tsx` carrying the Animated toggles and the
+GIF progress bar. 71 new unit tests (709 → **780**, 46 → **51** files) and `tools/probe-export.ts` grew
+from 68 to **122** browser checks. Decisions in `08-exporters.md §13`.
 
-### Prompt
+**A real bug, found only because this unit wrote a real decoder to check the encoder against.** LZW's
+code-width growth has a documented trap: a decoder cannot form dictionary entry *N* until it has read
+the code *after* the one that made entry *N* possible, because it needs that next code's first
+character to complete the string — so a decoder's dictionary is structurally one entry behind an
+encoder's at every point. An encoder that grows its code size the instant its own dictionary crosses a
+power-of-two threshold desyncs from any standard decoder two codes later, exactly at the point the
+first real growth crossing lands. Fixed with a two-step delay (`growPending` → `growArmed`, both in
+`lzw.ts`) rather than a decoder-side patch — decoder-side patches don't exist for a format the browser
+already implements. `08-exporters.md §13.2` is the full account, including why solid fills and small
+palettes never exercised it: this could have shipped, worked on every fixture this repo already had,
+and only broken in someone else's GIF viewer on a busier picture, with nothing here to blame.
 
-> Read `docs/UNITS.md`, `docs/specs/10-animation.md §0.5` and
-> `docs/specs/08-exporters.md §8–9`, then build unit **G**: sprite sheet and
-> GIF export, plus the animated React/CSS export hooks `08 §8`'s `animated`
-> flag already names.
->
-> Then follow the finishing protocol in `docs/UNITS.md §0`.
+**Two contract questions the spec never answered, resolved rather than routed around (§13.1, §13.4):**
+a sprite sheet is genuinely two files and `ExportOk` carries exactly one, so `exportSpriteSheet` and
+`exportSpriteSheetAtlas` are two pure functions sharing one `sheetLayout`, firing two real downloads
+from the popover's one row rather than inventing a zip. And animating a `box-shadow` or a `visibility`
+list across frames needs a *hard cut*, not an interpolation — two keyframes an instant apart
+(`hardCutEpsilon`, scaled down on a document with many very short frames so the gap can never exceed
+the window it cuts into) rather than `steps()`, which turns out to only subdivide one transition
+segment and cannot express "hold, then jump" across more than two keyframes on its own.
+
+**The Worker bundle question was measured with a real network trace, not a grep — the same discipline
+§12.4 already used once for `pngjs`.** `runGifExport` is a plain, static, module-scope import in
+`ExportPopover.tsx`; nothing dynamic was needed, because `new Worker(new URL('./gif-worker.ts',
+import.meta.url))` is itself what makes Turbopack split `gif-worker.ts` and everything it pulls in
+into their own chunk. Grepping the built output for `GIF89a` still finds it reachable from the initial
+page's own chunk-loader manifest — the same false trail `pngjs`'s internals left once before, because a
+manifest legitimately *mentions* a chunk it has not fetched. A cold-load Playwright trace settled it
+the only way that counts: zero requests for any of it before Export is opened, exactly four — the
+worker bootstrap and its three dependency chunks — the instant GIF is actually clicked.
+
+**Gating follows the rule this repo already wrote down for Open recent and Paste image** (`17
+§7`): a control that looks live and is not is worse than no control. `visibleFormats(frameCount)`
+drops the GIF and sprite-sheet rows, and the popover drops both Animated toggles, the moment a
+document has only one frame — never rendered disabled. `probe-export.ts` proves both directions on the
+same `face` document: absent as loaded, present the instant a second frame exists, and it re-measures
+the wider 8-row popover's geometry at 390px and 320px too, not just the original 6-row one, since a
+narrow viewport withholds the Timeline button that would be needed to grow a document to two frames
+from there in the first place — `setViewportSize` widens, adds the frame, narrows back down, all
+against the same in-memory document.
+
+**One test written this session had to be rewritten twice, and both times the lesson was "measure,
+don't assume":** picking a palette swatch by index to fill a second and third frame with visibly
+different colours failed silently the first time, because `face`'s own centre pixel already happened
+to sit on the swatch index chosen — the fill genuinely worked, the sampled proof of it didn't, and
+only checking `window.__tessera.layers()` directly against each frame found the coincidence. And a
+progress-bar assertion expecting to see the bar's value advance through multiple distinct numbers
+turned out to be racing a real Worker that is, once warm, simply faster than Playwright's own polling
+round-trip — not a bug, and not worth a bigger and bigger test document to chase; the check now proves
+what polling *can* prove deterministically (the bar existed, with the right total) instead.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Sprite sheet, GIF (worker, real LZW, disposal, loop, clamped delay, progress), and both animated hooks are all built to `08 §8–9` and `10 §0.5`. Gating matches `17 §7`'s own rule. Not 10: the two-file sprite sheet is a genuine, documented divergence from `ExportOk`'s one-file contract (§13.1) — the right call, but still a divergence from what §1 originally promised every exporter would look like. |
+| 2 | Correctness | 9 | The LZW round-trips a real hand-written decoder plus the `bird` fixture; disposal 2 keeps independent frames from bleeding into each other; the 20ms floor is exercised through the real UI, not just a unit test; the sprite sheet's atlas and PNG agree on every coordinate; the animated hooks hard-cut rather than interpolate, verified both as generated text and as a toggled real download. Not 10: GIF inherits `flattenFrame`'s topmost-wins approximation and drops palette alpha to a binary transparent/opaque split — both documented, both the same accepted gap every other exporter already carries, not new ones. |
+| 3 | Tests | 9 | 71 new unit tests including a from-scratch GIF89a structural parser used only by the test suite, and 54 new browser checks (68 → 122) covering gating both ways, two real downloads from one click with pixel-sampled proof they differ, a real Worker's file verified byte-for-byte, and mobile/narrow geometry re-measured for the grown popover. Not 10: proving a real Worker posts multiple *distinct* progress values from outside the page is not reliably observable once the worker chunk is warm — same shape as `HANDOFF §11`'s already-accepted "F-M5's first rung has never executed," a real gap in what external polling can prove rather than a skipped check. |
+| 4 | Integration | 9 | `commit()` is untouched — nothing here writes the document; no exporter imports another (the module-graph test now covers eight files, not six); `gif.ts` stays pure and synchronous, taking a plain callback so a worker can exist without the encoder knowing one does; shared timing math lives in one new `timeline.ts` rather than being duplicated between React and CSS; tokens only. Not 10: `ExportPopover.tsx` grew a third piece of local state (`animated`, `gifProgress`, `rowError`) on top of what was already there — reasonable growth, not yet enough to be worth its own hook. |
+| 5 | Design fidelity | 9 | Matches §10's mockup exactly where it says "Phase 5, hidden until then" — now shown, same group, same order — read in both themes and at both phone widths with the actual 8-row, two-toggle popover, not just the original 6-row baseline. Not 10: no reference measurement exists for the Animated toggle or the progress bar beyond this app's own judgement, the same caveat several Phase-5 units before this one already carried. |
+| 6 | No regressions | 9 | 780 tests (709 → 780) across 51 files, a clean production build, and all 15 probes green in one `npm run probes` run — including `probe-export.ts` at its new 122-check size. A cold-load network trace on the production build additionally confirmed zero requests for any GIF/Worker code before Export is opened, going beyond what the protocol requires because the whole point of the deferral was worth actually proving. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **A `Format` or quality option for GIF.** The spec names none, and the format's own 256-colour
+  ceiling makes a quality slider meaningless against a ≤36-colour source.
+- **Reusing `compositeStack` for GIF or sprite-sheet frames.** The original handover for this unit
+  suggested it; built instead on `flattenFrame`, the same primitive every other raster exporter already
+  uses, so GIF and the sprite sheet inherit the one documented layer-compositing approximation instead
+  of introducing a second, truer one that only two formats would use. `08-exporters.md §13.2` records
+  the reasoning.
+- **A cancel button on an in-flight GIF encode.** Nothing in this repo has one for any long operation,
+  and a 64-frame, 256×256 document — the largest this app allows — was not observed to run long enough
+  in a warm worker to need one; revisit if a real one ever does.
+- **Compressing the sprite sheet PNG's atlas into the image itself (a single-file format).** Considered
+  and rejected in §13.1 — a second, invented file format for one export row is a worse trade than two
+  ordinary files with an obvious relationship.
 
 ---
 

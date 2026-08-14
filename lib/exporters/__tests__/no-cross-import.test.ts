@@ -10,7 +10,9 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const DIR = join(process.cwd(), 'lib', 'exporters')
-const EXPORTER_FILES = ['png.ts', 'svg.ts', 'css.ts', 'react.ts', 'json.ts', 'ascii.ts']
+const EXPORTER_FILES = [
+  'png.ts', 'svg.ts', 'css.ts', 'react.ts', 'json.ts', 'ascii.ts', 'spritesheet.ts', 'gif.ts',
+]
 
 function importSpecifiers(src: string): string[] {
   return [...src.matchAll(/from ['"](\.[^'"]+)['"]/g)].map((m) => m[1]!)

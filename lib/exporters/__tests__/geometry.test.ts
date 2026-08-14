@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flattenFrame, horizontalRuns } from '../geometry'
+import { colourToRgba, flattenFrame, horizontalRuns, rasterizeFrame } from '../geometry'
 import { loadStarter } from '../../artwork-core/create'
 import { docFrom, docFromLayers } from './helpers'
 
@@ -73,5 +73,42 @@ describe('flattenFrame', () => {
     let sourcePainted = 0
     for (const i of doc.frames[0]!.layers[0]!.px) if (i !== 0) sourcePainted++
     expect(painted).toBe(sourcePainted)
+  })
+})
+
+describe('colourToRgba', () => {
+  it('reads #rrggbb as opaque', () => {
+    expect(colourToRgba('#11aa33')).toEqual([0x11, 0xaa, 0x33, 255])
+  })
+
+  it('reads the alpha byte from #rrggbbaa', () => {
+    expect(colourToRgba('#11223380')).toEqual([0x11, 0x22, 0x33, 0x80])
+  })
+})
+
+describe('rasterizeFrame', () => {
+  it('is transparent everywhere index 0 stands, at 1×', () => {
+    const doc = docFrom(['1.'], ['transparent', '#ff0000'])
+    const { w, h, data } = rasterizeFrame(doc, 0)
+    expect([w, h]).toEqual([2, 1])
+    expect([...data]).toEqual([255, 0, 0, 255, 0, 0, 0, 0])
+  })
+
+  it('scale turns one source pixel into a scale×scale solid block', () => {
+    const doc = docFrom(['1'], ['transparent', '#00ff00'])
+    const { w, h, data } = rasterizeFrame(doc, 0, 3)
+    expect([w, h]).toEqual([3, 3])
+    for (let p = 0; p < data.length; p += 4) {
+      expect([data[p], data[p + 1], data[p + 2], data[p + 3]]).toEqual([0, 255, 0, 255])
+    }
+  })
+
+  it('flattens layers the same way flattenFrame does — top wins', () => {
+    const doc = docFromLayers(
+      [{ rows: ['1'] }, { rows: ['2'] }],
+      ['transparent', '#ffffff', '#000000'],
+    )
+    const { data } = rasterizeFrame(doc, 0)
+    expect([...data]).toEqual([0, 0, 0, 255])
   })
 })

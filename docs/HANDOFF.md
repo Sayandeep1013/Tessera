@@ -1,16 +1,17 @@
 # Session handoff — Tessera
 
-**Written:** 13 Aug 2026 · last commit `90f733d` (unit **F**, animation —
-frames, the timeline strip, wall-clock playback, onion skin) · branch `main`.
+**Written:** 14 Aug 2026 · last commit — see `git log` (unit **G**, GIF, sprite
+sheet and the animated React/CSS export hooks) · branch `main`.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 709 tests across 46 files · production build clean · 6 viewports
+**Green:** 780 tests across 51 files · production build clean · 6 viewports
 clean · and **every** browser probe in one run (`npm run probes`) —
 `probe-file-menu` 134/134, `probe-code-panel` 96/96, `probe-canvas-size` 70/70,
-`probe-export` 68/68, `probe-symmetry` 20/20, `probe-layers` 42/42,
+`probe-export` 122/122, `probe-symmetry` 20/20, `probe-layers` 42/42,
 `probe-merge` 24/24, `probe-timeline` 63/63, `probe-tooltip` 23/23,
 `probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
-`probe-zoom`. Zero runtime errors.
+`probe-zoom`. A cold-load network trace additionally confirmed the GIF
+encoder and its Worker never reach the initial bundle. Zero runtime errors.
 
 ---
 
@@ -29,8 +30,10 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-The next unit is **G — GIF, sprite sheet and the animated export hooks**. Its
-prompt is in `UNITS.md`, in the G block, directly under "Context handed over".
+**There is no unit marked `NEXT` right now.** G, the last lettered unit in the ledger, is done. What
+remains is `Share` (built, parked, do not resume without asking — `DEFERRED.md`) and AI edit quality
+(deferred by standing user instruction — §7 below). If you are opening this repo cold with nothing
+else to go on, that means the next move is asking the user what they want built next, not guessing.
 
 > This section used to paste that prompt as well, and the copy went stale within
 > one unit — it was still asking B2 to decide something B1 had already settled.
@@ -152,17 +155,17 @@ looked fine in a screenshot until magnified.
 | Feedback and input | Honest agent outcomes, a capped agent panel, our own tooltip component, proportional zoom buttons. **Scored 9/10** — `docs/specs/15-feedback-and-input.md`. |
 | Settings | Tabbed panel, theme tri-state, pixel-grid tri-state, transparency grid, symmetry, and the Canvas tab's size control — presets, W×H, an apply button labelled with the size it produces, and the crop count before the crop. Symmetry now draws its own mirror line(s) on the canvas — dashed, difference-blended against `--accent`, visible at every zoom. **Scored 9/10** — `docs/specs/16-settings.md §3.1`. |
 | Persistence | IndexedDB autosave. |
-| Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG — six pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated. **Scored 9/10** — `docs/specs/08-exporters.md §12`. |
+| Exporters | SVG, CSS (box-shadow), React (TS/JSX), JSON, ASCII, PNG, sprite sheet (PNG + JSON atlas) and GIF (real GIF89a, a hand-written LZW encoder, a Web Worker) — pure functions of `(doc, opts)` in `lib/exporters/`, an Export popover off the code panel's header, and the File menu's PNG/JSON rows rewired onto the same functions. React and CSS both carry an `animated: true` mode once a document has more than one frame, hard-cutting between frames rather than interpolating. React's export is verified pixel-identical to the live canvas by a real browser probe, not approximated; GIF's Worker chunk is verified absent from the initial bundle by a real network trace. **Scored 9/10** — `docs/specs/08-exporters.md §12` (unit D) and **§13** (unit G). |
 | Animation | Frames (per-frame layers — `14-layers.md §9`), the timeline strip (`components/Timeline.tsx` — thumbnails, drag reorder, right-click context menu, shift-click duration range), wall-clock playback (`lib/editor/playback.ts` + `lib/store/playback.ts`, ping-pong, never touches history), onion skin, and every keyboard shortcut in `10-animation.md §2`. **Scored 9/10** — `docs/specs/10-animation.md`. |
 
 ### Not built, and what is next
 
 **[`UNITS.md`](./UNITS.md) is the authority on this** — it is kept current as
 part of finishing a unit, and this section is not. In brief: the dead-control
-group is now **empty** (Timeline was the last member), Share is built but
-parked (`DEFERRED.md`), and unit G (GIF, sprite sheet, animated export hooks)
-remains — the one thing F's own spec named and explicitly declined to build,
-costed in `10-animation.md §0.5`.
+group is **empty** (Timeline was the last member), unit G is done, and there
+is **no unit marked `NEXT`**. What remains is Share, built but parked
+(`DEFERRED.md`), and AI edit quality, deferred by standing user instruction
+(§7 below). Neither resumes without being asked for.
 
 `showTimeline` in `lib/editor/breakpoint.ts` replaces the old `showUnbuilt` —
 there is nothing left to gate that way. The next dead control, if one is ever
@@ -345,6 +348,34 @@ Every one of these has already cost time in this repo.
   input path and is unaffected); the fix is calling the *native* prototype's setter explicitly:
   `Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(el, value)`
   before dispatching `input`. See `tools/probe-merge.ts`'s opacity-slider check.
+- **A GIF LZW encoder that grows its code width the instant its dictionary crosses a power-of-two
+  threshold desyncs from any standard decoder, silently, two codes later.** A decoder cannot form
+  dictionary entry *N* until it has read the code *after* the one that made entry *N* possible (it
+  needs that code's first character to complete the string), so a decoder's dictionary is always
+  exactly one entry behind an encoder's — and a naive encoder applies its own width growth one code
+  too early relative to that lag. Solid fills and small palettes never exercise it, which is exactly
+  how it would ship looking correct. The fix is a **two-step delay** on the encoder side
+  (`growPending` → `growArmed`, applied at the *start* of the step after next, not immediately) —
+  `lib/exporters/gif/lzw.ts`, found only by writing a real decoder and round-tripping genuinely random
+  pixel data, not solid or small-palette fixtures. `08-exporters.md §13.2`.
+- **Playwright's `Promise.all([page.waitForEvent('download'), page.waitForEvent('download')])` does
+  NOT capture two distinct downloads from one click that fires two.** Both promises resolve off the
+  *same* first `download` event — they are broadcast listeners, not a FIFO queue — so `d1` and `d2`
+  end up identical and a second, genuinely different download is silently never observed. Register
+  `page.on('download', ...)` once instead and collect into an array; see `downloadsFrom` in
+  `tools/probe-export.ts`, built for the sprite sheet's two-file-from-one-click row.
+- **A cold dev server pays a real, one-time compile cost the first time a `new Worker(new URL(...))`
+  chunk is requested** — several seconds, not milliseconds, and it is Turbopack compiling the chunk on
+  demand, not a bug in the worker. A probe that polls a transient UI state (a progress bar) for a
+  *fixed* budget before awaiting the real result can burn that whole budget on the compile stall and
+  see nothing. Poll concurrently with the actual wait (a `while (!finished)` loop stopped only once
+  the awaited promise resolves), not before it on a fixed timer — see `probe-export.ts`'s GIF section.
+- **Once a worker chunk is warm, do not expect to catch more than one distinct value polling a fast,
+  multi-message `postMessage` sequence from outside the page.** A 3-frame GIF's three progress
+  messages can complete faster than Playwright's own round-trip latency between polls, which is a real
+  Worker doing its job quickly, not a bug — chasing it with a bigger and bigger test document is the
+  wrong fix. Assert what polling *can* prove deterministically (the element existed, with the right
+  total) instead of a specific number of distinct observations.
 
 ---
 
@@ -474,7 +505,7 @@ npx tsx tools/probe-layers.ts     # 42 assertions on the layer panel, both theme
 npx tsx tools/probe-merge.ts      # 24 checks: opacity, blend mode, merge, flatten, drag reorder
 npx tsx tools/probe-canvas-size.ts # 70 checks on the Canvas tab: presets, crop count, undo, phones
 npx tsx tools/probe-code-panel.ts  # 96 checks: sync both ways, colouring, errors, the sheet
-npx tsx tools/probe-export.ts     # 68 checks: six formats, real downloads, React pixel-identity, the CSS cap
+npx tsx tools/probe-export.ts     # 122 checks: every format incl. GIF/sprite sheet/animated, gating, React pixel-identity, the CSS cap
 npx tsx tools/probe-symmetry.ts   # 20 checks: the axis line at H/V/Both/Off, both themes
 npx tsx tools/probe-file-menu.ts  # 80 checks on the File menu: structure, submenu, confirms, phones
 npx tsx tools/probe-tooltip.ts    # tooltip appears, places, dismisses; both themes
@@ -513,7 +544,7 @@ components/
   Canvas.tsx           pointer input, all 8 tools, wheel handling
   Chrome.tsx           top bar, tool rail, zoom bar, File menu, palette, dither menu
   CodePanel.tsx        the document as text, both ways — see docs/specs/07-code-panel.md
-  ExportPopover.tsx    six exporters, off the code panel's header
+  ExportPopover.tsx    eight exporters (incl. GIF, sprite sheet), off the code panel's header
   Layers.tsx           the layer panel
   Timeline.tsx         the animation timeline — frames, playback, onion/ping-pong toggles
   AgentPanel.tsx       composer, step log, confirm, completion, BYOK modal
@@ -523,7 +554,11 @@ lib/
   artwork-core/        document model. imports nothing but zod. no React.
     frames.ts             MAX_FRAMES, clampFrame
   renderer/            canvas drawing + sprite→SVG. pure.
-  exporters/           six pure (doc, opts) => ExportResult functions. no exporter imports another.
+  exporters/           pure (doc, opts) => ExportResult functions. no exporter imports another.
+    timeline.ts            frameWindows/hardCutEpsilon — shared by the animated React/CSS hooks
+    gif.ts                 encodeGif — pure, synchronous GIF89a builder
+    gif/lzw.ts             hand-written LZW encoder (+ its own decoder, test-only)
+    gif-worker.ts          the Web Worker entry; lib/editor/gif-export.ts is its browser wrapper
   editor/              viewport, brush masks, dither, breakpoints
     playback.ts           frameAtElapsed — pure wall-clock frame scheduling, no DOM
   actions/             the 25-action registry — one definition per capability
@@ -648,6 +683,11 @@ Recorded so they are not rediscovered as surprises.
   through a ref, is what actually survives a mid-drag re-render. Worth knowing before any other
   drag-to-reorder control gets built in this codebase — the File menu's rows, or an animation
   timeline's frames, would hit the same wall.
+- **GIF encode time at the actual maximum a document can be (256×256, 64 frames) has never been
+  measured.** `tools/probe-export.ts` exercises a 180×180, 3-frame document — big enough to make the
+  progress bar and the worker split observable, nowhere near the ceiling. It runs off the main thread
+  either way, so the worst case cannot freeze the tab, but nobody has timed how long a user would
+  actually wait for it. Worth measuring before this is ever advertised as fast.
 
 ---
 

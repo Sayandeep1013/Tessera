@@ -185,3 +185,25 @@ exports[`exportCss > golden: face 1`] = `
 }
 "
 `;
+
+exports[`exportCss animated > golden: an animated three-frame export 1`] = `
+".pixel-art {
+  --p: 8px;
+  --c1: #ff0000;
+  --c2: #00ff00;
+  width: var(--p);
+  height: var(--p);
+  animation: pixel-art-frames 300ms linear infinite;
+}
+
+@keyframes pixel-art-frames {
+  0% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c1); }
+  33.3233% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c1); }
+  33.3333% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c2); }
+  66.6567% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c2); }
+  66.6667% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c1); }
+  99.99% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c1); }
+  100% { box-shadow: calc(var(--p) * 0) calc(var(--p) * 0) 0 0 var(--c1); }
+}
+"
+`;

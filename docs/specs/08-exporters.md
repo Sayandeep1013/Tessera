@@ -103,6 +103,11 @@ One shadow **per pixel**, not per run (`box-shadow` has no width). A warning is 
 non-transparent pixels; above 16,384 the exporter returns an error recommending SVG instead. Both
 thresholds are named constants.
 
+**`animated: true` (unit G, §13.4):** one `@keyframes` rule drives the whole class's `box-shadow`
+across every frame, cut hard at each frame boundary rather than left to interpolate between two
+unrelated pictures. Ignores `frame`. The pixel-count thresholds above now count every frame's pixels
+*together* — §13.4 says why.
+
 ---
 
 ## 5. React
@@ -134,6 +139,10 @@ export function PixelArt({ size = 16 }: { size?: number }) {
 **Acceptance:** the exported component, rendered in a Playwright test, is pixel-identical to the
 canvas at the same scale. This is the test that proves the whole pipeline is consistent — built for
 real in unit D, §12.7, not approximated.
+
+**`animated: true` (unit G, §13.4):** every frame as its own `<g>`, `visibility` cycled by a
+`@keyframes` rule per frame on a shared timeline sized to the sum of every frame's `ms`. Ignores
+`frame` — there is no one frame to pick once the whole document is animating.
 
 ---
 
@@ -167,6 +176,8 @@ No options beyond `frame`: there is nothing to optimise, group, or scale about a
 
 ## 8. Sprite sheet (Phase 5)
 
+Built by unit G. §13.1 is the one place this section understated its own contract.
+
 ```ts
 type SheetOptions = { columns?: number; padding?: number; spacing?: number }
 ```
@@ -183,6 +194,8 @@ values break naive consumers and should be opt-in.
 ---
 
 ## 9. GIF (Phase 5)
+
+Built by unit G — §13.2 and §13.3 are its corrections and decisions.
 
 Encoded in a **Web Worker** so the editor never blocks.
 
@@ -343,3 +356,106 @@ browser's own SVG renderer, and reads it back pixel by pixel against the app's l
 viewport transform (`window.__tessera.viewport()`). Only painted cells are compared: a transparent
 cell is the exporter's business by design (§1.4), not the canvas's, which paints a flat backdrop
 there instead — comparing the two would be asserting two deliberately different things are equal.
+
+---
+
+## 13. What unit G built and corrected
+
+Five decisions, made rather than routed around (rule 10). `10-animation.md §0.5` is the record of
+*why* this was its own unit rather than riding along inside F; this is what actually got built.
+
+### 13.1 A sprite sheet is genuinely two files, and §1's contract carries exactly one
+
+§8 was written before anyone had to answer "then how does one `ExportOk` return a PNG *and* its
+JSON atlas." It cannot — `ExportOk` is `{ filename, mime, data, warning? }`, one of each. Rather than
+bend that shape for the one format that needs two (a `data: [png, json]` union would be a lie for
+every other exporter, which really do have one file), `lib/exporters/spritesheet.ts` exports two
+plain functions, `exportSpriteSheet` (the PNG) and `exportSpriteSheetAtlas` (the JSON), sharing one
+pure `sheetLayout(doc, opts)` so the PNG's grid and the atlas's coordinates cannot drift apart. The
+popover fires both from the one "Sprite sheet" row — two real downloads, not a zip, because a zip
+would need a third dependency for a two-file archive nobody asked to unpack.
+
+### 13.2 The GIF encoder needed a bug the decoder could never have out-argued
+
+The LZW code-width growth has a real, well-known trap: an encoder that grows its code size the
+instant its dictionary crosses a power-of-two threshold desyncs from any decoder built the standard
+way, because a decoder cannot form dictionary entry *N* until it has read the code *after* the one
+that made entry *N* possible — it needs that next code's first character to complete the string. So
+a decoder's own dictionary is structurally one entry behind the encoder's at every point, and a width
+change the encoder applies "immediately" lands one code early from the decoder's side. The fix is a
+two-step delay on the encoder (`growPending` → `growArmed` → applied, in `lib/exporters/gif/lzw.ts`),
+not a decoder change — found by writing a real decoder (`decodeLzw`, kept only for
+`__tests__/lzw.test.ts`'s round-trip proof, since this sandbox has no independent GIF library to
+check against) and watching it disagree with genuinely random pixel data at exactly the third code of
+the stream. Solid runs and small palettes never exercised the bug, which is exactly how it would have
+shipped unnoticed on `face`-sized artwork and only shown up on a busier document, in someone else's
+GIF viewer, with no way to blame this repo's own tests.
+
+**Disposal method is 2 (restore to background), on every frame.** Each of this document's frames is
+a complete, independent picture — never a delta against the one before it, unlike most hand-authored
+GIFs — so without disposing, a transparent cell in frame 2 would show frame 1's opaque pixel bleeding
+through underneath it. Restoring to a background that is itself the transparent index (0) before each
+frame draws is what makes "this frame's transparent cells are transparent" true frame over frame, not
+just on frame 0.
+
+**Alpha is dropped to a colour table, the same simplification as `flattenFrame` everywhere else
+(§12.1/§12.4).** GIF only has binary transparency — one colour is the transparent index, everything
+else is opaque — so an `#rrggbbaa` palette entry's alpha byte is discarded; only its RGB reaches the
+colour table. This is one more instance of the accepted gap merge/flatten exist to close, not a new
+one.
+
+### 13.3 The Worker protocol, and the bundle question measured the same way PNG's was
+
+`lib/exporters/gif-worker.ts` speaks three message types (`progress`, `done`, `error`) to
+`lib/editor/gif-export.ts`'s `runGifExport`, which is the only DOM-touching part of any of this —
+`lib/exporters/gif.ts` itself stays pure and synchronous, taking an optional `onProgress` callback
+so the worker can turn each frame's completion into a `postMessage` without the encoder knowing a
+worker exists. `self` inside the worker file is narrowed to exactly the two members it uses
+(`onmessage`/`postMessage`) rather than fought into matching `DedicatedWorkerGlobalScope`, because
+this project's one `tsconfig.json` types `self` as `Window`, which demands a `targetOrigin` a
+worker's global scope does not have — see the comment in `gif-worker.ts` for the full reasoning.
+
+**Verified with a real network trace, not a grep, on the same reasoning §12.4 already used for
+PNG.** `import { runGifExport } from '@/lib/editor/gif-export'` sits as a static, module-scope import
+in `ExportPopover.tsx` — no dynamic `import()` needed — because `new Worker(new URL('./gif-worker.ts',
+import.meta.url))` is itself the thing that makes Turbopack split `gif-worker.ts` and everything it
+pulls in (`gif.ts`, `gif/lzw.ts`) into their own chunk, loaded only when a `Worker` is actually
+constructed. Grepping the built chunks for `GIF89a` still finds the string reachable from the initial
+page's own script graph — exactly the false trail §12.4 already hit once with `pngjs`'s internals —
+because a chunk-loader's *manifest* legitimately mentions a chunk it has not fetched yet. A cold-load
+Playwright trace settles it the only way that counts: zero requests for the worker chunk or
+`gif.ts`'s code before Export is even opened, and exactly four — the worker bootstrap plus its three
+dependency chunks — the instant GIF is actually clicked.
+
+### 13.4 The animated hooks — a hard cut, not an interpolation, between frames
+
+Both React's `visibility` cycling and CSS's `box-shadow` cycling share `lib/exporters/timeline.ts`:
+`frameWindows` turns each frame's `ms` into a `[start, end)` percentage of the total, and
+`hardCutEpsilon` picks a gap — 0.01% normally, shrinking to a tenth of a frame's own share on a
+document with many very short frames — used to place two keyframes an instant apart, so the browser
+holds one frame's value for its whole window and then jumps, rather than blending two frames the
+document never drew as one. `steps()` was the first instinct and turned out to be the wrong tool: it
+only subdivides a single transition *segment*, not a whole multi-keyframe timeline, so it cannot
+express "hold, then jump" across more than two keyframes on its own — the paired-keyframe gap does,
+without it.
+
+**React gets one `@keyframes` rule per frame** (one `<g>` each, `visibility` toggled) because a
+`<g>`'s visibility is independent of its siblings'. **CSS gets exactly one `@keyframes` rule** driving
+the whole class's `box-shadow`, because a single element has only one `box-shadow` to animate — every
+frame's full shadow list is a value in that one rule, switched at the same hard-cut boundaries.
+
+**The CSS pixel-count thresholds (§4) now sum every frame, not the worst one, once `animated` is
+true.** All of them ship in the one stylesheet at once — only one is ever visible, but the browser
+still has to parse every `@keyframes` value up front — so the number that actually determines whether
+a tab hangs is the total across frames, not any single frame's own count. A three-frame document
+where each frame is comfortably under the cap alone can still refuse as an animated export; the error
+message says why.
+
+### 13.5 GIF and sprite sheet are absent on a single frame, never disabled
+
+The same rule `17-file-menu.md §7` already established for Open recent and Paste image before they
+existed: a control that looks live and is not is worse than no control. `visibleFormats(frameCount)`
+in `lib/editor/export-menu.ts` drops the `gif` and `spritesheet` rows — and the popover drops the
+React/CSS Animated toggles — the moment a document has only one frame, rather than rendering them
+disabled with no explanation. `tools/probe-export.ts` proves the gating both ways: absent on `face`
+as loaded, present the instant a second frame exists.

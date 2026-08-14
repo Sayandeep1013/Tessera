@@ -53,3 +53,48 @@ export function flattenFrame(doc: Doc, frame: number): Uint8Array {
   }
   return out
 }
+
+/** A palette colour string (`#rrggbb` or `#rrggbbaa`) as straight RGBA bytes. */
+export function colourToRgba(c: string): [number, number, number, number] {
+  const r = parseInt(c.slice(1, 3), 16)
+  const g = parseInt(c.slice(3, 5), 16)
+  const b = parseInt(c.slice(5, 7), 16)
+  const a = c.length === 9 ? parseInt(c.slice(7, 9), 16) : 255
+  return [r, g, b, a]
+}
+
+/**
+ * A frame, flattened and rasterised to straight RGBA bytes at `scale` — the
+ * one pixel-pushing loop every raster exporter wants, shared here (§1.2: no
+ * exporter may import another, so the common part lives in this file) rather
+ * than repeated per format. Every source pixel becomes a `scale × scale`
+ * solid block; index 0 stays `rgba(0,0,0,0)` because a freshly-sized buffer
+ * is already zero-filled.
+ */
+export function rasterizeFrame(
+  doc: Doc,
+  frame: number,
+  scale = 1,
+): { w: number; h: number; data: Uint8Array } {
+  const w = doc.w * scale
+  const h = doc.h * scale
+  const data = new Uint8Array(w * h * 4)
+  const flat = flattenFrame(doc, frame)
+
+  for (const r of horizontalRuns(flat, doc.w, doc.h)) {
+    const [red, green, blue, alpha] = colourToRgba(doc.palette[r.i]!.c)
+    for (let sy = 0; sy < scale; sy++) {
+      const py = r.y * scale + sy
+      const rowStart = (py * w + r.x * scale) * 4
+      for (let sx = 0; sx < r.len * scale; sx++) {
+        const i = rowStart + sx * 4
+        data[i] = red
+        data[i + 1] = green
+        data[i + 2] = blue
+        data[i + 3] = alpha
+      }
+    }
+  }
+
+  return { w, h, data }
+}

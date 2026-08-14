@@ -1,24 +1,29 @@
 /**
  * Drive the Export popover with real clicks and real downloads.
- * See docs/specs/08-exporters.md §10.
+ * See docs/specs/08-exporters.md §10 and §13.
  *
  *   npx tsx tools/probe-export.ts
  *
- * The six exporters have 68 unit tests and every one of them runs in node,
- * against a `Doc` built by hand. None of that can tell you whether the popover
- * actually renders six rows, whether a click really produces a download, or
- * whether the one failure this file can produce — the CSS pixel cap — reaches
- * the screen instead of the browser's download manager. That is what this is
- * for.
+ * The exporters have well over a hundred unit tests and every one of them
+ * runs in node, against a `Doc` built by hand. None of that can tell you
+ * whether the popover actually renders the rows, whether a click really
+ * produces a download, whether the one failure the CSS path can produce
+ * reaches the screen instead of the browser's download manager — or, for
+ * unit G, whether a real Web Worker actually exists and actually encodes a
+ * real GIF in a real browser, which no node test can exercise at all. That
+ * is what this is for.
  *
  * Reads the document through the development-only `window.__tessera` hook.
  * Read-only — commit() is still the only writer.
  */
 
 import { chromium, type Page, type Download, type Locator } from 'playwright'
+import { PNG } from 'pngjs'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { exportRowDomId, exportScaleDomId, type ExportFormat } from '../lib/editor/export-menu'
+import {
+  exportAnimatedToggleDomId, exportRowDomId, exportScaleDomId, type ExportFormat,
+} from '../lib/editor/export-menu'
 
 const OUT = join(process.cwd(), 'docs', 'shots')
 const APP = process.env.APP_URL ?? 'http://localhost:3000'
@@ -76,6 +81,247 @@ async function content(d: Download): Promise<string> {
 async function bytes(d: Download): Promise<Buffer> {
   const path = await d.path()
   return path ? readFileSync(path) : Buffer.alloc(0)
+}
+
+/**
+ * Sprite sheet fires two downloads from one click (§13.1) — `download()`'s
+ * `Promise.all` of two `waitForEvent` calls does NOT work for this: both
+ * promises resolve off the SAME first event, so a `page.on('download', ...)`
+ * listener is the only way to actually capture two distinct ones in order.
+ */
+async function downloadsFrom(p: Page, locator: (p: Page) => Locator, count: number): Promise<Download[]> {
+  const seen: Download[] = []
+  const onDownload = (d: Download) => seen.push(d)
+  p.on('download', onDownload)
+  await locator(p).click()
+  for (let i = 0; i < 200 && seen.length < count; i++) await p.waitForTimeout(20)
+  p.off('download', onDownload)
+  return seen
+}
+
+/** Every `0x21 0xF9` Graphic Control Extension this app's own writer emits is
+ *  a fixed 8-byte block (§13.2) — reading the delay 4 bytes past the tag is
+ *  reliable for bytes this file's own encoder produced, without writing a
+ *  second, general-purpose GIF parser just for the probe. */
+function gifFrameDelays(bytes: Buffer): number[] {
+  const delays: number[] = []
+  for (let i = 0; i < bytes.length - 1; i++) {
+    if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9) delays.push(bytes[i + 4]! | (bytes[i + 5]! << 8))
+  }
+  return delays
+}
+
+async function resizeCanvas(p: Page, size: number) {
+  await p.getByRole('button', { name: 'Settings' }).click()
+  await p.waitForTimeout(200)
+  await p.getByRole('radio', { name: 'Canvas' }).click()
+  await p.waitForTimeout(150)
+  await p.getByLabel('Width').fill(String(size))
+  await p.getByLabel('Height').fill(String(size))
+  await p.locator('#canvas-size-apply').click()
+  await p.waitForTimeout(400)
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(200)
+}
+
+function timelinePanel(p: Page): Locator {
+  return p.locator('[role="dialog"][aria-label="Timeline"]')
+}
+
+async function setFrameDuration(p: Page, n: number, ms: number) {
+  await timelinePanel(p).getByRole('button', { name: `Frame ${n}`, exact: true }).click()
+  const input = p.getByLabel('Frame duration, milliseconds')
+  await input.fill(String(ms))
+  await input.press('Enter')
+  await p.waitForTimeout(150)
+}
+
+/** Fill the whole canvas with whatever the currently-selected colour is. */
+async function fillCanvas(p: Page) {
+  await p.getByRole('button', { name: 'Fill (G)' }).click()
+  const box = await p.locator('canvas').boundingBox()
+  if (!box) throw new Error('no canvas')
+  await p.mouse.click(box.x + box.width / 2, box.y + box.height / 2)
+  await p.waitForTimeout(200)
+}
+
+/**
+ * G's own surface: sprite sheet, GIF (via a real Web Worker), and the
+ * animated React/CSS hooks — everything the six-format run above cannot
+ * reach because it is single-frame by construction. `face` alone is one
+ * frame; this builds a real three-frame document with distinct content per
+ * frame, because a GIF or sprite sheet of three identical pictures would
+ * pass every check here by accident.
+ */
+async function runAnimated(p: Page, theme: string) {
+  await loadFace(p)
+  await openCodePanel(p)
+  await openExport(p)
+
+  // ── gating: one frame means no gif/spritesheet row, no animated toggle ────
+  check(`${theme}: a single-frame document shows no GIF row`, (await row('gif')(p).count()) === 0)
+  check(`${theme}: …nor a sprite-sheet row`, (await row('spritesheet')(p).count()) === 0)
+  check(`${theme}: …nor a React Animated toggle`,
+    (await p.locator('#' + exportAnimatedToggleDomId('react')).count()) === 0)
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(150)
+
+  // ── build a real three-frame document ──────────────────────────────────
+  // Large enough that even a warm worker's GIF encode takes long enough for
+  // several progress polls to land on different values — a 40×40 canvas
+  // compresses too fast for the "did it actually advance" check below to
+  // mean anything once the worker chunk is no longer cold-compiling.
+  await resizeCanvas(p, 180)
+  await p.getByRole('button', { name: 'Timeline' }).click()
+  await p.waitForTimeout(300)
+  await timelinePanel(p).getByRole('button', { name: 'Add frame' }).click()
+  await p.waitForTimeout(200)
+  await timelinePanel(p).getByRole('button', { name: 'Add frame' }).click()
+  await p.waitForTimeout(200)
+
+  // Frame durations: 100ms, 250ms, and a 10ms frame (the format's own floor,
+  // `MIN_FRAME_MS`) to exercise the GIF exporter's 20ms clamp (§9) for real,
+  // not just in a unit test.
+  await setFrameDuration(p, 1, 100)
+  await setFrameDuration(p, 2, 250)
+  await setFrameDuration(p, 3, 10)
+
+  // Distinct content per frame — frame 1 already carries `face`'s own
+  // painted pixels; flood-fill frames 2 and 3 with two swatches so a sprite
+  // sheet or GIF of "the same picture three times" cannot pass these checks
+  // by accident. Swatch 3, not swatch 2: `face`'s own centre pixel already
+  // happens to sit on palette index 2 — found by this probe sampling the
+  // "filled" frame and getting the original artwork's own colour back.
+  const swatches = p.locator('[role="dialog"][aria-label="Palette"] button')
+
+  await timelinePanel(p).getByRole('button', { name: 'Frame 2', exact: true }).click()
+  await p.getByRole('button', { name: 'Colour' }).click()
+  await p.waitForTimeout(150)
+  await swatches.nth(1).click() // also closes the popover
+  await fillCanvas(p)
+
+  await timelinePanel(p).getByRole('button', { name: 'Frame 3', exact: true }).click()
+  await p.getByRole('button', { name: 'Colour' }).click()
+  await p.waitForTimeout(150)
+  await swatches.nth(3).click()
+  await fillCanvas(p)
+
+  await openCodePanel(p)
+  await openExport(p)
+
+  check(`${theme}: a three-frame document now shows the GIF row`, (await row('gif')(p).count()) === 1)
+  check(`${theme}: …and the sprite-sheet row`, (await row('spritesheet')(p).count()) === 1)
+  const reactToggle = p.locator('#' + exportAnimatedToggleDomId('react'))
+  const cssToggle = p.locator('#' + exportAnimatedToggleDomId('css'))
+  check(`${theme}: …and React's Animated toggle`, (await reactToggle.count()) === 1)
+  check(`${theme}: …and CSS's Animated toggle`, (await cssToggle.count()) === 1)
+  await p.screenshot({ path: join(OUT, `probe-export-animated-${theme}.png`) })
+
+  // ── sprite sheet: two files from one click, agreeing with each other ─────
+  const sheetDownloads = await downloadsFrom(p, row('spritesheet'), 2)
+  check(`${theme}: sprite sheet fires exactly two downloads`, sheetDownloads.length === 2,
+    sheetDownloads.map((d) => d.suggestedFilename()).join(', '))
+  const png = sheetDownloads.find((d) => d.suggestedFilename().endsWith('.png'))
+  const atlasDl = sheetDownloads.find((d) => d.suggestedFilename().endsWith('.json'))
+  check(`${theme}: …a .sheet.png and a .sheet.json`, !!png && !!atlasDl)
+  if (png && atlasDl) {
+    const sheetPng = PNG.sync.read(await bytes(png))
+    const atlas = JSON.parse(await content(atlasDl)) as {
+      w: number; h: number; frames: Array<{ x: number; y: number; w: number; h: number; ms: number }>
+    }
+    check(`${theme}: the atlas lists all three frames, with the durations just set`,
+      atlas.frames.map((f) => f.ms).join(',') === '100,250,10', JSON.stringify(atlas.frames.map((f) => f.ms)))
+    check(`${theme}: the PNG is exactly as wide as three tiles side by side`,
+      sheetPng.width === atlas.w * 3 && sheetPng.height === atlas.h,
+      `${sheetPng.width}x${sheetPng.height} vs ${atlas.w * 3}x${atlas.h}`)
+    // Sample the centre of each tile — three different fills, three colours.
+    const cx = (i: number) => atlas.frames[i]!.x + Math.floor(atlas.w / 2)
+    const cy = Math.floor(atlas.h / 2)
+    const colourAt = (x: number, y: number) => {
+      const idx = (y * sheetPng.width + x) * 4
+      return [sheetPng.data[idx], sheetPng.data[idx + 1], sheetPng.data[idx + 2]].join(',')
+    }
+    const tileColours = [0, 1, 2].map((i) => colourAt(cx(i), cy))
+    check(`${theme}: the three tiles are three different colours, not one picture repeated`,
+      new Set(tileColours).size === 3, tileColours.join(' | '))
+  }
+
+  // ── GIF: a real Web Worker, a real progress bar, a real file ─────────────
+  // The FIRST GIF export against a fresh dev server pays a one-time
+  // Turbopack compile cost for the worker chunk — seconds, not milliseconds
+  // — so the progress bar is polled CONCURRENTLY with the download wait,
+  // for the download's own full timeout, rather than for a fixed budget that
+  // a cold compile could burn through before encoding even starts.
+  //
+  // Once the chunk is warm, three `postMessage` round trips for a
+  // 180×180 document reliably complete faster than this poll's own
+  // round-trip latency can distinguish — this is a real Worker actually
+  // doing its job quickly, not a bug, and not something worth fighting with
+  // a bigger and bigger test document. So this checks what polling CAN
+  // prove deterministically — the bar existed, at least once, with the
+  // right total — rather than a specific number of distinct values, which
+  // a fast machine can legitimately make impossible to observe.
+  const gifRow = row('gif')(p)
+  let sawProgress = false
+  let sawCorrectTotal = false
+  let gifFinished = false
+  const pollProgress = (async () => {
+    while (!gifFinished) {
+      if ((await p.locator('#export-gif-progress').count()) > 0) {
+        sawProgress = true
+        const max = await p.locator('#export-gif-progress').getAttribute('aria-valuemax').catch(() => null)
+        if (max === '3') sawCorrectTotal = true
+      }
+      await p.waitForTimeout(5)
+    }
+  })()
+  const gifDownloadPromise = p.waitForEvent('download', { timeout: 20_000 })
+  await gifRow.click()
+  const gifDownload = await gifDownloadPromise
+  gifFinished = true
+  await pollProgress
+
+  check(`${theme}: GIF filename ends .gif`, gifDownload.suggestedFilename().endsWith('.gif'))
+  const gifBytes = await bytes(gifDownload)
+  check(`${theme}: GIF opens with the GIF89a signature`,
+    gifBytes.subarray(0, 6).toString('ascii') === 'GIF89a')
+  check(`${theme}: GIF ends with the trailer byte`, gifBytes[gifBytes.length - 1] === 0x3b)
+  const delays = gifFrameDelays(gifBytes)
+  check(`${theme}: GIF carries exactly three frames`, delays.length === 3, String(delays.length))
+  check(`${theme}: …with delays converted to centiseconds, the 10ms one clamped to the 20ms floor`,
+    delays.join(',') === '10,25,2', delays.join(','))
+  check(`${theme}: a progress bar appeared at some point during encoding`, sawProgress)
+  if (sawProgress) {
+    check(`${theme}: …reporting the right frame count as its total`, sawCorrectTotal)
+  }
+
+  // ── animated React: one <g> per frame, real keyframes, still valid TS ─────
+  await reactToggle.click()
+  const animatedTsx = await download(p, row('react'))
+  const animatedTsxSrc = await content(animatedTsx)
+  check(`${theme}: animated React emits three <g> groups`,
+    [...animatedTsxSrc.matchAll(/<g style=/g)].length === 3)
+  check(`${theme}: …and three @keyframes rules`,
+    [...animatedTsxSrc.matchAll(/@keyframes/g)].length === 3)
+  await reactToggle.click() // back off, for anyone re-running this
+  const staticTsx = await download(p, row('react'))
+  check(`${theme}: switching the toggle back off returns a single, static <svg>`,
+    !(await content(staticTsx)).includes('@keyframes'))
+
+  // ── animated CSS: one @keyframes rule, no static box-shadow ───────────────
+  await cssToggle.click()
+  const animatedCss = await download(p, row('css'))
+  const animatedCssSrc = await content(animatedCss)
+  check(`${theme}: animated CSS declares @keyframes and an animation shorthand`,
+    animatedCssSrc.includes('@keyframes') && animatedCssSrc.includes('animation:'))
+  check(`${theme}: …not a static box-shadow declaration`, !/^\s*box-shadow:/m.test(animatedCssSrc))
+  await cssToggle.click()
+  const staticCss = await download(p, row('css'))
+  check(`${theme}: switching back off returns a static box-shadow rule again`,
+    (await content(staticCss)).includes('box-shadow:') && !(await content(staticCss)).includes('@keyframes'))
+
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(150)
 }
 
 /**
@@ -303,6 +549,10 @@ async function main() {
       acceptDownloads: true,
     })
     const p = await ctx.newPage()
+    // The GIF worker chunk compiles on its first hit against a dev server —
+    // a few seconds, one time, not a bug — so this stays generous; the GIF
+    // download itself carries its own even-longer explicit timeout.
+    p.setDefaultTimeout(10_000)
     const errors: string[] = []
     p.on('pageerror', (e) => errors.push(String(e)))
     p.on('console', (m) => m.type() === 'error' && errors.push(m.text()))
@@ -311,6 +561,7 @@ async function main() {
     await p.waitForTimeout(2000)
 
     await run(p, theme)
+    await runAnimated(p, theme)
     check(`${theme}: no console errors`, errors.length === 0, errors.join(' | '))
     await ctx.close()
   }
@@ -342,6 +593,37 @@ async function main() {
     check(`${name}: the export popover is fully on screen`,
       !!box && box.x >= 0 && box.x + box.width <= width, JSON.stringify(box))
     await p.screenshot({ path: join(OUT, `probe-export-${name}.png`) })
+
+    // The Animated toggles and the GIF/sprite-sheet rows only show once
+    // there is more than one frame, and `showTimeline` withholds the
+    // Timeline button below the tablet breakpoint (`breakpoint.ts`) — a
+    // second frame cannot be added from THIS width at all. Widen first, add
+    // one, then narrow back down: `setViewportSize` keeps the document (it
+    // is in-memory client state, not tied to the viewport) while letting the
+    // wider 8-row popover be measured at the width that actually withholds
+    // the control that grows it.
+    await p.keyboard.press('Escape')
+    await p.waitForTimeout(150)
+    await p.setViewportSize({ width: 1440, height: 900 })
+    await p.waitForTimeout(200)
+    await p.getByRole('button', { name: 'Timeline' }).click()
+    await p.waitForTimeout(300)
+    await p.locator('[role="dialog"][aria-label="Timeline"]')
+      .getByRole('button', { name: 'Add frame' }).click()
+    await p.waitForTimeout(200)
+    await p.keyboard.press('Escape')
+    await p.waitForTimeout(150)
+    await p.setViewportSize({ width, height })
+    await p.waitForTimeout(200)
+
+    await openCodePanel(p)
+    await openExport(p)
+    check(`${name}: the two-frame, 8-row popover is still fully on screen`,
+      (await row('gif')(p).count()) === 1)
+    const wideBox = await menu(p).boundingBox()
+    check(`${name}: …including its width, with GIF/sprite-sheet/Animated present`,
+      !!wideBox && wideBox.x >= 0 && wideBox.x + wideBox.width <= width, JSON.stringify(wideBox))
+    await p.screenshot({ path: join(OUT, `probe-export-${name}-animated.png`) })
 
     await ctx.close()
   }

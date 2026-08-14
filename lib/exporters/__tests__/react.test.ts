@@ -3,6 +3,21 @@ import ts from 'typescript'
 import { exportReact, sanitizeComponentName } from '../react'
 import { horizontalRuns, flattenFrame } from '../geometry'
 import { loadStarter, loadLogo } from '../../artwork-core/create'
+import { docFrom } from './helpers'
+import type { Doc } from '../../artwork-core/schema'
+
+function threeFrameDoc(): Doc {
+  const base = docFrom(['1'], ['transparent', '#ff0000'])
+  return {
+    ...base,
+    palette: [{ c: 'transparent' }, { c: '#ff0000' }, { c: '#00ff00' }],
+    frames: [
+      { ms: 100, layers: [{ n: 'L0', px: new Uint8Array([1]) }] },
+      { ms: 100, layers: [{ n: 'L0', px: new Uint8Array([2]) }] },
+      { ms: 100, layers: [{ n: 'L0', px: new Uint8Array([1]) }] },
+    ],
+  }
+}
 
 function transpiles(source: string, jsx = true): boolean {
   const result = ts.transpileModule(source, {
@@ -89,5 +104,56 @@ describe('exportReact', () => {
     expect(face.value.data).toMatchSnapshot()
     expect(bird.value.data).toMatchSnapshot()
     expect(logo.value.data).toMatchSnapshot()
+  })
+})
+
+describe('exportReact animated', () => {
+  it('emits one <g> per frame and one @keyframes rule per <g>', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true })
+    if (!r.ok) throw new Error(r.error)
+    const src = r.value.data as string
+    expect([...src.matchAll(/<g style=/g)]).toHaveLength(3)
+    expect([...src.matchAll(/@keyframes PixelArt-f\d/g)]).toHaveLength(3)
+  })
+
+  it('is still valid TypeScript', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true })
+    if (!r.ok) throw new Error(r.error)
+    expect(transpiles(r.value.data as string)).toBe(true)
+  })
+
+  it('the animation duration is the sum of every frame\'s ms', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true })
+    if (!r.ok) throw new Error(r.error)
+    expect(r.value.data).toContain('300ms linear infinite')
+  })
+
+  it('ignores `frame` — the whole document animates', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true, frame: 1 })
+    if (!r.ok) throw new Error(r.error)
+    expect([...(r.value.data as string).matchAll(/<g style=/g)]).toHaveLength(3)
+  })
+
+  it('every frame\'s keyframes hold visible across its own share and hidden elsewhere', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true })
+    if (!r.ok) throw new Error(r.error)
+    const src = r.value.data as string
+    // The middle frame (index 1) owns [33.33%, 66.67%) — it should be hidden
+    // at both 0% and 100%, and visible somewhere strictly inside its window.
+    const f1 = src.split('\n').find((l) => l.includes('@keyframes PixelArt-f1')) ?? ''
+    expect(f1).toContain('0% { visibility: hidden; }')
+    expect(f1).toContain('100% { visibility: hidden; }')
+    expect(f1).toMatch(/33\.3\d+% \{ visibility: visible; \}/)
+  })
+
+  it('golden: an animated three-frame export', () => {
+    const r = exportReact(threeFrameDoc(), { animated: true })
+    if (!r.ok) throw new Error(r.error)
+    expect(r.value.data).toMatchSnapshot()
+  })
+
+  it('rejects a document with no frames', () => {
+    const doc = { ...threeFrameDoc(), frames: [] }
+    expect(exportReact(doc, { animated: true }).ok).toBe(false)
   })
 })

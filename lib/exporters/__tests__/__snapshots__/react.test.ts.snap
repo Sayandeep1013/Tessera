@@ -153,3 +153,27 @@ exports[`exportReact > golden: face (tsx), bird (jsx), logo (tsx) 3`] = `
 }
 "
 `;
+
+exports[`exportReact animated > golden: an animated three-frame export 1`] = `
+"export function PixelArt({ size = 1 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 1 1" width={size} height={size} shapeRendering="crispEdges">
+      <style>{\`
+@keyframes PixelArt-f0 { 0% { visibility: visible; } 33.3333% { visibility: visible; } 33.3433% { visibility: hidden; } 100% { visibility: hidden; } }
+@keyframes PixelArt-f1 { 0% { visibility: hidden; } 33.3233% { visibility: hidden; } 33.3333% { visibility: visible; } 66.6667% { visibility: visible; } 66.6767% { visibility: hidden; } 100% { visibility: hidden; } }
+@keyframes PixelArt-f2 { 0% { visibility: hidden; } 66.6567% { visibility: hidden; } 66.6667% { visibility: visible; } 100% { visibility: visible; } }
+\`}</style>
+      <g style={{ animation: 'PixelArt-f0 300ms linear infinite' }}>
+        <rect x={0} y={0} width={1} height={1} fill="#ff0000" />
+      </g>
+      <g style={{ animation: 'PixelArt-f1 300ms linear infinite' }}>
+        <rect x={0} y={0} width={1} height={1} fill="#00ff00" />
+      </g>
+      <g style={{ animation: 'PixelArt-f2 300ms linear infinite' }}>
+        <rect x={0} y={0} width={1} height={1} fill="#ff0000" />
+      </g>
+    </svg>
+  )
+}
+"
+`;
