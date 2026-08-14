@@ -17,6 +17,7 @@ import type { Viewport } from '../renderer/canvas'
 import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
 import { CODE_DEFAULT_W, clampCodeWidth } from '../editor/code-panel'
+import { clampTab, type FormatTabId } from '../editor/export-menu'
 
 /** Spec 16 §1. Auto follows the zoom, as the renderer always has. */
 export type GridMode = 'auto' | 'on' | 'off'
@@ -275,18 +276,23 @@ type EditorState = {
   /**
    * Whether the code panel is on screen, and how wide it is.
    *
-   * The width lives here rather than inside the panel because `<main>` is the
-   * flex row that has to leave room for it — the panel is a split, not an
-   * overlay (spec 07 §1), so the canvas has to know. Persisted to localStorage
-   * by the panel; this is the live value.
+   * The panel is a centred modal, not a split (spec 07 §9.11 / 08 §14) — the
+   * width still lives here rather than inside the panel because it is
+   * persisted to localStorage across opens, the same as before the modal
+   * change; only the layout that consumes it moved.
    */
   codeOpen: boolean
   codeWidth: number
+  /** Which format tab is showing — `'code'` is the only editable one. Clamped
+   *  back to `'code'` whenever the document's frame count makes the current
+   *  tab unreachable (08 §14.1). */
+  codeTab: FormatTabId
   /**
    * The document cell the code panel's caret is inside, outlined on the canvas.
    * Spec 07 §4 — panel → canvas, the half of click-to-locate that makes the
    * link feel real rather than claimed. Null whenever the caret is not in a
-   * pixel row, which is most of the file.
+   * pixel row, which is most of the file. Degraded but not removed by the
+   * modal change — 08 §14.3.
    */
   codeCell: { x: number; y: number } | null
   /**
@@ -333,6 +339,7 @@ type EditorState = {
   setPingPong: (on: boolean) => void
   setCodeOpen: (open: boolean) => void
   setCodeWidth: (w: number) => void
+  setCodeTab: (tab: FormatTabId) => void
   setCodeCell: (c: { x: number; y: number } | null) => void
   /** `null` dismisses. Any string replaces whatever was there. */
   setNotice: (text: string | null, sticky?: boolean) => void
@@ -359,6 +366,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pingPong: false,
   codeOpen: false,
   codeWidth: CODE_DEFAULT_W,
+  codeTab: 'code',
   codeCell: null,
   notice: null,
 
@@ -385,11 +393,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setTimelineOpen: (open) => set({ timelineOpen: open }),
   setOnionSkin: (on) => set({ onionSkin: on }),
   setPingPong: (on) => set({ pingPong: on }),
-  setCodeOpen: (open) => set({ codeOpen: open }),
+  // Opening always starts on the Code tab — the document itself, and the one
+  // tab that's always reachable regardless of frame count. Closing leaves
+  // `codeTab` alone; there is nothing left mounted to show it.
+  setCodeOpen: (open) => set({ codeOpen: open, ...(open ? { codeTab: 'code' as FormatTabId } : {}) }),
   setCodeWidth: (w) =>
     set({
       codeWidth: clampCodeWidth(w, typeof window === 'undefined' ? Infinity : window.innerWidth),
     }),
+  setCodeTab: (tab) => set({ codeTab: tab }),
   setCodeCell: (c) => set({ codeCell: c }),
   setNotice: (text, sticky = false) =>
     set({ notice: text === null ? null : { text, sticky, seq: (get().notice?.seq ?? 0) + 1 } }),

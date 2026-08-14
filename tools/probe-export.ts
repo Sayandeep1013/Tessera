@@ -1,17 +1,16 @@
 /**
- * Drive the Export popover with real clicks and real downloads.
- * See docs/specs/08-exporters.md §10 and §13.
+ * Drive the format tabs and the single Export button with real clicks and
+ * real downloads. See docs/specs/08-exporters.md §10, §13 and §14.
  *
  *   npx tsx tools/probe-export.ts
  *
  * The exporters have well over a hundred unit tests and every one of them
  * runs in node, against a `Doc` built by hand. None of that can tell you
- * whether the popover actually renders the rows, whether a click really
- * produces a download, whether the one failure the CSS path can produce
- * reaches the screen instead of the browser's download manager — or, for
- * unit G, whether a real Web Worker actually exists and actually encodes a
- * real GIF in a real browser, which no node test can exercise at all. That
- * is what this is for.
+ * whether the tabs actually render, whether a click really produces a
+ * download, whether the one failure the CSS path can produce reaches the
+ * screen instead of the browser's download manager — or, for unit G, whether
+ * a real Web Worker actually exists and actually encodes a real GIF in a real
+ * browser, which no node test can exercise at all. That is what this is for.
  *
  * Reads the document through the development-only `window.__tessera` hook.
  * Read-only — commit() is still the only writer.
@@ -22,7 +21,7 @@ import { PNG } from 'pngjs'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  exportAnimatedToggleDomId, exportRowDomId, exportScaleDomId, type ExportFormat,
+  exportAnimatedToggleDomId, exportScaleDomId, formatTabDomId, type FormatTabId,
 } from '../lib/editor/export-menu'
 
 const OUT = join(process.cwd(), 'docs', 'shots')
@@ -33,16 +32,11 @@ const results: Array<[string, boolean, string?]> = []
 const check = (name: string, ok: boolean, detail?: string) => results.push([name, ok, detail])
 
 const source = (p: Page) => p.evaluate(SOURCE) as Promise<string>
-const menu = (p: Page) => p.locator('#code-export-menu')
-/** Built from the same function `ExportPopover.tsx` uses, so the two cannot drift. */
-const row = (id: ExportFormat) => (p: Page) => {
-  const sel = exportRowDomId(id)
-  return p.locator('#' + sel)
-}
-const scale = (n: number) => (p: Page) => {
-  const sel = exportScaleDomId(n)
-  return p.locator('#' + sel)
-}
+const panel = (p: Page) => p.locator('#code-panel')
+/** Built from the same function `CodePanel.tsx` uses, so the two cannot drift. */
+const tab = (id: FormatTabId) => (p: Page) => p.locator('#' + formatTabDomId(id))
+const scale = (n: number) => (p: Page) => p.locator('#' + exportScaleDomId(n))
+const exportButton = (p: Page) => p.locator('#code-export')
 
 async function loadFace(p: Page) {
   await p.getByRole('button', { name: 'File — new, open, export' }).click()
@@ -54,22 +48,19 @@ async function loadFace(p: Page) {
 }
 
 async function openCodePanel(p: Page) {
-  if ((await p.locator('#code-panel').count()) === 0) {
+  if ((await panel(p).count()) === 0) {
     await p.getByRole('button', { name: 'Code' }).click()
     await p.waitForTimeout(400)
   }
 }
 
-async function openExport(p: Page) {
-  if ((await menu(p).count()) === 0) {
-    await p.locator('#code-export').click()
-    await p.waitForTimeout(200)
-  }
-}
-
-/** Click a row (or a scale/lang button inside it) and capture the download it produces. */
-async function download(p: Page, locator: (p: Page) => Locator): Promise<Download> {
-  const [d] = await Promise.all([p.waitForEvent('download'), locator(p).click()])
+/** Switch to a tab and click the one Export button — §14: it acts on
+ *  whichever tab is showing, so every download in this file goes through
+ *  exactly this sequence. */
+async function exportFrom(p: Page, id: FormatTabId): Promise<Download> {
+  await tab(id)(p).click()
+  await p.waitForTimeout(150)
+  const [d] = await Promise.all([p.waitForEvent('download'), exportButton(p).click()])
   return d
 }
 
@@ -84,16 +75,18 @@ async function bytes(d: Download): Promise<Buffer> {
 }
 
 /**
- * Sprite sheet fires two downloads from one click (§13.1) — `download()`'s
+ * Sprite sheet fires two downloads from one Export click (§13.1) —
  * `Promise.all` of two `waitForEvent` calls does NOT work for this: both
  * promises resolve off the SAME first event, so a `page.on('download', ...)`
  * listener is the only way to actually capture two distinct ones in order.
  */
-async function downloadsFrom(p: Page, locator: (p: Page) => Locator, count: number): Promise<Download[]> {
+async function downloadsFrom(p: Page, id: FormatTabId, count: number): Promise<Download[]> {
+  await tab(id)(p).click()
+  await p.waitForTimeout(150)
   const seen: Download[] = []
   const onDownload = (d: Download) => seen.push(d)
   p.on('download', onDownload)
-  await locator(p).click()
+  await exportButton(p).click()
   for (let i = 0; i < 200 && seen.length < count; i++) await p.waitForTimeout(20)
   p.off('download', onDownload)
   return seen
@@ -147,24 +140,23 @@ async function fillCanvas(p: Page) {
 
 /**
  * G's own surface: sprite sheet, GIF (via a real Web Worker), and the
- * animated React/CSS hooks — everything the six-format run above cannot
- * reach because it is single-frame by construction. `face` alone is one
- * frame; this builds a real three-frame document with distinct content per
- * frame, because a GIF or sprite sheet of three identical pictures would
- * pass every check here by accident.
+ * animated React/CSS hooks — everything the six-tab run above cannot reach
+ * because it is single-frame by construction. `face` alone is one frame; this
+ * builds a real three-frame document with distinct content per frame, because
+ * a GIF or sprite sheet of three identical pictures would pass every check
+ * here by accident.
  */
 async function runAnimated(p: Page, theme: string) {
   await loadFace(p)
   await openCodePanel(p)
-  await openExport(p)
 
-  // ── gating: one frame means no gif/spritesheet row, no animated toggle ────
-  check(`${theme}: a single-frame document shows no GIF row`, (await row('gif')(p).count()) === 0)
-  check(`${theme}: …nor a sprite-sheet row`, (await row('spritesheet')(p).count()) === 0)
+  // ── gating: one frame means no gif/spritesheet tab, no animated toggle ────
+  check(`${theme}: a single-frame document shows no GIF tab`, (await tab('gif')(p).count()) === 0)
+  check(`${theme}: …nor a sprite-sheet tab`, (await tab('spritesheet')(p).count()) === 0)
+  await tab('react')(p).click()
+  await p.waitForTimeout(100)
   check(`${theme}: …nor a React Animated toggle`,
     (await p.locator('#' + exportAnimatedToggleDomId('react')).count()) === 0)
-  await p.keyboard.press('Escape')
-  await p.waitForTimeout(150)
 
   // ── build a real three-frame document ──────────────────────────────────
   // Large enough that even a warm worker's GIF encode takes long enough for
@@ -207,18 +199,21 @@ async function runAnimated(p: Page, theme: string) {
   await fillCanvas(p)
 
   await openCodePanel(p)
-  await openExport(p)
 
-  check(`${theme}: a three-frame document now shows the GIF row`, (await row('gif')(p).count()) === 1)
-  check(`${theme}: …and the sprite-sheet row`, (await row('spritesheet')(p).count()) === 1)
+  check(`${theme}: a three-frame document now shows the GIF tab`, (await tab('gif')(p).count()) === 1)
+  check(`${theme}: …and the sprite-sheet tab`, (await tab('spritesheet')(p).count()) === 1)
+  await tab('react')(p).click()
+  await p.waitForTimeout(100)
   const reactToggle = p.locator('#' + exportAnimatedToggleDomId('react'))
-  const cssToggle = p.locator('#' + exportAnimatedToggleDomId('css'))
   check(`${theme}: …and React's Animated toggle`, (await reactToggle.count()) === 1)
+  await tab('css')(p).click()
+  await p.waitForTimeout(100)
+  const cssToggle = p.locator('#' + exportAnimatedToggleDomId('css'))
   check(`${theme}: …and CSS's Animated toggle`, (await cssToggle.count()) === 1)
   await p.screenshot({ path: join(OUT, `probe-export-animated-${theme}.png`) })
 
   // ── sprite sheet: two files from one click, agreeing with each other ─────
-  const sheetDownloads = await downloadsFrom(p, row('spritesheet'), 2)
+  const sheetDownloads = await downloadsFrom(p, 'spritesheet', 2)
   check(`${theme}: sprite sheet fires exactly two downloads`, sheetDownloads.length === 2,
     sheetDownloads.map((d) => d.suggestedFilename()).join(', '))
   const png = sheetDownloads.find((d) => d.suggestedFilename().endsWith('.png'))
@@ -261,7 +256,8 @@ async function runAnimated(p: Page, theme: string) {
   // prove deterministically — the bar existed, at least once, with the
   // right total — rather than a specific number of distinct values, which
   // a fast machine can legitimately make impossible to observe.
-  const gifRow = row('gif')(p)
+  await tab('gif')(p).click()
+  await p.waitForTimeout(150)
   let sawProgress = false
   let sawCorrectTotal = false
   let gifFinished = false
@@ -276,7 +272,7 @@ async function runAnimated(p: Page, theme: string) {
     }
   })()
   const gifDownloadPromise = p.waitForEvent('download', { timeout: 20_000 })
-  await gifRow.click()
+  await exportButton(p).click()
   const gifDownload = await gifDownloadPromise
   gifFinished = true
   await pollProgress
@@ -296,27 +292,31 @@ async function runAnimated(p: Page, theme: string) {
   }
 
   // ── animated React: one <g> per frame, real keyframes, still valid TS ─────
+  await tab('react')(p).click()
+  await p.waitForTimeout(100)
   await reactToggle.click()
-  const animatedTsx = await download(p, row('react'))
+  const animatedTsx = await exportFrom(p, 'react')
   const animatedTsxSrc = await content(animatedTsx)
   check(`${theme}: animated React emits three <g> groups`,
     [...animatedTsxSrc.matchAll(/<g style=/g)].length === 3)
   check(`${theme}: …and three @keyframes rules`,
     [...animatedTsxSrc.matchAll(/@keyframes/g)].length === 3)
   await reactToggle.click() // back off, for anyone re-running this
-  const staticTsx = await download(p, row('react'))
+  const staticTsx = await exportFrom(p, 'react')
   check(`${theme}: switching the toggle back off returns a single, static <svg>`,
     !(await content(staticTsx)).includes('@keyframes'))
 
   // ── animated CSS: one @keyframes rule, no static box-shadow ───────────────
+  await tab('css')(p).click()
+  await p.waitForTimeout(100)
   await cssToggle.click()
-  const animatedCss = await download(p, row('css'))
+  const animatedCss = await exportFrom(p, 'css')
   const animatedCssSrc = await content(animatedCss)
   check(`${theme}: animated CSS declares @keyframes and an animation shorthand`,
     animatedCssSrc.includes('@keyframes') && animatedCssSrc.includes('animation:'))
   check(`${theme}: …not a static box-shadow declaration`, !/^\s*box-shadow:/m.test(animatedCssSrc))
   await cssToggle.click()
-  const staticCss = await download(p, row('css'))
+  const staticCss = await exportFrom(p, 'css')
   check(`${theme}: switching back off returns a static box-shadow rule again`,
     (await content(staticCss)).includes('box-shadow:') && !(await content(staticCss)).includes('@keyframes'))
 
@@ -414,38 +414,35 @@ async function run(p: Page, theme: string) {
   await openCodePanel(p)
 
   check(`${theme}: the export trigger sits in the code panel header`,
-    (await p.locator('#code-export').count()) === 1)
-
-  await openExport(p)
-  check(`${theme}: opens a dialog labelled Export`,
-    (await p.getByRole('dialog', { name: 'Export' }).count()) === 1)
+    (await exportButton(p).count()) === 1)
+  check(`${theme}: the panel is a dialog labelled Code`,
+    (await p.getByRole('dialog', { name: 'Code' }).count()) === 1)
   await p.screenshot({ path: join(OUT, `probe-export-${theme}.png`) })
 
-  for (const id of ['png', 'svg', 'css', 'react', 'json', 'ascii'] as const) {
-    check(`${theme}: the ${id} row is present`, (await row(id)(p).count()) === 1)
+  for (const id of ['code', 'png', 'svg', 'css', 'react', 'ascii'] as const) {
+    check(`${theme}: the ${id} tab is present`, (await tab(id)(p).count()) === 1)
   }
-  for (const n of [1, 2, 4, 8]) {
-    check(`${theme}: the ${n}× PNG button is present`, (await scale(n)(p).count()) === 1)
-  }
-  check(`${theme}: React's language toggle starts on TS`,
-    (await p.locator('#export-react-lang').innerText()) === 'TS')
+  check(`${theme}: there is no separate json tab — Code already is that text (§14.1)`,
+    (await tab('code' as FormatTabId)(p).count()) === 1 && (await p.locator('[role="tab"]', { hasText: 'JSON' }).count()) === 0)
 
-  // ── JSON: byte-identical to the code panel's own text ─────────────────────
-  const jsonDl = await download(p, row('json'))
-  check(`${theme}: JSON filename ends .tessera.json`,
+  // ── Code tab's Export IS the JSON download — one function, two entry points ─
+  const jsonDl = await exportFrom(p, 'code')
+  check(`${theme}: Code tab's Export filename ends .tessera.json`,
     /\.tessera\.json$/.test(jsonDl.suggestedFilename()))
-  check(`${theme}: JSON content is exactly what the code panel shows (rule 3)`,
+  check(`${theme}: …and its content is exactly what the Code tab shows (rule 3)`,
     (await content(jsonDl)) === await source(p))
 
   // ── SVG ─────────────────────────────────────────────────────────────────
-  const svgDl = await download(p, row('svg'))
+  const svgDl = await exportFrom(p, 'svg')
   check(`${theme}: SVG filename ends .svg`, svgDl.suggestedFilename().endsWith('.svg'))
   const svg = await content(svgDl)
   check(`${theme}: SVG is a real svg document with crisp edges`,
     svg.startsWith('<svg xmlns=') && svg.includes('shape-rendering="crispEdges"'))
+  check(`${theme}: …and the SVG tab previewed the same text before Export was clicked`,
+    (await panel(p).locator('pre').innerText()) === svg)
 
   // ── ASCII: same shape as the document, one char per pixel ─────────────────
-  const asciiDl = await download(p, row('ascii'))
+  const asciiDl = await exportFrom(p, 'ascii')
   check(`${theme}: ASCII filename ends .txt`, asciiDl.suggestedFilename().endsWith('.txt'))
   const ascii = (await content(asciiDl)).replace(/\n$/, '').split('\n')
   const { w, h } = JSON.parse(await source(p)) as { w: number; h: number }
@@ -454,12 +451,16 @@ async function run(p: Page, theme: string) {
     `${ascii.length} rows of ${ascii[0]?.length}, expected ${h} of ${w}`)
 
   // ── CSS, the happy path (the pixel cap gets its own document below) ───────
-  const cssDl = await download(p, row('css'))
+  const cssDl = await exportFrom(p, 'css')
   check(`${theme}: CSS filename ends .css`, cssDl.suggestedFilename().endsWith('.css'))
   check(`${theme}: CSS declares box-shadow`, (await content(cssDl)).includes('box-shadow'))
 
   // ── React: TS by default, JS after the toggle ─────────────────────────────
-  const tsxDl = await download(p, row('react'))
+  await tab('react')(p).click()
+  await p.waitForTimeout(100)
+  check(`${theme}: React's language toggle starts on TS`,
+    (await p.locator('#export-react-lang').innerText()) === 'TS')
+  const tsxDl = await exportFrom(p, 'react')
   check(`${theme}: React defaults to .tsx`, tsxDl.suggestedFilename().endsWith('.tsx'))
   const tsx = await content(tsxDl)
   check(`${theme}: …with a TS prop type`, tsx.includes('size?: number'))
@@ -484,22 +485,31 @@ async function run(p: Page, theme: string) {
   await p.locator('#export-react-lang').click()
   check(`${theme}: the toggle now reads JS`,
     (await p.locator('#export-react-lang').innerText()) === 'JS')
-  const jsxDl = await download(p, row('react'))
+  const jsxDl = await exportFrom(p, 'react')
   check(`${theme}: …and the download switches to .jsx`, jsxDl.suggestedFilename().endsWith('.jsx'))
   check(`${theme}: …with no TS annotation`, !(await content(jsxDl)).includes('size?: number'))
   await p.locator('#export-react-lang').click() // back to TS for anyone running this again
 
   // ── PNG: real bytes, the right magic number, the scale in the filename ────
-  const pngDl = await download(p, scale(4))
-  check(`${theme}: PNG filename encodes the scale`, pngDl.suggestedFilename().endsWith('@4x.png'))
+  await tab('png')(p).click()
+  await p.waitForTimeout(150)
+  for (const n of [1, 2, 4, 8]) {
+    check(`${theme}: the ${n}× PNG scale button is present`, (await scale(n)(p).count()) === 1)
+  }
+  await scale(4)(p).click()
+  const [pngDl] = await Promise.all([p.waitForEvent('download'), exportButton(p).click()])
+  check(`${theme}: PNG filename encodes the selected scale`, pngDl.suggestedFilename().endsWith('@4x.png'))
   const png = await bytes(pngDl)
   check(`${theme}: PNG starts with the PNG signature`,
     png.length > 8 && png[0] === 0x89 && png[1] === 0x50 && png[2] === 0x4e && png[3] === 0x47)
+  check(`${theme}: the PNG tab shows a live image preview`, (await panel(p).locator('img').count()) === 1)
+  await scale(1)(p).click() // back to 1× for anyone running this again
 
   // ── dismissal ───────────────────────────────────────────────────────────
   await p.keyboard.press('Escape')
   await p.waitForTimeout(150)
-  check(`${theme}: Escape closes the popover`, (await menu(p).count()) === 0)
+  check(`${theme}: Escape closes the whole panel, not just a sub-menu (§14.1's modal)`,
+    (await panel(p).count()) === 0)
 }
 
 /** F-M-shaped: the CSS exporter's one failure mode, driven for real rather than assumed. */
@@ -525,17 +535,21 @@ async function runCssCap(p: Page) {
   await p.waitForTimeout(300)
 
   await openCodePanel(p)
-  await openExport(p)
+
+  // The failure shows the instant the CSS tab is looked at — the preview and
+  // the Export button call the same exporter, so there is nothing left to
+  // discover by clicking Export that the tab did not already say (§14.4).
+  await tab('css')(p).click()
+  await p.waitForTimeout(200)
+  const err = await panel(p).locator('[role="alert"]').innerText()
+  check('CSS over the pixel cap says why, inline in the tab, before Export is even clicked (§10/§14.4)',
+    /too many/i.test(err) && /SVG/.test(err), err)
 
   let fired = false
   p.once('download', () => { fired = true })
-  await row('css')(p).click()
+  await exportButton(p).click()
   await p.waitForTimeout(500)
-
-  check('CSS over the pixel cap does not download anything', !fired)
-  const err = await p.locator('#code-export-menu [role="alert"]').innerText()
-  check('…and says why, inline in the popover, not as a toast (§10)',
-    /too many/i.test(err) && /SVG/.test(err), err)
+  check('…and clicking Export on a failing tab still downloads nothing', !fired)
 }
 
 async function main() {
@@ -580,7 +594,8 @@ async function main() {
     await ctx.close()
   }
 
-  // ── the code panel is a full-screen sheet below 640, and Export has to fit ─
+  // ── the code panel is a full-screen sheet below 640, and the modal has to
+  // fit above it — §14.1 ─────────────────────────────────────────────────────
   for (const [name, width, height] of [['mobile', 390, 844], ['narrow', 320, 568]] as const) {
     const ctx = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 2 })
     const p = await ctx.newPage()
@@ -588,20 +603,19 @@ async function main() {
     await p.waitForTimeout(2000)
 
     await openCodePanel(p)
-    await openExport(p)
-    const box = await menu(p).boundingBox()
-    check(`${name}: the export popover is fully on screen`,
+    const box = await panel(p).boundingBox()
+    check(`${name}: the panel is fully on screen`,
       !!box && box.x >= 0 && box.x + box.width <= width, JSON.stringify(box))
     await p.screenshot({ path: join(OUT, `probe-export-${name}.png`) })
 
-    // The Animated toggles and the GIF/sprite-sheet rows only show once
+    // The Animated toggles and the GIF/sprite-sheet tabs only show once
     // there is more than one frame, and `showTimeline` withholds the
     // Timeline button below the tablet breakpoint (`breakpoint.ts`) — a
     // second frame cannot be added from THIS width at all. Widen first, add
     // one, then narrow back down: `setViewportSize` keeps the document (it
     // is in-memory client state, not tied to the viewport) while letting the
-    // wider 8-row popover be measured at the width that actually withholds
-    // the control that grows it.
+    // wider tab strip be measured at the width that actually withholds the
+    // control that grows it.
     await p.keyboard.press('Escape')
     await p.waitForTimeout(150)
     await p.setViewportSize({ width: 1440, height: 900 })
@@ -617,11 +631,9 @@ async function main() {
     await p.waitForTimeout(200)
 
     await openCodePanel(p)
-    await openExport(p)
-    check(`${name}: the two-frame, 8-row popover is still fully on screen`,
-      (await row('gif')(p).count()) === 1)
-    const wideBox = await menu(p).boundingBox()
-    check(`${name}: …including its width, with GIF/sprite-sheet/Animated present`,
+    check(`${name}: the two-frame panel now shows the GIF tab`, (await tab('gif')(p).count()) === 1)
+    const wideBox = await panel(p).boundingBox()
+    check(`${name}: …and is still fully on screen with the wider, 8-tab strip`,
       !!wideBox && wideBox.x >= 0 && wideBox.x + wideBox.width <= width, JSON.stringify(wideBox))
     await p.screenshot({ path: join(OUT, `probe-export-${name}-animated.png`) })
 

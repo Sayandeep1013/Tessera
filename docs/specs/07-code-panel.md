@@ -397,3 +397,13 @@ went away with the timer still counting. It flushes on unmount, so Escape and
   now measures the two layers at five scroll positions and the advance of every
   coloured run, which is what C's first pass said would be needed the moment
   anything touched the overlay. It is a spot check, not a proof.
+
+### 9.11 §1 corrected again, by unit H — a modal, not a split
+
+§1's "right half of the canvas area" is reversed by direct user instruction: the panel is now a
+centred modal, and format tabs (Code plus every exporter) live under its header instead of behind a
+separate popover trigger. `08-exporters.md §14` is the full account, including what it costs — §9.3's
+canvas ↔ code cross-highlight is degraded, not removed, once the panel sits on top of the canvas
+instead of beside it. Everything else in this file — the sync loop, the debounces, the undo
+coalescing, the overlay's colouring — is unchanged; only the Code tab uses any of it, because it is
+still the only tab anything can be typed into.

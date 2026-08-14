@@ -23,7 +23,6 @@ const APP = process.env.APP_URL ?? 'http://localhost:3000'
 
 const SOURCE = `window.__tessera.source()`
 const LAYERS = `window.__tessera.layers()`
-const SIZE = `window.__tessera.size()`
 const VIEWPORT = `window.__tessera.viewport()`
 
 /** The overlay's marks, as [text, kind] — the only way to see what is marked. */
@@ -124,17 +123,43 @@ async function run(p: Page, theme: string) {
   await p.screenshot({ path: join(OUT, `probe-code-panel-${theme}.png`) })
 
   const canvasAfter = await p.locator('canvas').boundingBox()
-  check(t('it is a split — the canvas gives up width rather than being covered'),
-    !!canvasBefore && !!canvasAfter && canvasAfter.width < canvasBefore.width - 200,
+  check(t('it is a modal — the canvas keeps its full width, not a split (08 §14.1)'),
+    !!canvasBefore && !!canvasAfter && Math.abs(canvasAfter.width - canvasBefore.width) < 2,
     `${canvasBefore?.width} → ${canvasAfter?.width}`)
 
   const afterOpen = (await p.evaluate(VIEWPORT)) as { scale: number; offsetX: number }
-  check(t('…keeping the zoom, because a resize is not a zoom (§9.3)'),
-    afterOpen.scale === beforeOpen.scale, `${beforeOpen.scale} → ${afterOpen.scale}`)
-  const doc16 = (await p.evaluate(SIZE)) as { w: number; h: number }
-  check(t('…and re-centring, so the artwork is still on screen'),
-    afterOpen.offsetX > 0 && afterOpen.offsetX + doc16.w * afterOpen.scale <= canvasAfter!.width,
-    JSON.stringify(afterOpen))
+  check(t('…so the viewport does not move at all — nothing lost width to re-centre for'),
+    afterOpen.scale === beforeOpen.scale && afterOpen.offsetX === beforeOpen.offsetX,
+    `${JSON.stringify(beforeOpen)} → ${JSON.stringify(afterOpen)}`)
+
+  const modalBox = await panel(p).boundingBox()
+  const vp = p.viewportSize()!
+  check(t('…and it is centred in the viewport, not flush to an edge'),
+    !!modalBox && Math.abs((modalBox.x + modalBox.width / 2) - vp.width / 2) < 2
+      && Math.abs((modalBox.y + modalBox.height / 2) - vp.height / 2) < 2,
+    JSON.stringify(modalBox))
+
+  // ── dismissal: an outside click, and Escape — §14.1's modal convention ───
+  await p.mouse.click(20, 20) // well outside the centred panel
+  await p.waitForTimeout(300)
+  check(t('a click outside the modal closes it'), (await panel(p).count()) === 0)
+
+  await openPanel(p)
+  await p.waitForTimeout(300)
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(300)
+  check(t('…and so does Escape'), (await panel(p).count()) === 0)
+
+  await openPanel(p)
+  await p.waitForTimeout(300)
+
+  // A click INSIDE the modal — on its own header, not on a live control —
+  // must not close it. Only a mousedown OUTSIDE the ref counts (HANDOFF §5:
+  // the same convention FileMenu/PalettePopover/DitherMenu already use).
+  const headerBox = await panel(p).boundingBox()
+  await p.mouse.click(headerBox!.x + headerBox!.width / 2, headerBox!.y + 10)
+  await p.waitForTimeout(200)
+  check(t('…but a click inside it does not'), (await panel(p).count()) === 1)
 
   // ── the text IS the document — §1, the whole thesis ──────────────────────
   check(t('the panel is byte-identical to what Download writes'),
@@ -142,15 +167,24 @@ async function run(p: Page, theme: string) {
   check(t('…and says it is valid'), (await statusText(p)).startsWith('Valid'))
 
   // ── canvas → panel: paint one pixel, one character changes — §8 ──────────
+  // 08 §14.3: the modal's own box sits exactly where the canvas's centre is,
+  // and an outside click closes the panel by design — there is no click on
+  // the canvas, anywhere, that both reaches it and leaves the panel open.
+  // Close, paint, reopen: what survives is that the reopened panel reflects
+  // the paint, not that it updates live while both are on screen at once.
   const beforePaint = await text(p)
+  await p.keyboard.press('Escape')
+  await p.waitForTimeout(300)
   const box = await p.locator('canvas').boundingBox()
   // Artwork coordinates, not element coordinates — HANDOFF §5.
   await p.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2)
   await p.waitForTimeout(600)
+  await openPanel(p)
+  await p.waitForTimeout(400)
 
   const afterPaint = await text(p)
   const changed = diffAt(beforePaint, afterPaint)
-  check(t('painting changes exactly one character in the text (§8)'),
+  check(t('painting changes exactly one character in the reopened text (§8, §14.3)'),
     changed.length === 1, `${changed.length} characters differ`)
   check(t('…and the panel still matches the document exactly'),
     afterPaint === (await source(p)))
@@ -228,8 +262,16 @@ async function run(p: Page, theme: string) {
     await p.getByRole('status').innerText())
   check(t('…leaving the document itself untouched'),
     JSON.stringify(await layers(p)) === goodDoc)
+  // The notice banner sits outside the modal (spec 17 §9.6's own channel,
+  // unrelated to the code panel), so dismissing it is an outside click by
+  // §14.1's own rule — closing the panel is correct, not a bug, and this is
+  // the check for exactly that, rather than assuming it silently doesn't.
   await p.getByRole('status').click()
   await p.waitForTimeout(200)
+  check(t('dismissing the notice banner is an outside click, so it closes the panel too (§14.1)'),
+    (await panel(p).count()) === 0)
+  await openPanel(p)
+  await p.waitForTimeout(400)
 
   // Put it back, and the error clears.
   await p.evaluate(setText(goodText))
@@ -327,12 +369,45 @@ async function run(p: Page, theme: string) {
     return true
   })()`)
 
-  // ── canvas → panel highlight — §4 ────────────────────────────────────────
-  await p.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2)
+  // ── canvas → panel highlight — §4, and §14.3's other half ────────────────
+  // The centre of the canvas is where the modal sits — a hover there hits the
+  // modal's own opaque box, not the canvas underneath (no `pointerEvents`
+  // trick makes an element see through what is drawn on top of it). The
+  // bottom-right corner pixel is what this needs, not the centre: `offsetX`
+  // does not move as `scale` grows (page.tsx's `+` handler only changes
+  // scale), so pixel (0,0)'s screen position is fixed regardless of zoom —
+  // it is pixel (w-1, h-1) whose screen position grows outward with scale,
+  // eventually clearing the modal's own bounding box, via the same
+  // screen→doc mapping `lib/editor/viewport.ts` uses in reverse.
+  const docSize = (await p.evaluate(`window.__tessera.size()`)) as { w: number; h: number }
+  for (let i = 0; i < 16; i++) {
+    const vp = (await p.evaluate(VIEWPORT)) as { scale: number; offsetX: number; offsetY: number }
+    const modalNow = await panel(p).boundingBox()
+    const cornerX = box!.x + vp.offsetX + (docSize.w - 0.5) * vp.scale
+    const cornerY = box!.y + vp.offsetY + (docSize.h - 0.5) * vp.scale
+    const clearOfModal = !modalNow
+      || cornerX < modalNow.x || cornerX > modalNow.x + modalNow.width
+      || cornerY < modalNow.y || cornerY > modalNow.y + modalNow.height
+    // Still has to land ON the canvas element itself — zooming far enough
+    // that the corner scrolls past the canvas's own edge would hover
+    // whatever is behind it instead, which fires no pointer handler at all.
+    const onCanvas = cornerX <= box!.x + box!.width && cornerY <= box!.y + box!.height
+    if (clearOfModal && onCanvas) break
+    await p.keyboard.press('+')
+    await p.waitForTimeout(150)
+  }
+  const vpFinal = (await p.evaluate(VIEWPORT)) as { scale: number; offsetX: number; offsetY: number }
+  const cornerX = Math.min(box!.x + vpFinal.offsetX + (docSize.w - 0.5) * vpFinal.scale, box!.x + box!.width - 1)
+  const cornerY = Math.min(box!.y + vpFinal.offsetY + (docSize.h - 0.5) * vpFinal.scale, box!.y + box!.height - 1)
+  await p.mouse.move(cornerX, cornerY)
   await p.waitForTimeout(300)
   const hoverMarks = (await p.evaluate(MARKS)) as Array<{ text: string }>
-  check(t('hovering a pixel marks its character (§4)'),
+  check(t('hovering the corner pixel — now clear of the modal — marks its character (§4, §14.3)'),
     hoverMarks.length === 1 && hoverMarks[0]!.text.length === 1, JSON.stringify(hoverMarks))
+
+  // Zoom back to fit, for anyone re-running this against the same session.
+  await p.keyboard.press('1')
+  await p.waitForTimeout(300)
 
   // ── Ctrl+/ — §1, and §9.7 on why it is not behind isTyping ───────────────
   // Pressed with focus INSIDE the panel's own textarea, which is where the
@@ -348,7 +423,12 @@ async function run(p: Page, theme: string) {
 
   const nameField = p.getByLabel('Artwork name')
   if ((await nameField.count()) > 0) {
-    await nameField.click()
+    // `.focus()`, not `.click()` — §14.1: a real click on the filename field
+    // is itself an outside click now and would close the panel before ⌘/ is
+    // even pressed, confounding what this checks. A programmatic focus
+    // dispatches no mousedown, so the panel stays open and this still
+    // isolates the thing §9.7 is actually about: isTyping does not guard ⌘/.
+    await nameField.focus()
     await p.keyboard.press('Control+/')
     await p.waitForTimeout(250)
     check(t('…and from the filename field, where a slash chord means nothing'),

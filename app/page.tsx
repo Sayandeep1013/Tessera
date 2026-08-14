@@ -295,39 +295,37 @@ export default function EditorPage() {
           real chrome mounts. */}
       {ready ? <TopBar /> : <div style={{ flex: 'none', height: 48 }} />}
 
-      {/* A row, because the code panel is a SPLIT and not an overlay (spec 07
-          §1): the canvas gives up width to it rather than being covered by it.
-          The canvas's own ResizeObserver re-centres the view by half the change,
-          so opening the panel slides the artwork over instead of hiding half of
-          it (§9.3). */}
-      <div style={{ flex: '1 1 0', display: 'flex', minHeight: 0, minWidth: 0 }}>
-        <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden', minWidth: 0 }}>
-          {ready ? (
-            <>
-              <Canvas />
-              <ToolRail />
-              <ZoomBar />
-              {timelineShown && (
-                <TimelinePanel onClose={() => useEditorStore.getState().setTimelineOpen(false)} />
-              )}
-              {layersOpen && showLayers && (
-                <LayersPanel
-                  onClose={() => useEditorStore.getState().setLayersOpen(false)}
-                  topOffset={timelineShown ? TIMELINE_HEIGHT + c.inset : 0}
-                />
-              )}
-              <AgentPanel />
-            </>
-          ) : (
-            // Boot previously rendered an empty <main> — a blank rectangle that is
-            // indistinguishable from a broken app.
-            <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-              <MosaicLoader />
-            </div>
-          )}
-        </main>
-        {ready && <CodePanel />}
-      </div>
+      {/* The code panel is a centred modal now (spec 07 §9.11 / 08 §14), not a
+          split — it no longer takes width from the canvas, so it renders
+          alongside the other overlays below rather than as a sibling flex
+          column. `<main>` no longer loses width when it opens, so there is
+          nothing left for the canvas's ResizeObserver to re-centre for. */}
+      <main style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden', minWidth: 0 }}>
+        {ready ? (
+          <>
+            <Canvas />
+            <ToolRail />
+            <ZoomBar />
+            {timelineShown && (
+              <TimelinePanel onClose={() => useEditorStore.getState().setTimelineOpen(false)} />
+            )}
+            {layersOpen && showLayers && (
+              <LayersPanel
+                onClose={() => useEditorStore.getState().setLayersOpen(false)}
+                topOffset={timelineShown ? TIMELINE_HEIGHT + c.inset : 0}
+              />
+            )}
+            <AgentPanel />
+            <CodePanel />
+          </>
+        ) : (
+          // Boot previously rendered an empty <main> — a blank rectangle that is
+          // indistinguishable from a broken app.
+          <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+            <MosaicLoader />
+          </div>
+        )}
+      </main>
       <Notice />
     </div>
   )

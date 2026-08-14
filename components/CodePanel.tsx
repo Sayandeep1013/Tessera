@@ -1,13 +1,14 @@
 'use client'
 
 /**
- * The code panel. See docs/specs/07-code-panel.md, and §9 for what unit C
- * corrected in it.
+ * The code panel. See docs/specs/07-code-panel.md, §9 for what unit C
+ * corrected, §9.11 and docs/specs/08-exporters.md §14 for what unit H did.
  *
- * The thesis of this whole product, made literal: the text on the right IS the
- * document, byte for byte what `Download .tessera.json` writes, and editing it
- * edits the drawing. There is no second representation (rule 3) and no display
- * format — `serializeDoc` is the only thing that produces this text.
+ * The thesis of this whole product, made literal: the text on the Code tab IS
+ * the document, byte for byte what `Download .tessera.json` writes, and
+ * editing it edits the drawing. There is no second representation (rule 3)
+ * and no display format — `serializeDoc` is the only thing that produces this
+ * text, and it is the only tab of the eight that can be typed into.
  *
  * **It is a `<textarea>`, not CodeMirror.** §9.1 has the full argument; the
  * short version is that §1 already wanted CodeMirror with folding,
@@ -18,9 +19,15 @@
  * character under the canvas cursor. Three text nodes, so a 256×256 document
  * costs what a 16×16 one does.
  *
- * Everything that decides anything is in `lib/editor/code-panel.ts` and
- * `lib/editor/json-locate.ts`, where `npm test` can reach it. What is here is
- * markup, two timers, and the call to `commit`.
+ * **The panel is a centred modal, not a split — unit H, §14.** Every tab but
+ * Code is a read-only rendering of that format's own exporter, switched by a
+ * tab strip instead of a popover, and the one Export button acts on whichever
+ * tab is showing.
+ *
+ * Everything that decides anything is in `lib/editor/code-panel.ts`,
+ * `lib/editor/json-locate.ts` and `lib/editor/export-menu.ts`, where `npm
+ * test` can reach it. What is here is markup, three timers, and the calls to
+ * `commit` and to the exporters.
  */
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -39,10 +46,22 @@ import {
   caretCell, caretLine, cellRange, errorLine, lineAt, readCodeWidth,
   shouldCoalesce, type SyncOrigin,
 } from '@/lib/editor/code-panel'
-import { CODE_EXPORT_DOM_ID } from '@/lib/editor/export-menu'
-import type { DocError } from '@/lib/artwork-core/schema'
+import {
+  CODE_EXPORT_DOM_ID, EXPORT_GIF_PROGRESS_DOM_ID, EXPORT_REACT_LANG_DOM_ID, PNG_SCALES,
+  clampTab, exportAnimatedToggleDomId, exportScaleDomId, formatTabDomId, visibleTabs,
+  type FormatTabId,
+} from '@/lib/editor/export-menu'
+import { exportSvg } from '@/lib/exporters/svg'
+import { exportCss } from '@/lib/exporters/css'
+import { exportReact } from '@/lib/exporters/react'
+import { exportAscii } from '@/lib/exporters/ascii'
+import { exportJson } from '@/lib/exporters/json'
+import { runGifExport } from '@/lib/editor/gif-export'
+import { saveExport } from '@/lib/editor/save-export'
+import type { ExportResult } from '@/lib/exporters/types'
+import type { Doc, DocError } from '@/lib/artwork-core/schema'
 import { Code, Export } from './icons'
-import { ExportPopover } from './ExportPopover'
+import { TextPreview, ImagePreview } from './FormatPreview'
 
 export function CodePanel() {
   const open = useEditorStore((s) => s.codeOpen)
@@ -57,9 +76,16 @@ function CodePanelBody() {
   const cursor = useEditorStore((s) => s.cursor)
   const width = useEditorStore((s) => s.codeWidth)
   const setCodeOpen = useEditorStore((s) => s.setCodeOpen)
+  const rawTab = useEditorStore((s) => s.codeTab)
+  const setCodeTab = useEditorStore((s) => s.setCodeTab)
   const tier = useTier()
   const sheet = tier === 'mobile'
 
+  const frameCount = doc?.frames.length ?? 1
+  const tabs = visibleTabs(frameCount)
+  const activeTab = clampTab(rawTab, frameCount)
+
+  const modal = useRef<HTMLElement>(null)
   const area = useRef<HTMLTextAreaElement>(null)
   const overlay = useRef<HTMLPreElement>(null)
   const gutter = useRef<HTMLDivElement>(null)
@@ -67,7 +93,14 @@ function CodePanelBody() {
   const [text, setText] = useState(() => (doc ? serializeDoc(doc) : ''))
   const [error, setError] = useState<DocError | null>(null)
   const [caret, setCaret] = useState(0)
-  const [exportOpen, setExportOpen] = useState(false)
+
+  // ── per-tab export options, and the outcome of the last Export click ───────
+  const [pngScale, setPngScale] = useState<1 | 2 | 4 | 8>(1)
+  const [reactTs, setReactTs] = useState(true)
+  const [animated, setAnimated] = useState({ react: false, css: false })
+  const [gifProgress, setGifProgress] = useState<{ done: number; total: number } | null>(null)
+  const [rowError, setRowError] = useState<{ tab: FormatTabId; message: string } | null>(null)
+  const setNotice = useEditorStore((s) => s.setNotice)
 
   /**
    * §2's loop guard, as a value and not a comparison.
@@ -133,6 +166,13 @@ function CodePanelBody() {
     // is the subscription's job above, at its own debounce.
   }, [doc?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // A tab that stops being reachable (frame count drops under an open GIF tab)
+  // falls back to Code — export-menu.ts's `clampTab` decides it, this just
+  // writes the fallback back so the tab strip's own selection stays honest.
+  useEffect(() => {
+    if (activeTab !== rawTab) setCodeTab(activeTab)
+  }, [activeTab, rawTab, setCodeTab])
+
   // ── text → document, debounced (§2) ───────────────────────────────────────
   /** The buffer, readable from a cleanup closure that would otherwise see stale state. */
   const textRef = useRef(text)
@@ -180,8 +220,8 @@ function CodePanelBody() {
    * that keystroke — the debounce is still counting and the component goes
    * away with it. Typing a character and immediately reaching for Close is not
    * an unusual thing to do, and losing the edit silently is exactly what rule 7
-   * is about. Runs on unmount too, so Escape and ⌘/ get it as well as the
-   * button.
+   * is about. Runs on unmount too, so Escape, ⌘/ and an outside click get it as
+   * well as the button.
    */
   useEffect(() => () => {
     if (!parseTimer.current) return
@@ -207,6 +247,31 @@ function CodePanelBody() {
     document.addEventListener('selectionchange', read)
     return () => document.removeEventListener('selectionchange', read)
   }, [])
+
+  /**
+   * Closing the modal: an outside `mousedown` or `Escape`, on top of the
+   * existing Close button and `⌘/`. This codebase's own convention —
+   * `FileMenu`, `PalettePopover`, `DitherMenu` all use it (`HANDOFF §5`: a
+   * `click` listener fires on the same gesture that opened the panel, because
+   * that gesture's `mousedown` already finished before this effect registers,
+   * but its `click` has not). Skipped in sheet mode, where the panel fills the
+   * screen and there is nothing to click outside of.
+   */
+  useEffect(() => {
+    if (sheet) return
+    const down = (e: MouseEvent) => {
+      if (modal.current && !modal.current.contains(e.target as Node)) setCodeOpen(false)
+    }
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCodeOpen(false)
+    }
+    window.addEventListener('mousedown', down)
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('mousedown', down)
+      window.removeEventListener('keydown', key)
+    }
+  }, [sheet, setCodeOpen])
 
   /**
    * Undo inside the panel is the DOCUMENT's undo, not the textarea's.
@@ -278,24 +343,27 @@ function CodePanelBody() {
   }, [text, error])
 
   /**
-   * Canvas → panel (§4). Suppressed in sheet mode, where the canvas is not on
-   * screen to be pointed at, and while the text is invalid, where the row
-   * ranges mean nothing.
+   * Canvas → panel (§4). Suppressed in sheet mode, off the Code tab (there is
+   * no canvas cell a read-only preview's caret could point at) and while the
+   * text is invalid, where the row ranges mean nothing.
    */
   const cursorMark = useMemo(
-    () => (sheet || !cursor || error ? null : cellRange(rows, cursor.x, cursor.y)),
-    [sheet, cursor, error, rows],
+    () => (sheet || activeTab !== 'code' || !cursor || error ? null : cellRange(rows, cursor.x, cursor.y)),
+    [sheet, activeTab, cursor, error, rows],
   )
 
   const cell = caretCell(rows, caret)
   const where = caretLine(cell)
 
-  /** Panel → canvas (§4): the caret's pixel, outlined on the artwork. */
+  /** Panel → canvas (§4): the caret's pixel, outlined on the artwork. Degraded
+   *  but not removed by the modal change — 08 §14.3: the canvas is very often
+   *  behind the panel now, and the footer's `row Y · char X → pixel (X, Y)`
+   *  line is what survives as the honest substitute. */
   const setCodeCell = useEditorStore((s) => s.setCodeCell)
   useEffect(() => {
-    setCodeCell(sheet ? null : cell ? { x: cell.x, y: cell.y } : null)
+    setCodeCell(sheet || activeTab !== 'code' ? null : cell ? { x: cell.x, y: cell.y } : null)
     return () => setCodeCell(null)
-  }, [sheet, cell?.x, cell?.y, setCodeCell]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sheet, activeTab, cell?.x, cell?.y, setCodeCell]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── scroll sync: one scroller, two followers ──────────────────────────────
   const syncScroll = useCallback(() => {
@@ -339,182 +407,455 @@ function CodePanelBody() {
 
   const lines = useMemo(() => text.split('\n').length, [text])
 
+  // ── read-only previews, one per non-Code tab (08 §14.4) ─────────────────────
+  const svgResult = useMemo(() => (doc ? exportSvg(doc, { frame }) : null), [doc, frame])
+  const cssResult = useMemo(
+    () => (doc ? exportCss(doc, { frame, animated: animated.css }) : null),
+    [doc, frame, animated.css],
+  )
+  const reactResult = useMemo(
+    () => (doc ? exportReact(doc, { frame, typescript: reactTs, animated: animated.react }) : null),
+    [doc, frame, reactTs, animated.react],
+  )
+  const asciiResult = useMemo(() => (doc ? exportAscii(doc, { frame }) : null), [doc, frame])
+
+  // ── the single Export button: acts on whichever tab is showing ─────────────
+  const run = (result: ExportResult, tab: FormatTabId) => {
+    setRowError(null)
+    const message = saveExport(result)
+    if (!result.ok) {
+      setRowError({ tab, message: message ?? result.error })
+      return
+    }
+    if (message) setNotice(message)
+  }
+
+  const runGif = () => {
+    if (!doc || gifProgress) return
+    setRowError(null)
+    setGifProgress({ done: 0, total: doc.frames.length })
+    runGifExport(doc, (done, total) => setGifProgress({ done, total }))
+      .then((result) => run(result, 'gif'))
+      .catch((e: unknown) => {
+        setRowError({ tab: 'gif', message: e instanceof Error ? e.message : String(e) })
+      })
+      .finally(() => setGifProgress(null))
+  }
+
+  const runExport = () => {
+    if (!doc) return
+    switch (activeTab) {
+      case 'code': run(exportJson(doc), 'code'); return
+      case 'svg': if (svgResult) run(svgResult, 'svg'); return
+      case 'css': if (cssResult) run(cssResult, 'css'); return
+      case 'react': if (reactResult) run(reactResult, 'react'); return
+      case 'ascii': if (asciiResult) run(asciiResult, 'ascii'); return
+      case 'png':
+        // Loaded only on the click that needs it — `pngjs` (08 §12.4) is big
+        // enough that every other tab would otherwise pay to have it sit in
+        // the same chunk.
+        void import('@/lib/exporters/png').then((m) => run(m.exportPng(doc, { frame, scale: pngScale }), 'png'))
+        return
+      case 'gif': runGif(); return
+      case 'spritesheet':
+        // Two files from one click — 08 §13.1: the shared `ExportOk` shape
+        // carries exactly one, and a sprite sheet is genuinely two.
+        void import('@/lib/exporters/spritesheet').then((m) => {
+          run(m.exportSpriteSheet(doc), 'spritesheet')
+          run(m.exportSpriteSheetAtlas(doc), 'spritesheet')
+        })
+        return
+    }
+  }
+
   // ── layout ────────────────────────────────────────────────────────────────
+  const headerH = chromeFor(tier).headerHeight
+  const showOptions = activeTab === 'png' || activeTab === 'react' || (activeTab === 'css' && frameCount > 1)
+
   const frameStyle: React.CSSProperties = sheet
     ? {
-        position: 'absolute', inset: 0, zIndex: 45,
+        position: 'absolute', inset: 0, zIndex: 60,
         background: 'var(--panel)',
       }
     : {
-        position: 'relative', flex: 'none', width,
-        borderLeft: '1px solid var(--line)', background: 'var(--panel)',
+        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        zIndex: 61, width,
+        // `height`, not just `maxHeight` — a flex column with `maxHeight`
+        // alone has no definite height for a `flex: 1 1 0` child to fill, so
+        // the body region below the header/tabs/options rendered at 0 height
+        // regardless of content. A fixed frame with the body scrolling inside
+        // it is also the more ordinary modal shape.
+        height: 'min(80vh, 720px)',
+        border: '1px solid var(--line)', borderRadius: 'var(--r-lg)',
+        background: 'var(--panel)', boxShadow: 'var(--shadow-lg)',
       }
 
   return (
-    <aside
-      id={CODE_DOM_ID}
-      role="region"
-      aria-label={PANEL_TITLE}
-      style={{ ...frameStyle, display: 'flex', flexDirection: 'column', minWidth: 0 }}
-    >
-      {!sheet && <ResizeHandle />}
-
-      <header
-        style={{
-          position: 'relative', flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
-          height: chromeFor(tier).headerHeight, padding: '0 10px',
-          borderBottom: '1px solid var(--line)',
-        }}
-      >
-        <span style={{ color: 'var(--muted)', display: 'grid', placeItems: 'center' }}>
-          <Code size={18} />
-        </span>
-        <span style={{ flex: 1, font: 'var(--t-label)', color: 'var(--fg)' }}>{PANEL_TITLE}</span>
-        {doc && (
-          <span className="tabular" style={{ font: 'var(--t-label-sm)', color: 'var(--faint)' }}>
-            {doc.w}×{doc.h}
-          </span>
-        )}
-        <button
-          id={CODE_EXPORT_DOM_ID}
-          aria-label="Export"
-          aria-haspopup="dialog"
-          aria-expanded={exportOpen}
-          onClick={() => setExportOpen((v) => !v)}
-          disabled={!doc}
-          style={{
-            height: 28, width: 28, display: 'grid', placeItems: 'center',
-            borderRadius: 'var(--r-md)',
-            color: exportOpen ? 'var(--fg)' : doc ? 'var(--muted)' : 'var(--disabled)',
-            background: exportOpen ? 'var(--hover)' : 'transparent',
-          }}
-        >
-          <Export size={16} />
-        </button>
-        {/* Anchored to the HEADER's right edge, not the trigger's — the trigger
-            sits well inside the header (Close is to its right), so a popover
-            wide enough to hold six export rows anchored to the trigger itself
-            ran 7px off a 320px sheet's left edge. Measured, HANDOFF §5. */}
-        {exportOpen && <ExportPopover onClose={() => setExportOpen(false)} />}
-        <button
-          onClick={() => setCodeOpen(false)}
-          style={{
-            height: 28, padding: '0 10px', borderRadius: 'var(--r-md)',
-            font: 'var(--t-label-sm)', color: 'var(--muted)',
-          }}
-        >
-          {sheet ? SHEET_DONE : 'Close'}
-        </button>
-      </header>
-
-      <div style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
+    <>
+      {/* The scrim. Visual only — closing is decided by the mousedown-outside
+          listener above, the same convention every other popover in this app
+          uses, not by a click handler on the backdrop itself. `pointerEvents:
+          'none'` is load-bearing, not decoration: without it this div — not
+          the modal box, which sits above it, but this one — silently ate
+          every click and hover the canvas would otherwise have received
+          outside the modal's own bounds, which is most of the screen on a
+          wide viewport. §14.3 undersold the cost of the modal change before
+          this was found; with the scrim passable, a click still closes the
+          panel (the window listener below doesn't need the scrim's help for
+          that) but a bare hover over the visible canvas still reaches it, so
+          §4's hover-highlight survives wherever the canvas isn't literally
+          covered by the modal's own opaque box. */}
+      {!sheet && (
         <div
           aria-hidden
           style={{
-            position: 'absolute', left: 0, top: 0, bottom: 0, width: GUTTER,
-            overflow: 'hidden', borderRight: '1px solid var(--line)',
-            background: 'var(--panel2)', zIndex: 1,
-          }}
-        >
-          <div ref={gutter} style={{ padding: `${PAD}px 6px 0 0`, textAlign: 'right' }}>
-            {Array.from({ length: lines }, (_, i) => (
-              <div
-                key={i}
-                className="tabular"
-                style={{
-                  font: 'var(--t-mono-sm)',
-                  color: i + 1 === lineAt(text, caret) ? 'var(--fg)' : 'var(--faint)',
-                }}
-              >
-                {i + 1}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* The same string, behind the transparent textarea, with the ranges
-            that mean something marked. Not one span per character — three text
-            nodes and two marks, so document size does not matter. */}
-        <pre
-          ref={overlay}
-          aria-hidden
-          style={{
-            ...TEXT_BOX,
-            position: 'absolute', inset: 0, color: 'var(--fg)', zIndex: 0,
-            // Hidden, not auto: it is scrolled programmatically from the
-            // textarea and must never grow a scrollbar of its own — a scrollbar
-            // here would take width the textarea does not lose, and every line
-            // would wrap one character earlier than the text above it.
-            overflow: 'hidden',
-          }}
-        >
-          <Marked text={text} error={errorMark} cursor={cursorMark} />
-        </pre>
-
-        <textarea
-          id={CODE_TEXT_DOM_ID}
-          ref={area}
-          value={text}
-          spellCheck={false}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          aria-label="Document source"
-          aria-invalid={!!error}
-          onChange={(e) => onChange(e.target.value)}
-          onScroll={syncScroll}
-          onKeyDown={onKeyDown}
-          onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
-          style={{
-            ...TEXT_BOX,
-            position: 'absolute', inset: 0, zIndex: 2,
-            width: '100%', height: '100%', resize: 'none',
-            overflow: 'auto',
-            background: 'transparent',
-            // Transparent text over the overlay's text: one string, drawn once,
-            // so they cannot disagree about where a character is.
-            color: 'transparent',
-            caretColor: 'var(--fg)',
+            position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none',
+            background: 'color-mix(in srgb, var(--fg) 30%, transparent)',
           }}
         />
-      </div>
-
-      <footer
-        id={CODE_STATUS_DOM_ID}
-        style={{
-          flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
-          minHeight: 30, padding: '4px 10px', borderTop: '1px solid var(--line)',
-          font: 'var(--t-label-sm)',
-        }}
+      )}
+      <aside
+        id={CODE_DOM_ID}
+        ref={modal as React.RefObject<HTMLElement>}
+        role="dialog"
+        aria-modal={!sheet}
+        aria-label={PANEL_TITLE}
+        style={{ ...frameStyle, display: 'flex', flexDirection: 'column', minWidth: 0 }}
       >
-        {error ? (
-          <>
-            <span style={{ flex: 1, color: 'var(--diff-remove)' }}>{errorLine(error)}</span>
-            {errorMark && (
+        {!sheet && <ResizeHandle />}
+
+        <header
+          style={{
+            flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
+            height: headerH, padding: '0 10px',
+            borderBottom: '1px solid var(--line)',
+          }}
+        >
+          <span style={{ color: 'var(--muted)', display: 'grid', placeItems: 'center' }}>
+            <Code size={18} />
+          </span>
+          <span style={{ flex: 1 }} />
+          {doc && (
+            <span className="tabular" style={{ font: 'var(--t-label-sm)', color: 'var(--faint)' }}>
+              {doc.w}×{doc.h}
+            </span>
+          )}
+          <button
+            id={CODE_EXPORT_DOM_ID}
+            aria-label="Export"
+            onClick={runExport}
+            disabled={!doc || (activeTab === 'gif' && !!gifProgress)}
+            style={{
+              height: 28, width: 28, display: 'grid', placeItems: 'center',
+              borderRadius: 'var(--r-md)',
+              color: doc ? 'var(--muted)' : 'var(--disabled)',
+            }}
+          >
+            <Export size={16} />
+          </button>
+          <button
+            onClick={() => setCodeOpen(false)}
+            style={{
+              height: 28, padding: '0 10px', borderRadius: 'var(--r-md)',
+              font: 'var(--t-label-sm)', color: 'var(--muted)',
+            }}
+          >
+            {sheet ? SHEET_DONE : 'Close'}
+          </button>
+        </header>
+
+        {/* The tab strip — every format, always visible, one active selection.
+            08 §14: "it just exports the one I'm currently at" only means
+            something if there is exactly one of these at a time. */}
+        <div
+          role="tablist"
+          aria-label="Format"
+          style={{
+            flex: 'none', display: 'flex', gap: 2, padding: '6px 8px',
+            borderBottom: '1px solid var(--line)', overflowX: 'auto',
+          }}
+        >
+          {tabs.map((t) => {
+            const active = t.id === activeTab
+            return (
               <button
-                onClick={() => reveal(errorMark)}
+                key={t.id}
+                id={formatTabDomId(t.id)}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setCodeTab(t.id)}
                 style={{
-                  flex: 'none', padding: '2px 8px', borderRadius: 'var(--r-sm)',
-                  color: 'var(--diff-remove)', font: 'var(--t-label-sm)',
+                  flex: 'none', height: 28, padding: '0 10px', borderRadius: 'var(--r-md)',
+                  font: 'var(--t-label-sm)',
+                  color: active ? 'var(--fg)' : 'var(--muted)',
+                  background: active ? 'var(--hover)' : 'transparent',
                 }}
               >
-                {GO_TO_ERROR}
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Per-tab options — only the controls that apply to whichever tab is
+            active, replacing the popover's inline per-row chevrons. */}
+        {showOptions && (
+          <div
+            style={{
+              flex: 'none', display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 10px', borderBottom: '1px solid var(--line)',
+            }}
+          >
+            {activeTab === 'png' && PNG_SCALES.map((scale) => (
+              <button
+                key={scale}
+                id={exportScaleDomId(scale)}
+                aria-pressed={pngScale === scale}
+                onClick={() => setPngScale(scale)}
+                style={{
+                  height: 24, minWidth: 24, padding: '0 4px', borderRadius: 'var(--r-sm)',
+                  font: 'var(--t-label-sm)',
+                  color: pngScale === scale ? 'var(--onsolid)' : 'var(--muted)',
+                  background: pngScale === scale ? 'var(--solid)' : 'var(--panel2)',
+                }}
+              >
+                {scale}×
+              </button>
+            ))}
+            {activeTab === 'react' && (
+              <button
+                id={EXPORT_REACT_LANG_DOM_ID}
+                onClick={() => setReactTs((v) => !v)}
+                aria-label={reactTs ? 'TypeScript — click for JavaScript' : 'JavaScript — click for TypeScript'}
+                style={{
+                  height: 24, padding: '0 8px', borderRadius: 'var(--r-pill)',
+                  font: 'var(--t-label-sm)', color: 'var(--muted)', background: 'var(--panel2)',
+                }}
+              >
+                {reactTs ? 'TS' : 'JS'}
               </button>
             )}
-          </>
-        ) : (
-          <>
-            <span style={{ flex: 'none', color: 'var(--muted)' }}>{STATUS_VALID}</span>
-            {where && (
-              <span className="tabular" style={{ flex: 1, textAlign: 'right', color: 'var(--faint)' }}>
-                {where}
-              </span>
+            {(activeTab === 'react' || activeTab === 'css') && frameCount > 1 && (
+              <button
+                id={exportAnimatedToggleDomId(activeTab)}
+                onClick={() => setAnimated((a) => ({ ...a, [activeTab]: !a[activeTab as 'react' | 'css'] }))}
+                aria-pressed={animated[activeTab as 'react' | 'css']}
+                aria-label={
+                  animated[activeTab as 'react' | 'css'] ? 'Animated — click for one frame' : 'One frame — click to animate'
+                }
+                style={{
+                  height: 24, padding: '0 8px', borderRadius: 'var(--r-pill)',
+                  font: 'var(--t-label-sm)',
+                  color: animated[activeTab as 'react' | 'css'] ? 'var(--onsolid)' : 'var(--muted)',
+                  background: animated[activeTab as 'react' | 'css'] ? 'var(--solid)' : 'var(--panel2)',
+                }}
+              >
+                Animated
+              </button>
             )}
-          </>
+          </div>
         )}
-      </footer>
-    </aside>
+
+        {activeTab === 'gif' && gifProgress && (
+          <div
+            id={EXPORT_GIF_PROGRESS_DOM_ID}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={gifProgress.total}
+            aria-valuenow={gifProgress.done}
+            style={{
+              flex: 'none', margin: '0 10px', marginTop: 8, height: 4, borderRadius: 'var(--r-sm)',
+              background: 'var(--panel2)', overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                width: `${(gifProgress.done / gifProgress.total) * 100}%`, height: '100%',
+                background: 'var(--accent)',
+              }}
+            />
+          </div>
+        )}
+
+        <div style={{ flex: '1 1 0', position: 'relative', overflow: 'hidden' }}>
+          {activeTab === 'code' ? (
+            <>
+              <div
+                aria-hidden
+                style={{
+                  position: 'absolute', left: 0, top: 0, bottom: 0, width: GUTTER,
+                  overflow: 'hidden', borderRight: '1px solid var(--line)',
+                  background: 'var(--panel2)', zIndex: 1,
+                }}
+              >
+                <div ref={gutter} style={{ padding: `${PAD}px 6px 0 0`, textAlign: 'right' }}>
+                  {Array.from({ length: lines }, (_, i) => (
+                    <div
+                      key={i}
+                      className="tabular"
+                      style={{
+                        font: 'var(--t-mono-sm)',
+                        color: i + 1 === lineAt(text, caret) ? 'var(--fg)' : 'var(--faint)',
+                      }}
+                    >
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* The same string, behind the transparent textarea, with the ranges
+                  that mean something marked. Not one span per character — three text
+                  nodes and two marks, so document size does not matter. */}
+              <pre
+                ref={overlay}
+                aria-hidden
+                style={{
+                  ...TEXT_BOX,
+                  position: 'absolute', inset: 0, color: 'var(--fg)', zIndex: 0,
+                  // Hidden, not auto: it is scrolled programmatically from the
+                  // textarea and must never grow a scrollbar of its own — a scrollbar
+                  // here would take width the textarea does not lose, and every line
+                  // would wrap one character earlier than the text above it.
+                  overflow: 'hidden',
+                }}
+              >
+                <Marked text={text} error={errorMark} cursor={cursorMark} />
+              </pre>
+
+              <textarea
+                id={CODE_TEXT_DOM_ID}
+                ref={area}
+                value={text}
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                aria-label="Document source"
+                aria-invalid={!!error}
+                onChange={(e) => onChange(e.target.value)}
+                onScroll={syncScroll}
+                onKeyDown={onKeyDown}
+                onSelect={(e) => setCaret(e.currentTarget.selectionStart)}
+                style={{
+                  ...TEXT_BOX,
+                  position: 'absolute', inset: 0, zIndex: 2,
+                  width: '100%', height: '100%', resize: 'none',
+                  overflow: 'auto',
+                  background: 'transparent',
+                  // Transparent text over the overlay's text: one string, drawn once,
+                  // so they cannot disagree about where a character is.
+                  color: 'transparent',
+                  caretColor: 'var(--fg)',
+                }}
+              />
+            </>
+          ) : rowError?.tab === activeTab ? (
+            <TextPreview result={{ ok: false, error: rowError.message }} />
+          ) : (
+            <NonCodeTab
+              tab={activeTab}
+              doc={doc}
+              frame={frame}
+              svgResult={svgResult}
+              cssResult={cssResult}
+              reactResult={reactResult}
+              asciiResult={asciiResult}
+              frameCount={frameCount}
+            />
+          )}
+        </div>
+
+        <footer
+          id={CODE_STATUS_DOM_ID}
+          style={{
+            flex: 'none', display: 'flex', alignItems: 'center', gap: 8,
+            minHeight: 30, padding: '4px 10px', borderTop: '1px solid var(--line)',
+            font: 'var(--t-label-sm)',
+          }}
+        >
+          {activeTab === 'code' ? (
+            error ? (
+              <>
+                <span style={{ flex: 1, color: 'var(--diff-remove)' }}>{errorLine(error)}</span>
+                {errorMark && (
+                  <button
+                    onClick={() => reveal(errorMark)}
+                    style={{
+                      flex: 'none', padding: '2px 8px', borderRadius: 'var(--r-sm)',
+                      color: 'var(--diff-remove)', font: 'var(--t-label-sm)',
+                    }}
+                  >
+                    {GO_TO_ERROR}
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <span style={{ flex: 'none', color: 'var(--muted)' }}>{STATUS_VALID}</span>
+                {where && (
+                  <span className="tabular" style={{ flex: 1, textAlign: 'right', color: 'var(--faint)' }}>
+                    {where}
+                  </span>
+                )}
+              </>
+            )
+          ) : (
+            <span style={{ flex: 1, color: 'var(--muted)' }}>
+              {activeTab === 'gif' && gifProgress
+                ? `Encoding… ${gifProgress.done}/${gifProgress.total}`
+                : 'Read-only — generated from the document'}
+            </span>
+          )}
+        </footer>
+      </aside>
+    </>
   )
+}
+
+/** Everything but the Code tab: a read-only preview, built from the same
+ *  exporter the Export button uses. See docs/specs/08-exporters.md §14.4. */
+function NonCodeTab({
+  tab, doc, frame, svgResult, cssResult, reactResult, asciiResult, frameCount,
+}: {
+  tab: Exclude<FormatTabId, 'code'>
+  doc: Doc | null
+  frame: number
+  svgResult: ExportResult | null
+  cssResult: ExportResult | null
+  reactResult: ExportResult | null
+  asciiResult: ExportResult | null
+  frameCount: number
+}) {
+  if (!doc) return null
+  switch (tab) {
+    case 'svg': return svgResult && <TextPreview result={svgResult} />
+    case 'css': return cssResult && <TextPreview result={cssResult} />
+    case 'react': return reactResult && <TextPreview result={reactResult} />
+    case 'ascii': return asciiResult && <TextPreview result={asciiResult} />
+    case 'png':
+      return (
+        <ImagePreview
+          load={() => import('@/lib/exporters/png').then((m) => m.exportPng(doc, { frame, scale: 4 }))}
+          deps={[doc.id, frame, doc.w, doc.h]}
+        />
+      )
+    case 'gif':
+      return (
+        <ImagePreview
+          load={() => import('@/lib/exporters/png').then((m) => m.exportPng(doc, { frame, scale: 4 }))}
+          deps={[doc.id, frame, doc.w, doc.h]}
+          caption={`${frameCount} frames — Export encodes the animated GIF`}
+        />
+      )
+    case 'spritesheet':
+      return (
+        <ImagePreview
+          load={() => import('@/lib/exporters/spritesheet').then((m) => m.exportSpriteSheet(doc))}
+          deps={[doc.id, doc.frames.length, doc.w, doc.h]}
+        />
+      )
+  }
 }
 
 // ─── the overlay's marks ─────────────────────────────────────────────────────
@@ -627,6 +968,10 @@ function Marked({
  *
  * Pointer capture rather than window listeners: dragging fast enough to leave
  * the 6px strip is normal, and without capture the drag simply stops there.
+ *
+ * §14.2: the panel is centred now, not flush against the window's right edge,
+ * so a drag on this (left) edge has to grow the box symmetrically around its
+ * own midpoint or the box visibly slides sideways while being resized.
  */
 function ResizeHandle() {
   const setCodeWidth = useEditorStore((s) => s.setCodeWidth)
@@ -643,9 +988,7 @@ function ResizeHandle() {
       }}
       onPointerMove={(e) => {
         if (!e.currentTarget.hasPointerCapture(e.pointerId)) return
-        // From the right edge of the window: the panel is the right-hand column,
-        // so its width is whatever is left of the pointer.
-        setCodeWidth(window.innerWidth - e.clientX)
+        setCodeWidth(2 * (window.innerWidth / 2 - e.clientX))
       }}
       onPointerUp={(e) => {
         e.currentTarget.releasePointerCapture(e.pointerId)

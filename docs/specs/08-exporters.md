@@ -439,6 +439,169 @@ only subdivides a single transition *segment*, not a whole multi-keyframe timeli
 express "hold, then jump" across more than two keyframes on its own — the paired-keyframe gap does,
 without it.
 
+---
+
+## 14. Unit H — format tabs, replacing the popover, and the panel becomes a modal
+
+Direct user instruction, corrected under rule 10 rather than left as two contradicting documents:
+**§10's "Popover, not a modal" is reversed**, and so is `07-code-panel.md §1`'s "right half of the
+canvas area." The trigger was newt's own `</>` button, which shows every format as a persistent,
+always-visible menu rather than something you open a dropdown to find — "instead of just showing it
+while I click export, show it from the very start, side by side… and export just exports the one I'm
+currently at."
+
+That last clause is the whole design in one sentence: it only means something if there is a single
+**current** selection, which is a tab strip, not eight buttons in a list. Read literally, not
+reinterpreted.
+
+### 14.1 What changed
+
+- **The Export popover is gone.** In its place, a row of tabs sits under the panel's header —
+  **Code · SVG · CSS · React · PNG · ASCII**, then **GIF · Sprite sheet** once the document has more
+  than one frame, the same gating `visibleFormats` already did (`§13.1`'s two-file sprite sheet and
+  `13.2`'s GIF are otherwise untouched — this section is about how they're reached, not what they
+  produce). Clicking a tab switches what the panel shows; it does not export anything by itself.
+- **One Export button, header-right, acts on whichever tab is showing.** No per-row buttons, no
+  popover. PNG's scale buttons, React's TS/JS toggle and the CSS/React Animated toggle move from
+  inline row controls to a slim options strip under the tabs, shown only while the tab they belong to
+  is active.
+- **`JSON` is retired as its own tab.** It was never a different format — `exportJson(doc)` is
+  `serializeDoc(doc)`, unwrapped, and the Code tab already shows and edits exactly that text (`07 §1`'s
+  own assertion). A tab that duplicates the one next to it byte-for-byte is not a second format, it's
+  the same tab twice. The File menu's `Download .tessera.json` row is untouched — it already called
+  `exportJson` directly and never went through this popover — so nothing that worked stops working;
+  one redundant button is gone. Exporting from the Code tab calls `exportJson`, the same function, so
+  there is exactly one code path from "the document as text" to a `.tessera.json` file, not two that
+  happen to agree.
+- **Only Code is editable.** Every other tab is a read-only rendering of `exportX(doc, opts)`'s
+  `data`, recomputed as the document, frame or that tab's own options change — never a second place to
+  type into the document, which is rule 3 applied to a tab strip instead of a single panel.
+- **The panel is a centred modal**, not a split that takes width from the canvas. Fixed position,
+  horizontally and vertically centred, closes on an outside `mousedown` (this codebase's own
+  convention — `FileMenu`, `PalettePopover`, `DitherMenu` and the popover this section retires all use
+  it, `HANDOFF §5`: the click that *opens* it is still propagating when a `click` listener would fire)
+  and on `Escape`, in addition to the existing Close button and `⌘/`. This is the first true modal in
+  the repo — `17-file-menu.md`'s "this repo has no dialog component" was about *confirm* dialogs
+  specifically (New…, Clear), and stays true; a centred, dismissable panel showing content is a
+  different thing from a yes/no gate and needed no new primitive to build, only the same
+  mousedown-outside pattern already used four other places.
+
+### 14.2 The width divider still resizes, around the centre instead of the edge
+
+`07 §1`'s 320–800px, `localStorage`-persisted width is unchanged in range and default. What changed is
+the arithmetic: the panel used to be flush against the window's right edge, so dragging computed
+`width = window.innerWidth - e.clientX` directly. Centred, the same drag has to grow the box
+symmetrically around its own midpoint — `width = 2 * (e.clientX - window.innerWidth / 2)` — or the
+box would visibly slide sideways while being resized, which reads as a bug even though the number is
+technically still "the requested width."
+
+### 14.3 The cross-highlight (§4) is degraded, not removed, and that is a known, accepted cost
+
+`07 §4`'s two-way canvas ↔ code caret highlight — hovering a pixel lights its character, placing the
+caret outlines its pixel on the canvas — is still wired exactly as built: the Code tab still computes
+`cellRange`/`caretCell` and still calls `setCodeCell`, and the footer still prints
+`row Y · char X → pixel (X, Y)`. What is gone is the *visual* half on wide viewports where the split
+used to leave the canvas visible beside the panel: a centred modal sits on top of the canvas, so the
+outlined pixel is very often behind the panel rather than beside it. The row/column sentence in the
+footer is what survives as the honest substitute. This is the direct, foreseeable cost of "show it in
+a modal in the middle of the page" and is recorded here rather than discovered later as a silent
+regression — `07 §9.3`'s whole reason for keeping the panel a split in the first place was exactly
+this interaction, and the user's instruction overrides it knowingly, not by accident.
+
+**A second, sharper cost this section first missed: painting on the canvas while the panel is open is
+gone, not degraded.** The centred modal's own opaque box sits exactly where the canvas's centre is —
+they share the same midpoint by construction, both being centred in the same viewport — so a click
+anywhere the modal actually covers lands on the modal, never the canvas underneath it, no matter how
+the scrim is styled. And a click *outside* the modal closes it, by §14.1's own explicit request. Put
+together: there is no click on the canvas, anywhere, that both reaches the canvas *and* leaves the
+panel open. `tools/probe-code-panel.ts`'s original "paint a pixel, watch the panel update live" check
+assumed exactly that and hung waiting for a state that could no longer happen — found only by running
+it, not by reasoning about the layout in the abstract. The fix is in the probe, not the component:
+close, paint, reopen, and check the reopened text reflects it — which is what actually survives.
+
+**A hover is a different event, and does still reach the canvas — once the scrim stops swallowing it.**
+The first cut of the scrim had no `pointerEvents` set, so the default (`auto`) made it intercept every
+pointer event over its full-viewport box, silently eating a bare `mousemove` the same as a click, even
+though its own comment already said it was "visual only." `pointer-events: none` fixes that: a
+`mousedown` still closes the panel through the window-level listener, which never depended on the
+scrim catching anything, but a hover with no click now passes through to whatever canvas is actually
+visible outside the modal's own opaque box — which is most of a wide viewport, since the modal is
+capped at 800×720. §4's hover-highlight survives there. It does not survive *inside* the modal's own
+footprint, for the same reason painting does not: there is a real, opaque panel sitting on that part
+of the screen, and no amount of event-handling cleverness makes an element see through the thing
+drawn on top of it.
+
+### 14.4 What each tab actually shows
+
+Text formats — **SVG, CSS, React, ASCII** — render `exportX(doc, { frame, ...tabOptions }).value.data`
+as plain read-only monospace text, no line-number gutter and no palette-swatch colouring: `07 §9.8`'s
+colouring is aimed at *this document's own bytes* specifically, a decision that does not generalise to
+generated markup or a component file, and building a second highlighter for five different grammars
+is a bigger unit than this one. An export that failed (CSS's pixel cap) or warned shows that message
+in the tab body instead of text, the same inline-failure rule §10 already had for the popover.
+
+**PNG** and **Sprite sheet** render as an actual `<img>`, built from the exported bytes via
+`URL.createObjectURL` and revoked on tab change or unmount — a real preview of the real output, not a
+second rendering path, since the bytes come from the same `exportPng`/`exportSpriteSheet` the download
+uses. PNG's scale buttons control the *exported* pixel size only; the on-screen preview is always
+fit to the panel so an 8× export of a 256px document doesn't blow out the modal.
+
+**GIF** shows the same single-frame PNG-style preview of the current frame, captioned with the frame
+count, rather than actually encoding on every tab click — encoding is real CPU/worker cost
+(`§13.2`/`§13.3`), and spending it just to *look* at the tab would make browsing the format list
+slower than the thing it replaced. Export on this tab runs the exact encode this repo already had —
+the worker, the progress bar, the same `runGifExport` — unchanged; only the trigger moved.
+
+### 14.5 What stayed exactly as it was
+
+`lib/exporters/*` — every pure exporter function, its options type, its tests — is untouched. The
+sprite sheet's two-file download (`§13.1`), the GIF worker and its LZW encoder (`§13.2`/`§13.3`), the
+animated hard-cut hooks (`§13.4`), the CSS pixel cap and its warning, React's TS/JS output and its
+pixel-identity test — none of it changed. This unit is entirely about how the panel is opened, what it
+shows before you decide to export, and what a single Export button acts on; not about what any format
+produces.
+
+### 14.6 Two bugs the browser probes found, not the type checker
+
+Both were real regressions this unit's own redesign introduced, caught only by running the rewritten
+probes against a real browser — neither is the kind of thing `tsc` or a node test could see.
+
+**The scrim ate every pointer event over the canvas, not just clicks.** The first cut set no
+`pointerEvents` on the full-viewport dimming div, so the browser's default (`auto`) made it intercept
+`mousemove` the same as `mousedown` — silently disabling `07 §4`'s hover-highlight for the entire
+canvas, not only the part physically under the modal, and the component's own comment already said
+the scrim was "visual only." `pointer-events: none` fixed it; §14.3 has the full account of what does
+and does not survive.
+
+**A flex column with `maxHeight` alone has no definite height for a `flex: 1 1 0` child to fill.** The
+modal's body region — the actual Code textarea or a tab's preview — rendered at a measured **129px
+tall** (header + tabs + footer, and nothing else) the first time a real browser laid it out, because
+`maxHeight` only caps a box that would otherwise be taller than that; it does not give an
+otherwise-content-sized box anything to hand its `flex: 1 1 0` children. `tools/probe-code-panel.ts`'s
+divider-drag check caught it — the drag target computed from a 129px-tall box landed on the scrim, not
+the handle, and closed the panel instead of resizing it. The fix is `height: 'min(80vh, 720px)'`
+instead of `maxHeight`, which is a fixed frame with the body scrolling inside it — the more ordinary
+modal shape anyway.
+
+### 14.7 Deliberately left out
+
+- **Arrow-key navigation between tabs.** The strip carries `role="tablist"`/`role="tab"` for a screen
+  reader, but there is no roving-tabindex or arrow-key handler — each tab is reached by clicking or by
+  Tab-and-Enter, not by the WAI-ARIA tabs pattern's arrow-key convention. Worth adding if the tab strip
+  ever gets keyboard-first users specifically asking for it.
+- **A confirm before an outside click discards an in-progress Code edit.** Not needed: the existing
+  flush-on-unmount behavior (`07 §9.9`) already applies a pending valid edit before the panel closes,
+  by any route — outside click, Escape, or the Close button all go through the same unmount. An invalid
+  buffer is never silently discarded either (`07 §3`); only the escape hatch's ergonomics would differ,
+  and nothing asked for that.
+- **Resizing the modal's height.** Only width is user-resizable, as `07 §1` originally specified; height
+  is the fixed `min(80vh, 720px)` frame §14.6 settled on. A document whose preview needs more vertical
+  room scrolls inside it rather than growing the frame.
+- **A different tab order than the one built here.** Code · SVG · CSS · React · PNG · ASCII, then GIF ·
+  Sprite sheet once gated. The user's own instruction named "code css svg" as illustrative, not
+  exhaustive, and left the actual ordering to judgement — this is that judgement call, not a measured
+  answer, and it is the one part of this unit most likely to be revisited on a second look.
+
 **React gets one `@keyframes` rule per frame** (one `<g>` each, `visibility` toggled) because a
 `<g>`'s visibility is independent of its siblings'. **CSS gets exactly one `@keyframes` rule** driving
 the whole class's `box-shadow`, because a single element has only one `box-shadow` to animate — every

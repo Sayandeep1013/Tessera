@@ -699,6 +699,31 @@ Recorded so they are not rediscovered as surprises.
   progress bar and the worker split observable, nowhere near the ceiling. It runs off the main thread
   either way, so the worst case cannot freeze the tab, but nobody has timed how long a user would
   actually wait for it. Worth measuring before this is ever advertised as fast.
+- **A dimming scrim needs `pointer-events: none` explicitly, or it silently eats every pointer event
+  over its whole box, not just clicks.** The code panel's modal (unit H, `08-exporters.md §14`) added
+  a full-viewport backdrop div with no `pointerEvents` set; the browser's default (`auto`) intercepted
+  `mousemove` the same as `mousedown`, disabling canvas hover-highlight everywhere, not only behind the
+  modal itself, even though the div's own comment already said "visual only." A `mousedown`-outside
+  listener on `window` never needed the scrim to catch anything — it checks DOM containment directly —
+  so the scrim gaining real hit-testing was pure accident, not a design choice. Any future dimming
+  backdrop in this codebase should set `pointer-events: none` from the first commit, not discover the
+  need for it.
+- **A flex column with `maxHeight` set but no `height` gives a `flex: 1 1 0` child nothing to grow
+  into.** The code panel's modal (same unit) rendered its body region at a measured 129px — header,
+  tabs and footer, and nothing else — because `maxHeight` only caps a box that would otherwise exceed
+  it; a content-sized box has no "available extra space" for a flex child to claim. Only a real browser
+  laying it out found this — `tsc` and `npm test` have no opinion on computed flex heights. Give a
+  flex-column overlay a real `height` (even a `min(...)` expression), not just a ceiling on one.
+- **A centred modal and "click outside closes it" together retire simultaneous interaction with
+  whatever the modal covers, not just the part visually hidden behind it.** The code panel's own
+  centre coincides with the canvas's centre (both are centred in the same viewport), so a click at
+  canvas-centre always lands on the modal's own opaque box, never the canvas beneath — and a click
+  anywhere else on the canvas is "outside" the modal and closes it. There is no click, anywhere on the
+  canvas, that both reaches it and leaves such a modal open; this is inherent to the combination, not a
+  bug to route around. A bare hover (no click) still reaches whatever canvas the modal does not
+  physically cover, once the scrim above is non-interactive. `08-exporters.md §14.3` has the full
+  account; any future modal placed over a live, interactive surface should expect the same trade-off
+  and decide deliberately whether that surface needs to stay reachable while it's open.
 
 ---
 

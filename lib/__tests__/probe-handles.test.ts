@@ -25,7 +25,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fileMenuDomHandles } from '../editor/file-menu'
 import { codePanelDomHandles } from '../editor/code-panel'
-import { exportMenuDomHandles } from '../editor/export-menu'
+import { formatTabDomHandles } from '../editor/export-menu'
 import { listStarters } from '../artwork-core/create'
 
 const ROOT = process.cwd()
@@ -62,7 +62,7 @@ function renderedIds(): Set<string> {
   const ids = new Set<string>([
     ...fileMenuDomHandles(listStarters()),
     ...codePanelDomHandles(),
-    ...exportMenuDomHandles(),
+    ...formatTabDomHandles(),
   ])
   for (const [, src] of read(COMPONENTS, '.tsx')) {
     for (const m of src.matchAll(/\bid=(?:"([\w-]+)"|\{\s*['"`]([\w-]+)['"`]\s*\})/g)) {
@@ -109,12 +109,13 @@ describe('probe DOM handles', () => {
     }
   })
 
-  /** Third surface. Unit D's export popover ids are built by exportRowDomId/exportScaleDomId. */
-  it('the export popover still renders every handle it declares', () => {
-    const src = readFileSync(join(COMPONENTS, 'ExportPopover.tsx'), 'utf8')
-    for (const fn of ['exportRowDomId(', 'exportScaleDomId(', 'EXPORT_REACT_LANG_DOM_ID', 'EXPORT_MENU_DOM_ID']) {
-      expect(src, `ExportPopover.tsx should build ids with ${fn}`).toContain(fn)
+  /** Third surface. Unit H's format tabs are built by formatTabDomId/exportScaleDomId, in
+   *  CodePanel.tsx now that the export popover is gone (08-exporters.md §14). */
+  it('the format tabs still render every handle they declare', () => {
+    const src = readFileSync(join(COMPONENTS, 'CodePanel.tsx'), 'utf8')
+    for (const fn of ['formatTabDomId(', 'exportScaleDomId(', 'EXPORT_REACT_LANG_DOM_ID', 'CODE_EXPORT_DOM_ID']) {
+      expect(src, `CodePanel.tsx should build ids with ${fn}`).toContain(fn)
     }
-    expect(exportMenuDomHandles().length).toBeGreaterThan(6)
+    expect(formatTabDomHandles().length).toBeGreaterThan(6)
   })
 })
