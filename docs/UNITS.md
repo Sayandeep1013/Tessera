@@ -1266,7 +1266,7 @@ happened somewhere." Recorded in `HANDOFF.md §5`.
 
 ## G — GIF, sprite sheet, animated export hooks · DONE
 
-**14 Aug 2026 · see `git log` · 9/10**
+**14 Aug 2026 · `d273153` · 9/10**
 
 `lib/exporters/spritesheet.ts` (`sheetLayout`, `exportSpriteSheet`, `exportSpriteSheetAtlas`),
 `lib/exporters/gif/lzw.ts` (a hand-written variable-code-length LZW encoder and its own decoder, kept
