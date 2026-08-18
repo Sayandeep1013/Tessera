@@ -23,6 +23,16 @@ keep it.
 That is the whole format. One character per pixel: `.` is transparent, `1`–`9` and `a`–`z` are
 palette indices. It is the file you export, the text the code panel shows, and the grid the AI reads.
 
+## Screenshots
+
+| Light | Dark |
+|---|---|
+| ![Editor, light theme](docs/shots/readme/editor-light.png) | ![Editor, dark theme](docs/shots/readme/editor-dark.png) |
+
+| Code panel | Layers | Timeline |
+|---|---|---|
+| ![Code panel — the document's own JSON, six export formats](docs/shots/readme/code-panel.png) | ![Layers panel](docs/shots/readme/layers-panel.png) | ![Timeline / frame strip](docs/shots/readme/timeline-panel.png) |
+
 ## Running it
 
 ```bash
@@ -35,7 +45,12 @@ No account needed — for you or for anyone using it.
 
 ## What works
 
-- Brush, eraser, fill, eyedropper · palette · brush sizes and shapes
+- Brush, eraser, fill, eyedropper, shapes, gradient, select/move · palette · brush sizes and shapes ·
+  symmetry (H/V/both)
+- Layers — add, reorder, opacity, blend mode, merge down, flatten
+- Timeline — multiple frames, per-frame timing, onion-skinning, animated export
+- Code panel — the document's own JSON, editable both ways, plus one-click SVG, CSS, React, PNG, and
+  ASCII export
 - Undo/redo where one gesture is one step, not four hundred
 - Zoom anchored at the cursor, pan, fit
 - Autosave to IndexedDB — refresh and your drawing is still there
@@ -52,7 +67,7 @@ probe run scored **0 of 9**, and that is written up honestly in
 [`docs/PHASE-0-FINDINGS.md`](docs/PHASE-0-FINDINGS.md) with ranked hypotheses for the fix. The
 plumbing is sound; the taste isn't there yet.
 
-Also pending: the code panel, SVG/CSS/React export, sharing, and animation.
+Also pending: sharing (parked — see [`docs/DEFERRED.md`](docs/DEFERRED.md)).
 
 ## How it's built
 
