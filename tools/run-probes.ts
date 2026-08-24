@@ -62,6 +62,13 @@ const PROBES: Probe[] = [
   { file: 'probe-timeline.ts', what: 'timeline: frames, playback, onion, shortcuts', gates: true },
   { file: 'probe-tools-ui.ts', what: 'all 8 tools with real pointer events', gates: true },
   { file: 'probe-tooltip.ts', what: 'tooltip appears, places, dismisses', gates: true },
+  /**
+   * Structure only here — every preset, both themes, 320px, no network and no key.
+   * The live half (a real key pasted into the real dialog, driving a real edit)
+   * spends money and is opt-in behind PROBE_LIVE=1, so it is a deliberate act
+   * rather than part of the suite. See tools/probe-byok.ts.
+   */
+  { file: 'probe-byok.ts', what: 'key dialog: providers, compat notice, migration', gates: true },
   { file: 'probe-crisp.ts', what: 'pixel edges stay crisp', gates: true },
   {
     file: 'probe-agent-ui.ts',

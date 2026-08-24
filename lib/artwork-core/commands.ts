@@ -91,8 +91,35 @@ export function applyCommand(doc: Doc, cmd: EditorCommand): Doc {
 
     case 'ai_edit': {
       const next = cloneDoc(doc)
-      // Colours first — the cells may reference indices this edit created.
-      for (const entry of cmd.paletteAdded) next.palette.push({ ...entry })
+
+      /**
+       * Colours first — the cells may reference indices this edit created.
+       *
+       * APPENDING IS IDEMPOTENT, and it has to be. An agent session applies its
+       * work to the live document as it goes, then collapses into ONE ai_edit
+       * which the store commits over that already-mutated document
+       * (lib/store/agent.ts, finaliseToHistory). Setting a pixel to the value it
+       * already holds is a no-op; pushing a palette entry that is already there is
+       * NOT, so every session that added a colour appended it twice.
+       *
+       * Measured 24 Aug 2026 by eval scenario G2: a butterfly drawn with four
+       * colours ended with a palette of eight — 1-4 and 5-8 byte-identical. Worse
+       * than cosmetic: invertCommand pops `paletteAdded.length` entries, so undo
+       * removed four of the eight and left the document carrying four orphans.
+       *
+       * Re-applying is therefore a no-op when the palette already ends with
+       * exactly this run. After an undo those entries are gone, the tail no longer
+       * matches, and redo appends them properly.
+       */
+      const added = cmd.paletteAdded
+      const tail = next.palette.slice(next.palette.length - added.length)
+      const alreadyApplied =
+        added.length > 0 &&
+        tail.length === added.length &&
+        tail.every((e, i) => e.c === added[i]!.c && e.n === added[i]!.n)
+      if (!alreadyApplied) {
+        for (const entry of added) next.palette.push({ ...entry })
+      }
       const px = next.frames[cmd.frame]?.layers[cmd.layer]?.px
       if (!px) return stamp(next)
       for (const [x, y, , after] of cmd.cells) px[y * next.w + x] = after

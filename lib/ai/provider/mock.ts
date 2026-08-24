@@ -3,6 +3,7 @@
  * No network, no key, deterministic.
  */
 
+import { MAX_CALLS_PER_TURN } from '../../agent/limits'
 import type {
   AiProvider,
   ConversePart,
@@ -105,9 +106,14 @@ const SCRIPTS: Record<string, ConversePart[][]> = {
     [call('set_pixels', { px: [[999, 999, 1]] })],
     [call('finish', { summary: 'Tried to draw off the canvas.' })],
   ],
-  // more calls in one turn than MAX_CALLS_PER_TURN allows
+  // More calls in one turn than MAX_CALLS_PER_TURN allows. DERIVED from the
+  // constant, not a literal: it was 20 against a cap of 12, and raising the cap to
+  // 24 in unit I turned the flood fixture into a non-flood — the test failed
+  // loudly, which is the good case, but the next change might not.
   __agent_flood: [
-    Array.from({ length: 20 }, (_, n) => call('set_pixels', { px: [[n % 16, 0, 1]] })),
+    Array.from({ length: MAX_CALLS_PER_TURN + 5 }, (_, n) =>
+      call('set_pixels', { px: [[n % 16, 0, 1]] }),
+    ),
     [call('finish', { summary: 'Drew a lot at once.' })],
   ],
   // draws, then thinks better of it — the shape the live model actually produced

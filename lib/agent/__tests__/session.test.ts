@@ -182,8 +182,13 @@ describe('budgets are cumulative across the session', () => {
 
   it('caps new palette colours', () => {
     const h = harness()
-    const results = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'].map((c) =>
-      h.call('add_palette_color', { color: c }),
+    // Generated from the constant, not a list of literals: the list was six long
+    // against a cap of four, and raising the cap to twelve turned "more than the
+    // budget" into "fewer than the budget" without the test noticing what it had
+    // stopped testing.
+    const tries = MAX_SESSION_COLORS + 2
+    const results = Array.from({ length: tries }, (_, n) =>
+      h.call('add_palette_color', { color: `#${(n + 1).toString(16).padStart(6, '0')}` }),
     )
     const okCount = results.filter((r) => r.ok).length
     expect(okCount).toBe(MAX_SESSION_COLORS)
@@ -355,5 +360,91 @@ describe('session collapse across layers', () => {
 
     const back = applyCommand(h.getDoc(), invertCommand(out.command!))
     expect(back.palette).toHaveLength(start.palette.length)
+  })
+})
+
+/**
+ * Found by tools/eval-ai.ts scenario C1, 24 Aug 2026 (docs/specs/19 §5).
+ *
+ * "Change the body from blue to purple" — claude-opus-5 answered by recolouring
+ * palette entries and touching no pixel at all. That is a BETTER answer than
+ * repainting, and the collapse had no way to express it: diff() reports palette
+ * entries that were appended, never ones rewritten in place, so the session ended
+ * with an empty diff, `command: null`, and a panel saying nothing had changed —
+ * over a canvas that was now visibly purple, with no way to undo it.
+ */
+describe('a palette-only session is still undoable', () => {
+  it('collapses to replace_doc rather than to nothing', () => {
+    const h = harness()
+    expect(h.call('edit_palette_color', { index: 1, color: '#9a5cf0' }).ok).toBe(true)
+
+    const out = h.session.finalise(h.getDoc(), 'recoloured the outline', 'finish')
+    expect(out.command).not.toBeNull()
+    expect(out.command!.type).toBe('replace_doc')
+    expect(out.changed).toBeGreaterThan(0)
+  })
+
+  it('undoing it restores the original colour', () => {
+    const h = harness()
+    const start = cloneDoc(h.getDoc())
+    h.call('edit_palette_color', { index: 2, color: '#9a5cf0' })
+
+    const out = h.session.finalise(h.getDoc(), 'recoloured', 'finish')
+    const restored = applyCommand(h.getDoc(), invertCommand(out.command!))
+    expect(restored.palette.map((p) => p.c)).toEqual(start.palette.map((p) => p.c))
+  })
+
+  it('a pixel edit with no palette change still collapses to ai_edit', () => {
+    // The guard must not turn every session into a whole-document replacement.
+    const h = harness()
+    h.call('set_pixels', { px: [[8, 8, 1]] })
+    const out = h.session.finalise(h.getDoc(), 'one pixel', 'finish')
+    expect(out.command!.type).toBe('ai_edit')
+  })
+
+  it('an APPENDED colour is still an ai_edit, not a replacement', () => {
+    // add_palette_color is already carried correctly by ai_edit's paletteAdded;
+    // the guard deliberately ignores entries after the shared prefix.
+    const h = harness()
+    h.call('add_palette_color', { c: '#123456' })
+    h.call('set_pixels', { px: [[8, 8, 1]] })
+    const out = h.session.finalise(h.getDoc(), 'added a colour', 'finish')
+    expect(out.command!.type).toBe('ai_edit')
+  })
+})
+
+/**
+ * The headline said "256 pixels changed" beside "0 added, 0 changed, 0 cleared" —
+ * two statements that cannot both be true. Found by eval scenario C1, 24 Aug 2026.
+ */
+describe('the changed count means what the panel claims it means', () => {
+  it('counts only the pixels a palette edit actually recoloured', () => {
+    const h = harness()
+    const doc = h.getDoc()
+    // How many cells render with palette index 2 on the starting artwork.
+    let expected = 0
+    const px = doc.frames[0]!.layers[0]!.px
+    for (const v of px) if (v === 2) expected++
+    expect(expected).toBeGreaterThan(0)
+
+    h.call('edit_palette_color', { index: 2, color: '#a855f7' })
+    const out = h.session.finalise(h.getDoc(), 'recoloured', 'finish')
+    expect(out.changed).toBe(expected)
+    expect(out.changed).toBeLessThan(doc.w * doc.h)
+  })
+
+  it('reports zero when a session replaced the document with an identical one', () => {
+    const h = harness()
+    const out = h.session.finalise(cloneDoc(h.getDoc()), 'nothing', 'finish')
+    expect(out.changed).toBe(0)
+  })
+
+  it('still reports the whole canvas when the dimensions changed', () => {
+    // A resize cannot be compared cell by cell, so w*h remains the honest answer.
+    const h = harness()
+    h.call('new_document', { width: 8, height: 8 })
+    const out = h.session.finalise(h.getDoc(), 'new canvas', 'finish')
+    expect(out.command!.type).toBe('replace_doc')
+    expect(out.changed).toBe(64)
   })
 })

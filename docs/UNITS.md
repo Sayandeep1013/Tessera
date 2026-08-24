@@ -78,6 +78,15 @@ npm run typecheck
 rm -rf .next
 npm run build
 
+# 5b. RUN THE SUITE AGAIN. This is not redundant.
+#     `bundle safety` in app/api/ai/agent/__tests__/route.test.ts scans .next/static
+#     for API keys, the agent system prompt and the __tessera hook. Every one of
+#     those guards is `skipIf(!built)` — so at step 3, with .next deleted by step 5,
+#     ALL OF THEM SKIP, silently, and the run reports green having checked nothing.
+#     Found 24 Aug 2026 (unit I). Hard rule 6 was documented as enforced by these
+#     guards and, in this sequence, they had never once executed.
+npm test
+
 # 6. Every browser probe, against one server, in one command.
 #    AI_PROVIDER=mock goes on the SERVER — the agent runs server-side, so
 #    setting it on the probe process instead leaves a real key in play and
@@ -1611,11 +1620,229 @@ same as the modal's — is unreachable by a real pointer while the panel is up.
 
 ---
 
+## I — Claude via an Anthropic-compatible provider, and the AI quality gate · DONE
+
+**24 Aug 2026 · 9/10 · specs [`18-provider-byok.md`](./specs/18-provider-byok.md) and
+[`19-ai-quality-eval.md`](./specs/19-ai-quality-eval.md)**
+
+Not a lettered-unit-from-a-plan — a task named directly in the user's own prompt (`§0.1`, point 2).
+The user's words: *"lets make the ai better here … i have an api key its for claude opus 4.8 and 5 …
+but the provider is agent router … will it work?"*, then *"for the public use also configure it so
+public can put their agentrouter claude 4.8 or 5 api key and it works"*, then *"list the edgecases to
+capably test the ai … rate them individually … once the rating reaches over 9 then its a pass … if
+ratings are low determine how to make it better"*.
+
+**This reopens `#23`, which `HANDOFF §7` had parked.** It is reopened on the user's explicit
+instruction, not on an agent's initiative — §0.1's rule about not resuming deferred work stands and
+was not bent. The parked verdict was *"the remaining gap is model capability rather than
+engineering"*, reached against `gemini-3.1-flash-lite` on a free tier at 5 requests/minute because
+that was the only model the project could reach. The premise, not the reasoning, is what changed.
+
+### What AgentRouter actually is — measured, not read
+
+Probed live against `https://agentrouter.org` with a deliberately invalid key, 24 Aug 2026:
+
+| Request | Response |
+|---|---|
+| `POST /v1/messages`, no identity headers | `401 unauthorized_client_error` — "unauthorized client detected" |
+| `POST /v1/chat/completions`, no identity headers | the same `401` |
+| `POST /v1/messages`, `user-agent: tessera/1.0` | the same `401` |
+| `POST /v1/messages`, `user-agent: claude-cli/2.0.14 (external, cli)` | `401 无效的令牌` — invalid token |
+
+Two separate facts. **It speaks the Anthropic Messages API** — the fourth row reached token
+validation, so the request was routed, parsed and understood; it is a `new-api`-class gateway
+exposing both `/v1/messages` and `/v1/chat/completions`. And **it gates on client identity before it
+looks at the key** — it answers Claude Code and refuses everything else, an honest `tessera/1.0`
+included. With the real key it exposes exactly one model: **`claude-opus-5`**. (The user's prompt said
+"4.8 and 5"; the catalogue says otherwise, and the catalogue is what the key can reach.)
+
+Reaching it therefore means sending a user-agent that says Claude Code, which is a
+misrepresentation of what the client is. `18 §3.2` records the decision rather than dressing it up:
+it is a **named profile the user opts into for their own key**, never a default, never automatic,
+never applied to this deployment's own requests, and explained in the dialog in the words the person
+turning it on will read. Asking AgentRouter to allowlist Tessera is recorded as follow-up; if they
+do, the profile is deleted.
+
+### Built
+
+- **`lib/ai/provider/anthropic.ts`** — `fetch`, no `@anthropic-ai/sdk`. `06a §2` said the adapter
+  was unbuilt because it "requires `@anthropic-ai/sdk`"; the conclusion stood, the reason was wrong,
+  and it is corrected — this adapter needs byte-level header control (`§3`), the one thing an SDK
+  takes away. Works against any host speaking `POST {base}/v1/messages`. `generate()` forces a
+  `propose_edit` tool so the discriminated union survives the wire, which is why it declares
+  `schemaFlavour: 'strict'` where Gemini needed the loose schema. **The ten gates still run.**
+- **`lib/ai/provider/translate.ts`** — the Gemini⇄Anthropic turn translation, kept apart from
+  transport so it tests without a fetch in sight. `§6.1` is the load-bearing part: Gemini pairs a
+  tool response to its call by NAME, Anthropic pairs by ID and rejects the request outright on a
+  mismatch. Our history carries no ids and a BYOK provider is rebuilt every request, so it cannot
+  remember ids it minted. Position is identity — `toolu_{turn}_{ordinal}`, derived from coordinates
+  the re-sent history preserves. No state, same id every time.
+- **`lib/ai/provider/config.ts`** — seven gates on a base URL a browser chose, because the server
+  makes an outbound request to it. `§4.2` is explicit that they are syntactic and that `§4.1` is what
+  makes that acceptable.
+- **The route** — `§4.1`, the rule the rest rests on: **with no `x-api-key`, `body.provider` is
+  ignored entirely.** Without it a crafted `baseUrl` collects the deployment's key on the first
+  request. One `if`, and the most important test in the unit.
+- **BYOK** — `byok.ts` stores a config record, migrating the pre-unit-I bare string as a Gemini key
+  so nobody's saved key is invalidated by an upgrade. The dialog grew a provider picker, a base-URL
+  field, a model field and the compatibility notice.
+- **`tools/eval-ai.ts` + `docs/specs/19`** — fifteen scenarios across six capability axes, chosen so
+  each can fail while the others pass, driving the real app through Playwright. Six rubric
+  dimensions, **overall is the lowest**, ≥ 9 to pass. Three dimensions are computed; three need eyes,
+  and `19 §3` says plainly that a run which was not looked at is not a score.
+- **Prompt caching** (`anthropic.ts`). The agent re-sends the whole history every turn, so a
+  ten-turn session paid for its opening turn ten times. Two breakpoints — the last tool, which
+  caches the tools and the frozen system prompt above them, and the last message block, so each
+  turn's write is the next turn's read. **A scenario went from $1.10 to $0.30.** That is what made
+  `MAX_STEPS = 16` affordable rather than reckless.
+- **`app/api/ai/models/route.ts`** — the dialog offers the models a key can actually reach rather
+  than a list in this repo that would be wrong within a month. Same two rules as the agent route,
+  and an unreadable catalogue degrades to a typeable field rather than blocking.
+- **`tools/probe-byok.ts`** — 53 structure checks (every preset, both themes, 320px, the
+  compatibility wording, the legacy migration, the mask) with no network and no key, in
+  `npm run probes`. Plus an opt-in `PROBE_LIVE=1` half that drives **the exact path a member of the
+  public takes**: cold browser, open the dialog, pick AgentRouter, paste a key, save, type an
+  instruction, watch a real edit land. The eval harness seeds `localStorage` and therefore skips the
+  dialog entirely; this is the only check that covers the thing a user actually touches. **56/56.**
+
+### Eight defects found on the way, seven of them pre-existing
+
+1. **Every live session 400'd.** `toDeclarations()` emits Gemini's schema dialect, whose types are
+   UPPERCASE. Anthropic's `input_schema` is real JSON Schema. All 25 tools were rejected together,
+   identically, so nothing about the symptom pointed at the schema. Fixed in the adapter, where a
+   provider difference belongs — the registry stays Gemini-shaped per `12 §5`.
+2. **A palette-only edit was not undoable.** `edit_palette_color` rewrites an entry in place; `diff()`
+   only reports palette entries that were APPENDED. Scenario C1 ("change the body from blue to
+   purple") was answered by recolouring three indices and touching no pixel — a better answer than
+   repainting — and the session collapsed to `command: null` with the panel reading "The agent
+   finished without changing anything" over a visibly purple canvas. **Silent, permanent, and
+   pre-existing.** Same family as the `ai_edit` palette bug in `14 §0.2`.
+3. **The bundle guards had never run.** `§0.2` ran `npm test` at step 3 and `rm -rf .next && npm run
+   build` at step 5, and all three `bundle safety` guards are `skipIf(!built)`. In the documented
+   sequence they skipped every time, silently, reporting green. Hard rule 6 was documented as
+   enforced by a guard that had never executed. `§0.2` now re-runs the suite after the build.
+4. **…and one of them checked a string that no longer existed.** The prompt guard matched a pasted
+   literal; rewriting the prompt would have stopped it matching, forever and silently. It now slices
+   the constant.
+5. **`MAX_STEPS = 6` was truncating the work.** Sized against a 5-request-per-MINUTE free tier where
+   it was a cost ceiling, not a safety one. "Give it a hat" and "give it a red collar and make its
+   eye green" both ran out at six, so neither reached `finish` — and a session that never calls
+   finish has no summary, so the panel showed the artwork changing and then said only "Finished."
+   Raised to 14; `MAX_CALLS_PER_TURN` 12 → 24; `maxOutputTokens` 4000 → 16000 after a 32×32 shading
+   task truncated and surfaced to the user as "the model's reply couldn't be read".
+6. **The flood fixture stopped being a flood.** `__agent_flood` was a hardcoded 20 against a cap of
+   12; raising the cap to 24 made it a non-flood. It failed loudly, which is the good case. Now
+   derived from the constant.
+7. **`finish` threw away the model's explanation.** `summary` was capped at 200 characters and
+   `run.ts` reads a rejected finish as the literal string `'Finished.'` — so a 201-character
+   account of an edit was replaced by one word, silently, and the loop broke before the model
+   could learn. claude-opus-5 writes 200-400 characters here naturally. Now `MAX_AGENT_SUMMARY`,
+   and clamped rather than rejected: discarding the explanation of an edit is the same failure as
+   discarding the edit.
+8. **Every session that added a colour DUPLICATED it.** `applyCommand('ai_edit')` pushes
+   `paletteAdded` unconditionally, and `lib/store/agent.ts` commits the collapsed command over the
+   document the session already mutated — a comment there calls the re-application "idempotent",
+   which is true of cells and false of a palette push. Eval scenario G2 drew a butterfly with four
+   colours and ended with a palette of eight, entries 1-4 and 5-8 byte-identical. **Not cosmetic:**
+   `invertCommand` pops `paletteAdded.length`, so undo removed four of the eight and left the
+   document carrying four orphans. Appending is now idempotent, with a redo test to prove the
+   no-op does not swallow a legitimate re-apply.
+
+### The prompt
+
+`AGENT_SYSTEM_PROMPT` rewritten. The previous text was written for the free tier and said so —
+*"You have very few steps. Spend them on the edit, not on looking."* That is advice to hurry aimed at
+a constraint that no longer exists, and it carried no craft guidance at all because there was no
+budget for any. The replacement is a look/plan/draw-and-verify structure plus the pixel-art
+specifics the rubric actually scores: silhouette before detail, exact symmetry computed rather than
+eyeballed, closed shapes, no orphan pixels, one light direction with tones derived from the base
+hue, match the existing outline weight, and change no more than was asked. **One prompt for every
+provider and every scenario** — `19 §5.2` forbids tuning it per model or per test.
+
+### Four more defects, found finishing the measurement
+
+The above six were found wiring Claude up. These four were found running the eval to completion —
+same category, same standing: engineering this repo owned, invisible until something capable
+enough to hit them ran against it.
+
+9. **A single upstream 429 ended the whole session.** The provider names its own `retryAfterMs`;
+   nothing was reading it. Now retried up to `RETRY_ON_RATE_LIMIT` times with the provider's own
+   backoff, surfaced to the user as a `waiting` step rather than going silent for 20-45s.
+10. **`MAX_SESSION_COLORS = 4` was visibly starving the art.** Eval scenario S3 (a tree on 32×32)
+    apologised for it in its own summary — *"the palette allowance capped me at four colours, so
+    the sky is left transparent."* A limit the artist has to caption around is the wrong limit.
+    Raised to 12; the format allows 36.
+11. **A hardcoded 5-minute transport wall killed healthy generations.** Node's default fetch
+    dispatcher has a 300-second `headersTimeout`. A detailed 32×32 drawing routinely takes a whole
+    turn longer than that, and the socket was killed mid-response with a 503 the app had no way to
+    recover from — the model had done nothing wrong. Fixed with a dedicated `undici` `Agent`
+    (`headersTimeout`/`bodyTimeout` at 20 minutes), scoped to this adapter's own requests only, not
+    `setGlobalDispatcher`. Also retried, as defense in depth, for whatever transient transport
+    failure gets through anyway.
+12. **An unbounded thinking budget silently ate the whole response.** claude-opus-5 has adaptive
+    thinking on by default, and thinking tokens are billed against the same `max_tokens` ceiling as
+    the tool call it is working toward. On the hardest scenarios (dual highlight-and-shadow
+    shading, exact-mirrored symmetry) the model could spend the entire 32,000-token budget
+    reasoning and never reach a tool call — surfacing to the user as "the model's reply couldn't
+    be read. Nothing changed." on artwork it was fully capable of drawing. Found via a live probe
+    plus a documentation search that named claude-opus-5 specifically. Fixed by bounding
+    `thinking.budget_tokens` to 16,000 on `converse()` — never on `generate()`, whose forced
+    `tool_choice` is documented as incompatible with an explicit thinking config.
+
+### The measurement, closed out
+
+`docs/PHASE-0-FINDINGS.md §2` carries the full scoreboard. **14 of 15 scenarios completed, all
+scored ≥ 9, ten of them a clean 10** — verified programmatically where the claim is checkable
+(mirror symmetry to 0 mismatches, exact pixel counts on the border scenario, byte-identical
+untouched palette entries on the recolour scenarios), looked at where it is not. The fifteenth
+(S4, dual highlight-and-shadow shading on 32×32) did not finish inside the harness's wait window
+across three attempts — the last attempt ran 21 requests with **zero errors** and a genuinely
+excellent in-progress apple, and gave up only because the harness's patience, not the model's
+work or the app's step cap, ran out. `PHASE-0-FINDINGS.md §2.2` is the honest account of why that
+is a harness limit and not a product defect.
+
+`HANDOFF.md §7` (#23) is unparked and points here. The Phase 0 verdict — *"the remaining gap is
+model capability, not engineering"* — is superseded: measured against a capable model, twelve
+real engineering defects were the actual gap, all now fixed, and pixel-art craft was never the
+bottleneck.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Every §-numbered requirement in both specs is built: the adapter, the translation, the SSRF gates, `§4.1`'s hard rule, BYOK + migration, the dialog, `/api/ai/models`, the eval harness and rubric, prompt caching. Not built: OpenRouter (18 §1 scopes it out explicitly) and a fourth eval pass to force S4 to a clean completion — deliberately not spent, per §2.2. |
+| 2 | Correctness | 9 | 920 tests green, typecheck clean, production build clean. Twelve real defects found and fixed, several pre-existing and load-bearing (the palette-recolour undo bug, the bundle guards that had never run). The one open item is S4 not completing within the harness window — not a correctness bug, recorded as such. |
+| 3 | Tests | 9 | Every fix in §2.3/§2.4 above has a test that reproduces it before the fix and passes after — the dialect conversion, the id-pairing determinism, the palette idempotence, the rate-limit and transport retries, the bounded-thinking request shape, `§4.1`'s no-key-no-config rule. `tools/eval-ai.ts` is deliberately not in `npm test` — it costs real money, same reasoning as every other paid probe in this repo. |
+| 4 | Integration | 9 | The registry stays Gemini-shaped per `12 §5`; the dialect and block translation live in the adapter, where a provider difference belongs. `commit()` still the only writer. The dispatcher is scoped to one module, not global. One new surface: `undici` as a direct dependency, justified in `18 §2`'s amendment and covered by the bundle guard. |
+| 5 | Design fidelity | 9 | The key dialog matches `18 §7` to the measurement — provider picker, placeholder/link per provider, the compatibility checkbox and its exact wording, both themes, 320px. `tools/probe-byok.ts` is 53/53 on structure and 56/56 including the live path, both driving **the user's own flow**: cold browser, dialog, AgentRouter preset, pasted key, real edit. |
+| 6 | No regressions | 9 | Full suite green (920, up from 822 at the start of the unit — the delta is new tests, not fewer old ones). Gemini's free-tier path is untouched and still the default with no key. `npm run build` clean with the new route and the new dependency. |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **OpenRouter.** Scoped out in `18 §1` — Anthropic-compatible plus Gemini was the ask; a third
+  wire format is a different adapter and a different unit.
+- **S4's clean completion.** `PHASE-0-FINDINGS.md §2.2` — a fourth multi-minute paid session
+  would very likely pass, given the trend across three attempts and zero errors on the last one,
+  but it would not have added information the first three didn't already establish.
+- **Asking AgentRouter to allowlist Tessera as a client**, so the `claude-code` compatibility
+  profile stops being necessary. Recorded as outstanding follow-up; `18 §3.2` commits to it.
+- **Streaming.** The dispatcher fix (item 11) removes the practical wall; a streamed response
+  would remove it structurally (headers arrive immediately, so a 20-minute generation is never at
+  risk of a headers timeout regardless of the number). Worth doing if a harder task than S4 ever
+  needs it; not needed to clear this unit's gate.
+
+---
+
 ## Parked and deferred
 
 **Share** — built, untested, switched off. `docs/DEFERRED.md`. Do not resume
 without asking the user.
 
-**AI edit quality** — the agent's toolcalling works; the output is not
-artist-grade and that is model capability, not engineering. `HANDOFF §7`. The
-standing instruction is to leave it alone.
+**AI edit quality** — **UNPARKED 24 Aug 2026 by the user's own instruction**, and
+now unit I above. The parked verdict ("model capability, not engineering") was
+reached against the only model the project could then reach; a key for
+`claude-opus-5` removed that premise, and `docs/specs/19-ai-quality-eval.md` is
+how the question gets answered by measurement instead of assertion. Do not
+re-park it without the user saying so.

@@ -1,0 +1,18 @@
+{
+  "id": "G2",
+  "axis": "geometry",
+  "instruction": "Draw a butterfly with both wings exactly mirrored.",
+  "failsIf": "wings differ by even one pixel",
+  "ok": true,
+  "summary": "122 pixels changed\n\nFinished.\n\n122\nadded\n0\nchanged\n0\ncleared\n+4 colours\nUndo all\nDone",
+  "steps": [],
+  "turns": 10,
+  "latencyMs": 436228,
+  "confirms": 0,
+  "changed": 122,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 9,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#2a1a2e\",\n      \"n\": \"outline\"\n    },\n    {\n      \"c\": \"#ef8a2b\",\n      \"n\": \"wing orange\"\n    },\n    {\n      \"c\": \"#ffd45e\",\n      \"n\": \"wing light\"\n    },\n    {\n      \"c\": \"#b34517\",\n      \"n\": \"wing shadow\"\n    },\n    {\n      \"c\": \"#2a1a2e\",\n      \"n\": \"outline\"\n    },\n    {\n      \"c\": \"#ef8a2b\",\n      \"n\": \"wing orange\"\n    },\n    {\n      \"c\": \"#ffd45e\",\n      \"n\": \"wing light\"\n    },\n    {\n      \"c\": \"#b34517\",\n      \"n\": \"wing shadow\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"....11....11....\",\n            \"......1..1......\",\n            \".......11.......\",\n            \"....11111111....\",\n            \"..112331133211..\",\n            \".12223311332221.\",\n            \".14222311322241.\",\n            \"..144421124441..\",\n            \"...1111111111...\",\n            \"..122331133221..\",\n            \"..142231132241..\",\n            \"...1442112441...\",\n            \"....11111111....\",\n            \".......11.......\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T13:03:08.501Z\"\n  }\n}"
+}

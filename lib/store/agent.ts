@@ -158,12 +158,32 @@ export const useAgentStore = create<AgentState>((set, get) => ({
         ctx,
         sessionId: `${Date.now()}-${instruction.length}`,
         apiKey: access.usingOwnKey ? access.apiKey : undefined,
+        provider: access.usingOwnKey ? access.config : undefined,
         signal: controller.signal,
         currentDoc: () => useDocStore.getState().doc,
         onConfirm: (name, args) =>
           new Promise<boolean>((resolve) => set({ status: 'confirm', confirm: { name, args, resolve } })),
         onStep: (s) => {
           if (s.type === 'thinking') set({ step: s.step, ofSteps: s.of })
+          /**
+           * A rate-limit wait can be 20-45 seconds. Saying nothing for that long
+           * reads as a hang, and the user's next move is to reload and lose the
+           * session the retry exists to save.
+           */
+          if (s.type === 'waiting') {
+            set({
+              log: [
+                ...get().log,
+                {
+                  id: nextId++,
+                  name: 'rate limit',
+                  args: {},
+                  ok: true,
+                  detail: `waiting ${s.seconds}s · attempt ${s.attempt} of ${s.of}`,
+                },
+              ],
+            })
+          }
           if (s.type === 'action') set({ log: [...get().log, describe(s)] })
           if (s.type === 'error') {
             set({ error: s.message, needsKey: s.code === 'upstream_rate_limited' })
@@ -178,6 +198,10 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     // One command for everything the session did. Applying it to the already
     // mutated document is idempotent — it sets the values that are already there —
     // so this lands exactly one entry on the undo stack.
+    //
+    // "Idempotent" was true of the CELLS and false of the palette until 24 Aug
+    // 2026: applyCommand pushed paletteAdded unconditionally, so every session
+    // that added a colour appended it twice here. See artwork-core/commands.ts.
     finaliseToHistory(outcome.command)
 
     if (!access.usingOwnKey) recordFreeSession()

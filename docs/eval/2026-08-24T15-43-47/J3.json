@@ -1,0 +1,18 @@
+{
+  "id": "J3",
+  "axis": "judgement",
+  "instruction": "Draw a line from (0,0) to (40,40).",
+  "failsIf": "burns the budget retrying a rejected call",
+  "ok": true,
+  "summary": "16 pixels changed\n\nDrew a diagonal line from (0,0) to (15,15); the requested endpoint (40,40) is off the 16×16 canvas, so the line was drawn along the same y=x path to the canvas edge.\n\n16\nadded\n0\nchanged\n0\ncleared\n+1 colour\nUndo all\nDone",
+  "steps": [],
+  "turns": 6,
+  "latencyMs": 45531,
+  "confirms": 0,
+  "changed": 16,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 2,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#1a1a1a\",\n      \"n\": \"ink\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"1...............\",\n            \".1..............\",\n            \"..1.............\",\n            \"...1............\",\n            \"....1...........\",\n            \".....1..........\",\n            \"......1.........\",\n            \".......1........\",\n            \"........1.......\",\n            \".........1......\",\n            \"..........1.....\",\n            \"...........1....\",\n            \"............1...\",\n            \".............1..\",\n            \"..............1.\",\n            \"...............1\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T16:36:26.180Z\"\n  }\n}"
+}

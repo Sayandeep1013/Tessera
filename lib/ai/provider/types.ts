@@ -22,6 +22,9 @@ export type ProviderUsage = {
   inputTokens?: number
   outputTokens?: number
   thinkingTokens?: number
+  /** Prompt-cache hits. Billed far below a fresh input token — see anthropic.ts. */
+  cacheReadTokens?: number
+  cacheWriteTokens?: number
   totalTokens?: number
 }
 

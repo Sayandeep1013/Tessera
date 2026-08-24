@@ -18,11 +18,12 @@ import { useAgentStore } from '@/lib/store/agent'
 import { useDocStore } from '@/lib/store/editor'
 import {
   FREE_SESSIONS,
-  GET_KEY_URL,
+  PROVIDERS,
   clearApiKey,
   getApiKey,
+  getConfig,
   maskApiKey,
-  setApiKey,
+  setConfig,
 } from '@/lib/agent/byok'
 import { chromeFor, useTier } from '@/lib/editor/breakpoint'
 import { Elapsed, TurnMark } from './Loaders'
@@ -392,9 +393,21 @@ function DoneRow() {
         <p style={{ margin: '0 0 8px', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>{summary}</p>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Stat n={counts.added} label="added" color="var(--diff-add)" />
-        <Stat n={counts.changed} label="changed" color="var(--diff-change)" />
-        <Stat n={counts.removed} label="cleared" color="var(--diff-remove)" />
+        {/*
+          The triad comes from the pixel diff, and a session that added a layer or
+          recoloured the palette collapses to replace_doc with an EMPTY diff — so
+          it rendered "50 pixels changed" beside "0 added, 0 changed, 0 cleared",
+          two statements that cannot both be true. Found by eval scenarios L2 and
+          C1 (docs/specs/19). Showing nothing is honest; showing three zeroes is
+          not. The headline and the model's own summary already say what happened.
+        */}
+        {counts.added + counts.changed + counts.removed > 0 && (
+          <>
+            <Stat n={counts.added} label="added" color="var(--diff-add)" />
+            <Stat n={counts.changed} label="changed" color="var(--diff-change)" />
+            <Stat n={counts.removed} label="cleared" color="var(--diff-remove)" />
+          </>
+        )}
         {counts.palette > 0 && (
           <span style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
             +{counts.palette} colour{counts.palette === 1 ? '' : 's'}
@@ -449,15 +462,63 @@ function ErrorRow({ onAddKey }: { onAddKey: () => void }) {
 
 // ─── bring your own key ──────────────────────────────────────────────────────
 
+/**
+ * The key dialog. See docs/specs/18-provider-byok.md §7.
+ *
+ * Grew a provider picker in unit I. The credential promise, the mask and Remove
+ * are unchanged — they were already right.
+ */
 function KeyDialog({ onClose }: { onClose: () => void }) {
-  const existing = getApiKey()
+  const existing = getConfig()
+  const [choice, setChoice] = useState<string>('gemini')
   const [value, setValue] = useState('')
+  const [model, setModel] = useState('')
+  const [baseUrl, setBaseUrl] = useState('')
+  const [compat, setCompat] = useState(false)
+
+  const preset = PROVIDERS[choice]
+  const custom = choice === 'custom'
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  /** Picking a preset fills its URL and sets its profile — both stay visible. */
+  function pick(next: string) {
+    setChoice(next)
+    const p = PROVIDERS[next]
+    setBaseUrl(p?.baseUrl ?? '')
+    setCompat(p?.profile === 'claude-code')
+  }
+
+  function save() {
+    const key = value.trim()
+    if (!key) return
+    setConfig({
+      providerId: custom ? 'anthropic' : (preset?.id ?? 'gemini'),
+      apiKey: key,
+      ...(custom ? { baseUrl: baseUrl.trim() } : preset?.baseUrl ? { baseUrl: preset.baseUrl } : {}),
+      ...(model.trim() ? { model: model.trim() } : {}),
+      ...((custom ? compat : preset?.profile === 'claude-code')
+        ? { profile: 'claude-code' as const }
+        : {}),
+    })
+    onClose()
+  }
+
+  const field = {
+    height: 32,
+    padding: '0 10px',
+    borderRadius: 'var(--r-md)',
+    background: 'var(--panel2)',
+    border: '1px solid var(--line)',
+    font: 'var(--t-mono)',
+    color: 'var(--fg)',
+  } as const
+
+  const showCompatNote = custom ? compat : preset?.profile === 'claude-code'
 
   return (
     <>
@@ -479,77 +540,147 @@ function KeyDialog({ onClose }: { onClose: () => void }) {
           position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
           width: 'min(420px, calc(100vw - 32px))', zIndex: 91,
           padding: 16, background: 'var(--panel)', borderRadius: 'var(--r-xl)',
-          boxShadow: 'var(--shadow-lg)',
+          boxShadow: 'var(--shadow-lg)', maxHeight: 'calc(100vh - 32px)', overflowY: 'auto',
         }}
       >
-      <p style={{ margin: '0 0 10px', font: 'var(--t-label-lg)' }}>Use your own API key</p>
+        <p style={{ margin: '0 0 10px', font: 'var(--t-label-lg)' }}>Use your own API key</p>
 
-      {/*
-        This is a promise about someone's credentials. It belongs in the interface
-        where they can read it, not only in a spec they will never open.
-      */}
-      <p style={{ margin: '0 0 12px', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>
-        Stored in this browser only. Sent with each request, used once, and discarded — never
-        logged and never saved on our server. Remove it any time.{' '}
-        <a
-          href={GET_KEY_URL}
-          target="_blank"
-          rel="noreferrer noopener"
-          style={{ color: 'var(--fg)', textDecoration: 'underline' }}
-        >
-          Get a free key
-        </a>
-        .
-      </p>
+        {existing ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <code style={{ flex: 1, font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
+              {maskApiKey(existing.apiKey)}
+            </code>
+            <button
+              onClick={() => {
+                clearApiKey()
+                onClose()
+              }}
+              style={{ font: 'var(--t-label-sm)', color: 'var(--diff-remove)' }}
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <>
+            <label
+              style={{
+                display: 'block', margin: '0 0 4px',
+                font: 'var(--t-label-sm)', color: 'var(--muted)',
+              }}
+            >
+              Provider
+            </label>
+            <select
+              aria-label="Provider"
+              value={choice}
+              onChange={(e) => pick(e.currentTarget.value)}
+              style={{ ...field, width: '100%', font: 'var(--t-label-sm)', marginBottom: 10 }}
+            >
+              {Object.entries(PROVIDERS).map(([id, p]) => (
+                <option key={id} value={id}>
+                  {p.label}
+                </option>
+              ))}
+              <option value="custom">Anthropic-compatible…</option>
+            </select>
 
-      {existing ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <code style={{ flex: 1, font: 'var(--t-label-sm)', color: 'var(--muted)' }}>
-            {maskApiKey(existing)}
-          </code>
-          <button
-            onClick={() => {
-              clearApiKey()
-              onClose()
-            }}
-            style={{ font: 'var(--t-label-sm)', color: 'var(--diff-remove)' }}
-          >
-            Remove
-          </button>
-        </div>
-      ) : (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            setApiKey(value)
-            onClose()
-          }}
-          style={{ display: 'flex', gap: 8 }}
-        >
-          <input
-            autoFocus
-            type="password"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder="AIza…"
-            aria-label="API key"
-            style={{
-              flex: 1, height: 34, padding: '0 10px', font: 'var(--t-mono)',
-              background: 'var(--panel2)', borderRadius: 'var(--r-md)', color: 'var(--fg)',
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!value.trim()}
-            style={{
-              height: 34, padding: '0 14px', borderRadius: 'var(--r-md)',
-              font: 'var(--t-label-sm)', background: 'var(--solid)', color: 'var(--onsolid)',
-            }}
-          >
-            Save
-          </button>
-        </form>
-      )}
+            {custom && (
+              <input
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.currentTarget.value)}
+                placeholder="https://your-relay.example.com"
+                aria-label="Base URL"
+                style={{ ...field, width: '100%', marginBottom: 10 }}
+              />
+            )}
+
+            {/*
+              This is a promise about someone's credentials. It belongs in the
+              interface where they can read it, not only in a spec they will
+              never open.
+            */}
+            <p style={{ margin: '0 0 12px', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>
+              Stored in this browser only. Sent with each request, used once, and discarded — never
+              logged and never saved on our server. Remove it any time.{' '}
+              <a
+                href={preset?.getKeyUrl ?? PROVIDERS.gemini!.getKeyUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                style={{ color: 'var(--fg)', textDecoration: 'underline' }}
+              >
+                Get a key
+              </a>
+              .
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                save()
+              }}
+              style={{ display: 'flex', gap: 8 }}
+            >
+              <input
+                autoFocus
+                type="password"
+                value={value}
+                onChange={(e) => setValue(e.currentTarget.value)}
+                placeholder={custom ? 'sk-…' : (preset?.placeholder ?? 'AIza…')}
+                aria-label="API key"
+                style={{ ...field, flex: 1 }}
+              />
+              <button
+                type="submit"
+                disabled={!value.trim()}
+                style={{
+                  height: 32, padding: '0 14px', borderRadius: 'var(--r-md)',
+                  font: 'var(--t-label-sm)', background: 'var(--solid)', color: 'var(--onsolid)',
+                }}
+              >
+                Save
+              </button>
+            </form>
+
+            {choice !== 'gemini' && (
+              <input
+                value={model}
+                onChange={(e) => setModel(e.currentTarget.value)}
+                placeholder="claude-opus-5"
+                aria-label="Model"
+                style={{ ...field, width: '100%', marginTop: 8 }}
+              />
+            )}
+
+            {custom && (
+              <label
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 10,
+                  font: 'var(--t-copy-sm)', color: 'var(--muted)',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={compat}
+                  onChange={(e) => setCompat(e.currentTarget.checked)}
+                  aria-label="AgentRouter compatibility"
+                  style={{ marginTop: 2 }}
+                />
+                <span>AgentRouter compatibility</span>
+              </label>
+            )}
+
+            {/*
+              §7.3. The one shim in this codebase that misrepresents what the
+              client is, said plainly where the person turning it on can read it.
+              Same standard as the credential promise above.
+            */}
+            {showCompatNote && (
+              <p style={{ margin: '8px 0 0', font: 'var(--t-copy-sm)', color: 'var(--muted)' }}>
+                {PROVIDERS.agentrouter!.note}
+              </p>
+            )}
+          </>
+        )}
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
           <button onClick={onClose} style={{ font: 'var(--t-label-sm)', color: 'var(--muted)' }}>

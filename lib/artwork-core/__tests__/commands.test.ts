@@ -414,3 +414,66 @@ describe('unchanged command types still round-trip', () => {
     )
   })
 })
+
+/**
+ * Found by eval scenario G2, 24 Aug 2026: a butterfly drawn with four colours
+ * ended with a palette of eight, entries 1-4 and 5-8 byte-identical.
+ *
+ * An agent session applies live and then commits one collapsed ai_edit over the
+ * document it already mutated. Cells are idempotent; a palette push was not.
+ */
+describe('ai_edit re-application is idempotent (the agent-session collapse)', () => {
+  const base = () => docOf(['....', '....', '....', '....'], [{ c: 'transparent' }])
+
+  const edit = (): EditorCommand => ({
+    type: 'ai_edit',
+    label: 'AI: draw',
+    frame: 0,
+    layer: 0,
+    cells: [[1, 1, 0, 1]],
+    paletteAdded: [{ c: '#ff0000' }],
+    summary: 'drew',
+    ops: [],
+  })
+
+  it('applying twice appends the colour once', () => {
+    const once = applyCommand(base(), edit())
+    const twice = applyCommand(once, edit())
+    expect(once.palette.map((p) => p.c)).toEqual(twice.palette.map((p) => p.c))
+    expect(twice.palette.filter((p) => p.c === '#ff0000')).toHaveLength(1)
+  })
+
+  it('the pixel is still correct after the second application', () => {
+    const twice = applyCommand(applyCommand(base(), edit()), edit())
+    expect(twice.frames[0]!.layers[0]!.px[1 * 4 + 1]).toBe(1)
+  })
+
+  it('undo after a double application leaves NO orphaned entries', () => {
+    // The real damage: invert pops paletteAdded.length, so the duplicate stayed.
+    const start = base()
+    const applied = applyCommand(applyCommand(start, edit()), edit())
+    const undone = applyCommand(applied, invertCommand(edit()))
+    expect(undone.palette.map((p) => p.c)).toEqual(start.palette.map((p) => p.c))
+  })
+
+  it('redo after an undo still appends the colour', () => {
+    // The tail no longer matches once undo popped it, so this must NOT be skipped.
+    const start = base()
+    const applied = applyCommand(start, edit())
+    const undone = applyCommand(applied, invertCommand(edit()))
+    const redone = applyCommand(undone, edit())
+    expect(redone.palette.filter((p) => p.c === '#ff0000')).toHaveLength(1)
+    expect(redone.frames[0]!.layers[0]!.px[1 * 4 + 1]).toBe(1)
+  })
+
+  it('still appends a colour that genuinely is not there yet', () => {
+    const doc = applyCommand(base(), {
+      type: 'palette_add',
+      label: 'add',
+      entries: [{ c: '#00ff00' }],
+    })
+    const out = applyCommand(doc, edit())
+    expect(out.palette.map((p) => p.c)).toContain('#ff0000')
+    expect(out.palette.map((p) => p.c)).toContain('#00ff00')
+  })
+})

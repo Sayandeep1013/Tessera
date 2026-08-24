@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runAgent, type AgentStep } from '../run'
-import { MAX_CALLS_PER_TURN, MAX_STEPS } from '../limits'
+import { MAX_CALLS_PER_TURN, MAX_RETRY_WAIT_S, MAX_STEPS, RETRY_ON_RATE_LIMIT } from '../limits'
 import { createMockProvider } from '../../ai/provider/mock'
 import { loadStarter } from '../../artwork-core/create'
 import { clampLayer } from '../../artwork-core/layers'
@@ -89,6 +89,9 @@ function harness() {
       sessionId: 's1',
       currentDoc: () => doc,
       onStep: (s) => steps.push(s),
+      // No real sleeping in tests. The retry path is exercised, the wall clock
+      // is not — see RunOptions.sleepFn.
+      sleepFn: async () => true,
       ...extra,
     })
 
@@ -188,6 +191,119 @@ describe('failures are fed back, not thrown', () => {
     const out = await h.run('__agent_ratelimit')
     expect(out.stoppedBy).toBe('error')
     expect(h.steps.some((s) => s.type === 'error')).toBe(true)
+  })
+})
+
+/**
+ * A single upstream 429 used to end the session outright and lose a half-finished
+ * drawing the model was minutes into. Measured 24 Aug 2026 (docs/specs/19).
+ */
+describe('a rate limit is waited out, not fatal', () => {
+  it('retries the turn RETRY_ON_RATE_LIMIT times before giving up', async () => {
+    const h = harness()
+    await h.run('__agent_ratelimit')
+    const waits = h.steps.filter((s) => s.type === 'waiting')
+    expect(waits).toHaveLength(RETRY_ON_RATE_LIMIT)
+  })
+
+  it('tells the user it is waiting rather than going silent', async () => {
+    const h = harness()
+    await h.run('__agent_ratelimit')
+    const first = h.steps.find((s) => s.type === 'waiting') as Extract<
+      AgentStep,
+      { type: 'waiting' }
+    >
+    expect(first.seconds).toBeGreaterThan(0)
+    expect(first.seconds).toBeLessThanOrEqual(MAX_RETRY_WAIT_S)
+    expect(first.attempt).toBe(1)
+    expect(first.of).toBe(RETRY_ON_RATE_LIMIT)
+  })
+
+  it('does NOT retry a refusal or a bad key — asking again cannot change those', async () => {
+    const h = harness()
+    await h.run('__agent_prose')
+    expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(0)
+  })
+
+  it('stops waiting when the user aborts', async () => {
+    const h = harness()
+    const controller = new AbortController()
+    const out = await h.run('__agent_ratelimit', {
+      signal: controller.signal,
+      sleepFn: async () => {
+        controller.abort()
+        return false
+      },
+    })
+    expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(1)
+    expect(out.stoppedBy).toBe('error')
+  })
+})
+
+/**
+ * Measured 24 Aug 2026: two live requests were killed by the DEFAULT FETCH
+ * DISPATCHER'S 5-minute headersTimeout mid-generation and surfaced as
+ * `unavailable` — a transport failure, not a verdict on the request. Fixed at the
+ * source in anthropic.ts (a dispatcher with a real timeout); this is the
+ * defense-in-depth half, for whatever transient transport failure gets through.
+ */
+describe('a transient transport failure is retried too', () => {
+  function stubUnavailableThenOk(failures: number) {
+    const provider = createMockProvider()
+    let calls = 0
+    return vi.fn(async (_url: string, init: RequestInit) => {
+      calls++
+      if (calls <= failures) {
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({ code: 'unavailable', message: 'the model is unavailable' }),
+        } as Response
+      }
+      const { history } = JSON.parse(String(init.body)) as { history: never }
+      const res = await provider.converse!({ systemPrompt: 'x', history, tools: [], maxOutputTokens: 100 })
+      if (!res.ok) throw new Error('unexpected: mock provider itself failed')
+      return { ok: true, status: 200, json: async () => ({ parts: res.parts }) } as Response
+    })
+  }
+
+  it('recovers from a transport failure that clears within the retry budget', async () => {
+    vi.stubGlobal('fetch', stubUnavailableThenOk(1))
+    const h = harness()
+    const out = await h.run('__agent_prose')
+    expect(out.stoppedBy).not.toBe('error')
+    expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(1)
+  })
+
+  it('still gives up once RETRY_ON_RATE_LIMIT is exhausted', async () => {
+    vi.stubGlobal('fetch', stubUnavailableThenOk(RETRY_ON_RATE_LIMIT + 5))
+    const h = harness()
+    const out = await h.run('__agent_prose')
+    expect(out.stoppedBy).toBe('error')
+    expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(RETRY_ON_RATE_LIMIT)
+  })
+
+  it('does NOT retry a refusal or a bad key — those are not transient', async () => {
+    // Neither becomes true by asking again, and retrying would spend the user's
+    // quota to arrive at the same rejection more slowly.
+    for (const code of ['refused', 'bad_key']) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: false,
+          status: 422,
+          json: async () => ({ code, message: 'no' }),
+        })) as unknown as typeof fetch,
+      )
+      const h = harness()
+      const out = await h.run('__agent_prose', {
+        sleepFn: async () => {
+          throw new Error(`must not sleep for a non-retryable failure (${code})`)
+        },
+      })
+      expect(out.stoppedBy).toBe('error')
+      expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(0)
+    }
   })
 })
 
@@ -292,5 +408,20 @@ describe('bring your own key', () => {
     await harness().run('__agent_prose')
     const without = (spy.mock.calls[0]![1] as RequestInit).headers as Record<string, string>
     expect(without['x-api-key']).toBeUndefined()
+  })
+})
+
+/**
+ * G2 drew a complete butterfly, used every step, and reported "122 pixels
+ * changed · Finished." outcome.ts only names the cap when nothing changed, so a
+ * truncated session that DID draw described itself as a finished one.
+ */
+describe('a session cut off by the step limit says so', () => {
+  it('does not call a truncated session "Finished."', async () => {
+    const h = harness()
+    const out = await h.run('__agent_runaway keep going forever')
+    expect(out.stoppedBy).toBe('cap')
+    expect(out.summary).not.toBe('Finished.')
+    expect(out.summary).toMatch(/ran out of steps/i)
   })
 })

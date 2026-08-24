@@ -1,0 +1,18 @@
+{
+  "id": "C1",
+  "axis": "colour",
+  "instruction": "Change the body from blue to purple.",
+  "failsIf": "recolours wing or belly too, or enumerates pixels",
+  "ok": false,
+  "summary": "256 pixels changed\n\nRecoloured the bird's body from blue to purple by changing palette entry 2 (#41a6f6 → #a855f7), which updated every body pixel at once; the wing, belly, beak, eye and outline were left exactly as they were, so the darker wing shade is still blue.\n\n0\nadded\n0\nchanged\n0\ncleared\nUndo all\nDone",
+  "steps": [],
+  "turns": 8,
+  "latencyMs": 364107,
+  "confirms": 0,
+  "changed": 0,
+  "disturbed": 0,
+  "paletteBefore": 7,
+  "paletteAfter": 7,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"starter-bird\",\n  \"name\": \"bird\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#1a1a2e\",\n      \"n\": \"outline\"\n    },\n    {\n      \"c\": \"#41a6f6\",\n      \"n\": \"body\"\n    },\n    {\n      \"c\": \"#2a6fb0\",\n      \"n\": \"wing\"\n    },\n    {\n      \"c\": \"#e8f4fc\",\n      \"n\": \"belly\"\n    },\n    {\n      \"c\": \"#f2a65a\",\n      \"n\": \"beak\"\n    },\n    {\n      \"c\": \"#ffffff\",\n      \"n\": \"eye\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \".........1111...\",\n            \"........122221..\",\n            \".......12261211.\",\n            \"....111122222551\",\n            \"...122222222251.\",\n            \"..122222222221..\",\n            \"..12233332221...\",\n            \"..12333333441...\",\n            \"...123333441....\",\n            \"....1224441.....\",\n            \".....151151.....\",\n            \"....15511551....\",\n            \".....11..11.....\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-12T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-12T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"starter-bird\",\n  \"name\": \"bird\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#1a1a2e\",\n      \"n\": \"outline\"\n    },\n    {\n      \"c\": \"#a855f7\",\n      \"n\": \"body\"\n    },\n    {\n      \"c\": \"#2a6fb0\",\n      \"n\": \"wing\"\n    },\n    {\n      \"c\": \"#e8f4fc\",\n      \"n\": \"belly\"\n    },\n    {\n      \"c\": \"#f2a65a\",\n      \"n\": \"beak\"\n    },\n    {\n      \"c\": \"#ffffff\",\n      \"n\": \"eye\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \".........1111...\",\n            \"........122221..\",\n            \".......12261211.\",\n            \"....111122222551\",\n            \"...122222222251.\",\n            \"..122222222221..\",\n            \"..12233332221...\",\n            \"..12333333441...\",\n            \"...123333441....\",\n            \"....1224441.....\",\n            \".....151151.....\",\n            \"....15511551....\",\n            \".....11..11.....\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-12T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T12:45:06.517Z\"\n  }\n}"
+}

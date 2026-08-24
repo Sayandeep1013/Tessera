@@ -1,0 +1,18 @@
+{
+  "id": "S2",
+  "axis": "synthesis",
+  "instruction": "Draw a smiling yellow sun with rays.",
+  "failsIf": "no disc, or rays read as noise",
+  "ok": true,
+  "summary": "92 pixels changed\n\nDrew a smiling yellow sun on the blank 16x16 canvas: a round 8-pixel disc with brown eyes and a curved smile, eight symmetrical rays (four cardinal, four diagonal reaching the canvas corners), and simple top-left lighting using a pale-yellow rim highlight and an orange rim shadow.\n\n92\nadded\n0\nchanged\n0\ncleared\n+4 colours\nUndo all\nDone",
+  "steps": [],
+  "turns": 12,
+  "latencyMs": 478075,
+  "confirms": 0,
+  "changed": 92,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 5,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#ffcc29\",\n      \"n\": \"sun yellow\"\n    },\n    {\n      \"c\": \"#ffe98a\",\n      \"n\": \"sun light\"\n    },\n    {\n      \"c\": \"#e08a12\",\n      \"n\": \"sun shadow\"\n    },\n    {\n      \"c\": \"#6b3a12\",\n      \"n\": \"face brown\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"1......11......1\",\n            \".1.....11.....1.\",\n            \"..1....11....1..\",\n            \"...1........1...\",\n            \"......2211......\",\n            \".....221111.....\",\n            \"....22411411....\",\n            \"111.21111111.111\",\n            \"111.14111143.111\",\n            \"....11444433....\",\n            \".....111133.....\",\n            \"......1133......\",\n            \"...1........1...\",\n            \"..1....11....1..\",\n            \".1.....11.....1.\",\n            \"1......11......1\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T13:46:04.115Z\"\n  }\n}"
+}

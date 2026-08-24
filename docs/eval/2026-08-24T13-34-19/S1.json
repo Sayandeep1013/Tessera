@@ -1,0 +1,18 @@
+{
+  "id": "S1",
+  "axis": "synthesis",
+  "instruction": "Draw a red heart in the middle.",
+  "failsIf": "not recognisable, not centred, asymmetric halves",
+  "ok": true,
+  "summary": "66 pixels changed\n\nDrew a red heart centred on the 16x16 canvas, with a dark red outline, a pink highlight on the upper-left lobe and a deeper red shadow along the lower-right edge.\n\n66\nadded\n0\nchanged\n0\ncleared\n+4 colours\nUndo all\nDone",
+  "steps": [],
+  "turns": 9,
+  "latencyMs": 220652,
+  "confirms": 0,
+  "changed": 66,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 5,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#6e1020\",\n      \"n\": \"heart outline\"\n    },\n    {\n      \"c\": \"#e02236\",\n      \"n\": \"heart red\"\n    },\n    {\n      \"c\": \"#ff7a8a\",\n      \"n\": \"heart highlight\"\n    },\n    {\n      \"c\": \"#a81730\",\n      \"n\": \"heart shadow\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"....111..111....\",\n            \"...1232112241...\",\n            \"...1332222241...\",\n            \"...1322222241...\",\n            \"...1222222441...\",\n            \"....12222441....\",\n            \".....122441.....\",\n            \"......1241......\",\n            \".......11.......\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T13:38:02.879Z\"\n  }\n}"
+}

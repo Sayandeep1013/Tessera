@@ -1,0 +1,18 @@
+{
+  "id": "J3",
+  "axis": "judgement",
+  "instruction": "Draw a line from (0,0) to (40,40).",
+  "failsIf": "burns the budget retrying a rejected call",
+  "ok": true,
+  "summary": "16 pixels changed\n\nAdded a dark ink colour to the palette and drew a one-pixel diagonal line from (0,0) to (15,15); the requested endpoint (40,40) lies outside this 16×16 canvas, so the line stops at the bottom-right corner pixel.\n\n16\nadded\n0\nchanged\n0\ncleared\n+1 colour\nUndo all\nDone",
+  "steps": [],
+  "turns": 5,
+  "latencyMs": 26977,
+  "confirms": 0,
+  "changed": 16,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 3,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#222222\",\n      \"n\": \"ink\"\n    },\n    {\n      \"c\": \"#222222\",\n      \"n\": \"ink\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"1...............\",\n            \".1..............\",\n            \"..1.............\",\n            \"...1............\",\n            \"....1...........\",\n            \".....1..........\",\n            \"......1.........\",\n            \".......1........\",\n            \"........1.......\",\n            \".........1......\",\n            \"..........1.....\",\n            \"...........1....\",\n            \"............1...\",\n            \".............1..\",\n            \"..............1.\",\n            \"...............1\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T13:24:45.079Z\"\n  }\n}"
+}

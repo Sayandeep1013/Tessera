@@ -460,7 +460,24 @@ Share, built but switched off: **[`DEFERRED.md`](./DEFERRED.md)**.
 comments, feeds. `SPEC.md §0` puts them out permanently and the user confirmed
 it on 12 Aug 2026.
 
-### #23 — AI edit quality (Phase 6, deferred)
+### #23 — AI edit quality — **RESOLVED 24 Aug 2026, unit I. Do not treat the section below as current.**
+
+The section below is kept for its history, not its verdict. Its *reasoning* was sound; its
+*premise* was not — "the remaining gap is model capability, not engineering" was reached against
+`gemini-3.1-flash-lite` on a free tier at 5 requests/minute, because that was the only model this
+project could reach at the time. The user supplied a key for **`claude-opus-5`** and asked, in
+their own words, for the AI to be made better and for its edge cases to be tested and rated until
+they pass at 9. That is unit I — `UNITS.md`, `docs/specs/18-provider-byok.md`,
+`docs/specs/19-ai-quality-eval.md`, and the final scoreboard in `PHASE-0-FINDINGS.md §2`.
+
+**The measured result: 14 of 15 scenarios ≥ 9, ten of them a clean 10.** Pixel-art craft was never
+the bottleneck. Twelve real engineering defects were — most pre-existing, all now fixed, full
+account in `PHASE-0-FINDINGS.md §2.3`. The fifteenth scenario (dual highlight-and-shadow shading
+on 32×32) did not finish inside the eval harness's wait window across three attempts, the last of
+which ran with zero errors and genuinely excellent in-progress art; `PHASE-0-FINDINGS.md §2.2` is
+explicit that this is a harness-patience limit, not a product defect.
+
+### #23 — the original finding, kept for reference (Phase 6, deferred)
 
 Phase 0 failed its gate **0/9** and the user rejected every output. Re-tested last session after the
 agent loop landed and at 32×32 (the top-ranked hypothesis): `"give the face a hat"` produced a

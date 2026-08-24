@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Free tries and bring-your-own-key. See docs/specs/12-agent-actions.md §9.
+ * Free tries and bring-your-own-key. See docs/specs/12-agent-actions.md §9 and
+ * 18-provider-byok.md §4.3.
  *
  * The deployment shares one free-tier project across every visitor, and the
  * binding limit is 5 requests per minute for the whole project. Two free sessions
@@ -16,12 +17,66 @@
  * not sent anywhere else, and not persisted server-side.
  */
 
+import type { ClientProfile, ClientProviderConfig } from '../ai/provider/config'
+
 export const FREE_SESSIONS = 2
 
 const KEY_STORE = 'tessera-api-key'
 const COUNT_STORE = 'tessera-free-sessions'
 
-export const GET_KEY_URL = 'https://aistudio.google.com/apikey'
+/** What the user picked, alongside the key it belongs to. §4.3. */
+export type ByokConfig = {
+  providerId: 'gemini' | 'anthropic'
+  apiKey: string
+  baseUrl?: string
+  model?: string
+  profile?: ClientProfile
+}
+
+export type ProviderChoice = {
+  id: 'gemini' | 'anthropic'
+  label: string
+  /** Shown in the key field so the user can tell they pasted the right thing. */
+  placeholder: string
+  getKeyUrl: string
+  baseUrl?: string
+  profile?: ClientProfile
+  /** Copy for the compatibility notice, when one applies. §7.3. */
+  note?: string
+}
+
+/**
+ * The presets the dialog offers. AgentRouter carries the one shim in this codebase
+ * that misrepresents what the client is, so it says so in the interface rather than
+ * only in the spec — same standard as the credential promise next to it.
+ */
+export const PROVIDERS: Record<string, ProviderChoice> = {
+  gemini: {
+    id: 'gemini',
+    label: 'Gemini · free',
+    placeholder: 'AIza…',
+    getKeyUrl: 'https://aistudio.google.com/apikey',
+  },
+  anthropic: {
+    id: 'anthropic',
+    label: 'Claude · Anthropic',
+    placeholder: 'sk-ant-…',
+    getKeyUrl: 'https://console.anthropic.com/settings/keys',
+    baseUrl: 'https://api.anthropic.com',
+    profile: 'standard',
+  },
+  agentrouter: {
+    id: 'anthropic',
+    label: 'Claude · AgentRouter',
+    placeholder: 'sk-…',
+    getKeyUrl: 'https://agentrouter.org',
+    baseUrl: 'https://agentrouter.org',
+    profile: 'claude-code',
+    note: 'AgentRouter only answers clients it recognises, so Tessera identifies itself as Claude Code when talking to it. Your key, your account, your call — leave this off for any other provider.',
+  },
+}
+
+export const GET_KEY_URL = PROVIDERS.gemini!.getKeyUrl
 
 /** Every read is guarded: localStorage throws in private mode on some browsers. */
 function read(name: string): string | null {
@@ -41,15 +96,50 @@ function write(name: string, value: string): void {
   }
 }
 
-export function getApiKey(): string | null {
-  const k = read(KEY_STORE)?.trim()
-  return k ? k : null
+/**
+ * Reads the stored config, migrating the pre-spec-18 shape.
+ *
+ * Before this unit the slot held a bare key string, which was always a Gemini key.
+ * Anyone who saved one must not have it silently invalidated by an upgrade — the
+ * same instinct hard rule 7 applies to artwork, applied to a credential.
+ */
+export function getConfig(): ByokConfig | null {
+  const raw = read(KEY_STORE)?.trim()
+  if (!raw) return null
+
+  if (!raw.startsWith('{')) return { providerId: 'gemini', apiKey: raw }
+
+  try {
+    const o = JSON.parse(raw) as Partial<ByokConfig>
+    if (!o || typeof o.apiKey !== 'string' || !o.apiKey.trim()) return null
+    return {
+      providerId: o.providerId === 'anthropic' ? 'anthropic' : 'gemini',
+      apiKey: o.apiKey.trim(),
+      ...(o.baseUrl ? { baseUrl: o.baseUrl } : {}),
+      ...(o.model ? { model: o.model } : {}),
+      ...(o.profile === 'claude-code' ? { profile: 'claude-code' as ClientProfile } : {}),
+    }
+  } catch {
+    // Corrupt JSON is not a key. Treating it as one sends garbage upstream and
+    // reports a confusing 401.
+    return null
+  }
 }
 
+export function setConfig(cfg: ByokConfig): void {
+  if (!cfg.apiKey.trim()) return clearApiKey()
+  write(KEY_STORE, JSON.stringify({ ...cfg, apiKey: cfg.apiKey.trim() }))
+}
+
+export function getApiKey(): string | null {
+  return getConfig()?.apiKey ?? null
+}
+
+/** Kept for the legacy call path: a bare key is a Gemini key. */
 export function setApiKey(key: string): void {
   const trimmed = key.trim()
   if (!trimmed) return clearApiKey()
-  write(KEY_STORE, trimmed)
+  setConfig({ providerId: 'gemini', apiKey: trimmed })
 }
 
 export function clearApiKey(): void {
@@ -64,6 +154,16 @@ export function clearApiKey(): void {
 export function maskApiKey(key: string): string {
   if (key.length <= 8) return '••••'
   return `${key.slice(0, 4)}${'•'.repeat(8)}${key.slice(-4)}`
+}
+
+/** The wire shape the route validates — never includes the key itself. */
+export function toWireProvider(cfg: ByokConfig): ClientProviderConfig {
+  return {
+    id: cfg.providerId,
+    ...(cfg.baseUrl ? { baseUrl: cfg.baseUrl } : {}),
+    ...(cfg.model ? { model: cfg.model } : {}),
+    ...(cfg.profile ? { profile: cfg.profile } : {}),
+  }
 }
 
 export function freeSessionsUsed(): number {
@@ -81,8 +181,8 @@ export function recordFreeSession(): void {
 }
 
 export type AgentAccess =
-  | { allowed: true; apiKey: string; usingOwnKey: true }
-  | { allowed: true; apiKey: undefined; usingOwnKey: false; freeLeft: number }
+  | { allowed: true; apiKey: string; config: ClientProviderConfig; usingOwnKey: true }
+  | { allowed: true; apiKey: undefined; config: undefined; usingOwnKey: false; freeLeft: number }
   | { allowed: false; reason: 'needs-key' }
 
 /**
@@ -90,10 +190,12 @@ export type AgentAccess =
  * first — having supplied one, they should never be told they are out of tries.
  */
 export function checkAccess(): AgentAccess {
-  const key = getApiKey()
-  if (key) return { allowed: true, apiKey: key, usingOwnKey: true }
+  const cfg = getConfig()
+  if (cfg) {
+    return { allowed: true, apiKey: cfg.apiKey, config: toWireProvider(cfg), usingOwnKey: true }
+  }
 
   const left = freeSessionsLeft()
   if (left <= 0) return { allowed: false, reason: 'needs-key' }
-  return { allowed: true, apiKey: undefined, usingOwnKey: false, freeLeft: left }
+  return { allowed: true, apiKey: undefined, config: undefined, usingOwnKey: false, freeLeft: left }
 }

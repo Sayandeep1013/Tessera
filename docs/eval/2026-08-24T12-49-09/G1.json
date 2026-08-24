@@ -1,0 +1,18 @@
+{
+  "id": "G1",
+  "axis": "geometry",
+  "instruction": "Draw a 1-pixel border around the entire canvas edge.",
+  "failsIf": "a gap, a doubled corner, or inset by one",
+  "ok": true,
+  "summary": "60 pixels changed\n\nAdded a dark ink colour (#2b2b3a) to the empty palette and drew a closed 1-pixel border around all four edges of the 16x16 canvas, leaving the interior untouched.\n\n60\nadded\n0\nchanged\n0\ncleared\n+1 colour\nUndo all\nDone",
+  "steps": [],
+  "turns": 6,
+  "latencyMs": 32582,
+  "confirms": 0,
+  "changed": 60,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 3,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#2b2b3a\",\n      \"n\": \"ink\"\n    },\n    {\n      \"c\": \"#2b2b3a\",\n      \"n\": \"ink\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"1111111111111111\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1..............1\",\n            \"1111111111111111\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T12:55:49.555Z\"\n  }\n}"
+}

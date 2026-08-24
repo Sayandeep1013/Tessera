@@ -20,7 +20,7 @@ import { fitViewport, stepScale } from '@/lib/editor/viewport'
 // one guard for "is the user typing", not one per handler.
 import { isTyping } from '@/lib/editor/keys'
 import { NOTICE_MS } from '@/lib/editor/paste'
-import { serializeDoc } from '@/lib/artwork-core/codec'
+import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
 
 export default function EditorPage() {
   const doc = useDocStore((s) => s.doc)
@@ -147,6 +147,28 @@ export default function EditorPage() {
         return d ? serializeDoc(d) : null
       },
       viewport: () => useEditorStore.getState().viewport,
+      /**
+       * Unit I: the AI quality harness (tools/eval-ai.ts) has to put a KNOWN
+       * document in front of the agent before every scenario, or a rating
+       * measures the starting artwork as much as the model.
+       *
+       * This is File > Open, not a mutation — `setDoc`, exactly as Chrome.tsx
+       * does at the same job, for the reason recorded there. Dev-only like the
+       * rest of this hook, and pinned out of the production bundle by the same
+       * test.
+       */
+      open: (json: string) => {
+        let raw: unknown
+        try {
+          raw = JSON.parse(json)
+        } catch {
+          return false
+        }
+        const parsed = parseDoc(raw)
+        if (!parsed.ok) return false
+        useDocStore.getState().setDoc(parsed.value)
+        return true
+      },
     }
     return () => {
       delete w.__tessera

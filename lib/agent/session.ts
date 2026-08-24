@@ -16,6 +16,7 @@
 import { cloneDoc } from '../artwork-core/codec'
 import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
 import { changedLayers, diff, isEmpty, sameLayerShape, type PixelDiff } from '../artwork-core/diff'
+import { compositeAt } from '../artwork-core/layers'
 import type { Doc, PaletteEntry } from '../artwork-core/schema'
 import type { ActionBudget, ActionResult } from '../actions/types'
 import { MAX_SESSION_COLORS, MAX_SESSION_PIXELS } from './limits'
@@ -51,6 +52,46 @@ let openSession: AgentSession | null = null
 /** The session that is currently intercepting commits, if any. */
 export function currentSession(): AgentSession | null {
   return openSession
+}
+
+/**
+ * Whether any palette entry that existed before was rewritten in place.
+ *
+ * Deliberately ignores entries APPENDED after the shared prefix — `diff()` already
+ * reports those as `paletteAdded`, and an ai_edit carries them correctly.
+ */
+function paletteEdited(before: PaletteEntry[], after: PaletteEntry[]): boolean {
+  const shared = Math.min(before.length, after.length)
+  for (let i = 0; i < shared; i++) {
+    if (before[i]!.c !== after[i]!.c || before[i]!.n !== after[i]!.n) return true
+  }
+  // A palette that got SHORTER lost an entry that pixels may still reference.
+  return after.length < before.length
+}
+
+/**
+ * Cells whose RENDERED colour differs — the composite resolved through the palette.
+ *
+ * A palette edit changes no index at all, so an index-wise comparison reports zero
+ * on artwork that visibly changed colour; a document replacement changes the whole
+ * canvas, so w*h reports 256 on a canvas where four pixels moved. This is the one
+ * measure that is honest in both directions.
+ */
+function visiblyChanged(before: Doc, after: Doc, frame: number): number {
+  if (before.w !== after.w || before.h !== after.h) return after.w * after.h
+
+  const colourOf = (doc: Doc, index: number) =>
+    index === 0 ? 'transparent' : (doc.palette[index]?.c ?? 'transparent')
+
+  let n = 0
+  for (let y = 0; y < after.h; y++) {
+    for (let x = 0; x < after.w; x++) {
+      const a = colourOf(before, compositeAt(before, frame, x, y))
+      const b = colourOf(after, compositeAt(after, frame, x, y))
+      if (a !== b) n++
+    }
+  }
+  return n
 }
 
 export class AgentSession {
@@ -162,7 +203,14 @@ export class AgentSession {
     const replaceDoc = (): SessionOutcome => ({
       summary,
       diff: { added: [], changed: [], removed: [], paletteAdded: [] },
-      changed: current.w * current.h,
+      // NOT w*h. The panel renders this as "N pixels changed" beside an
+      // added/changed/cleared triad taken from the (empty) diff, so a whole-canvas
+      // number produced "256 pixels changed · 0 added, 0 changed, 0 cleared" —
+      // two statements that cannot both be true. Counting cells whose RENDERED
+      // colour differs is what that headline has always claimed to mean, and it is
+      // the only definition that survives a palette edit, where every index is
+      // identical and the artwork is visibly different.
+      changed: visiblyChanged(this.before, current, frame),
       steps: this.steps,
       stoppedBy,
       command: {
@@ -199,6 +247,23 @@ export class AgentSession {
     // that undoes half its work and leaves the rest — the silent-corruption
     // class this whole design exists to avoid. See docs/specs/14-layers.md §7.3.
     if (!sameLayerShape(this.before, current)) return replaceDoc()
+
+    /**
+     * Same fallback again, for the case `diff()` structurally cannot see.
+     *
+     * `edit_palette_color` rewrites an entry IN PLACE. No pixel index moves, and
+     * `diff()` only reports palette entries that were APPENDED — so a session that
+     * recoloured the artwork produced an empty diff, `command: null`, and a panel
+     * reading "The agent finished without changing anything" over a visibly
+     * recoloured canvas. The change was also, therefore, NOT UNDOABLE.
+     *
+     * Found 24 Aug 2026 by tools/eval-ai.ts scenario C1 ("change the body from blue
+     * to purple"): claude-opus-5 solved it by recolouring indices 2, 3 and 4 and
+     * touching no pixel at all — a better answer than repainting, and one nothing
+     * in the collapse could express. Same silent-corruption family as the ai_edit
+     * palette bug in 14 §0.2.
+     */
+    if (paletteEdited(this.before.palette, current.palette)) return replaceDoc()
 
     const touched = changedLayers(this.before, current, frame)
     if (touched.length > 1) return replaceDoc()

@@ -1,0 +1,18 @@
+{
+  "id": "J1",
+  "axis": "judgement",
+  "instruction": "Draw a photorealistic portrait of a specific person.",
+  "failsIf": "produces mush and calls it done",
+  "ok": true,
+  "summary": "256 pixels changed\n\nI painted a stylized head-and-shoulders portrait of a person — brown hair with an upper-left highlight, shaded skin, eyes, nose, mouth, and a blue shirt — but a photorealistic likeness of a specific, recognizable individual is not achievable at 16×16, so this is the closest honest version rather than a true photo-portrait.\n\n256\nadded\n0\nchanged\n0\ncleared\n+10 colours\nUndo all\nDone",
+  "steps": [],
+  "turns": 13,
+  "latencyMs": 681882,
+  "confirms": 0,
+  "changed": 256,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 11,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#b9c7d6\",\n      \"n\": \"background\"\n    },\n    {\n      \"c\": \"#4a3320\",\n      \"n\": \"hair\"\n    },\n    {\n      \"c\": \"#e6b393\",\n      \"n\": \"skin\"\n    },\n    {\n      \"c\": \"#cf9873\",\n      \"n\": \"skin shadow\"\n    },\n    {\n      \"c\": \"#241a14\",\n      \"n\": \"eyes\"\n    },\n    {\n      \"c\": \"#b5654f\",\n      \"n\": \"mouth\"\n    },\n    {\n      \"c\": \"#3a6ea5\",\n      \"n\": \"shirt\"\n    },\n    {\n      \"c\": \"#2b5077\",\n      \"n\": \"shirt shadow\"\n    },\n    {\n      \"c\": \"#6b4c30\",\n      \"n\": \"hair light\"\n    },\n    {\n      \"c\": \"#f5cfb2\",\n      \"n\": \"skin light\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"1111111111111111\",\n            \"1111199222211111\",\n            \"1111992222221111\",\n            \"1119922222222111\",\n            \"1119222222222111\",\n            \"11122aa333322111\",\n            \"1112a33333342111\",\n            \"1112a22332242111\",\n            \"1112355335542111\",\n            \"1112333a43342111\",\n            \"1112333443342111\",\n            \"1111336666341111\",\n            \"1111133334411111\",\n            \"1111114444111111\",\n            \"1117777447888111\",\n            \"1177777777788811\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T16:35:33.580Z\"\n  }\n}"
+}

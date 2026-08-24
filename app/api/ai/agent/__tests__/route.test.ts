@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { POST } from '../route'
 import { toDeclarations } from '@/lib/actions/registry'
 import { MAX_HISTORY_BYTES, SESSIONS_PER_HOUR } from '@/lib/agent/limits'
+import { AGENT_SYSTEM_PROMPT } from '@/lib/agent/prompt'
 
 const ROOT = join(__dirname, '..', '..', '..', '..', '..')
 
@@ -152,22 +153,77 @@ describe('bundle safety', () => {
     return acc
   }
 
-  it.skipIf(!existsSafe(clientDir))('ships no API key reference to the browser', () => {
+  /**
+   * THESE GUARDS ONLY RUN AFTER A PRODUCTION BUILD, and `docs/UNITS.md` §0.2 used
+   * to run `npm test` at step 3 and `npm run build` at step 5 — so in the
+   * documented verification sequence every one of them skipped, silently, every
+   * time. A guard that reports green while checking nothing is worse than an
+   * absent one, because the absent one does not appear in a spec as enforcement.
+   * §0.2 now re-runs the suite after the build; this comment is why.
+   */
+  const built = existsSafe(clientDir)
+
+  it('says plainly when the bundle guards could not run', () => {
+    if (!built) {
+      console.warn('[bundle safety] no .next/static — run `npm run build`, then `npm test` again.')
+    }
+    expect(true).toBe(true)
+  })
+
+  it.skipIf(!built)('ships no API key reference to the browser', () => {
+    // The literal env var name reaching the client means a server module was
+    // imported from a client one. Spec 06a §7 claimed this covered every
+    // *_API_KEY; it named exactly one, and unit I added two more.
+    const names = ['GEMINI_API_KEY', 'ANTHROPIC_API_KEY', 'AGENTROUTER_API_KEY']
     const offenders: string[] = []
     for (const file of allFiles(clientDir)) {
       const text = readFileSync(file, 'utf8')
-      // The literal env var name reaching the client means a server module was
-      // imported from a client one.
-      if (text.includes('GEMINI_API_KEY')) offenders.push(file.slice(ROOT.length + 1))
+      for (const name of names) {
+        if (text.includes(name)) offenders.push(`${file.slice(ROOT.length + 1)} :: ${name}`)
+      }
+      // Anything shaped like an env-var key reference at all, so the next
+      // provider added does not need this list updated to be covered.
+      if (/process\.env\.[A-Z0-9_]*API_KEY/.test(text)) {
+        offenders.push(`${file.slice(ROOT.length + 1)} :: process.env.*API_KEY`)
+      }
     }
     expect(offenders).toEqual([])
   })
 
-  it.skipIf(!existsSafe(clientDir))('ships no agent system prompt to the browser', () => {
+  it.skipIf(!built)('ships no actual key VALUE to the browser', () => {
+    // Spec 06a §7 promised this and nothing checked it. A key can reach the
+    // bundle without its variable name coming along — inlined at build time is
+    // exactly how that happens.
+    let secrets: string[] = []
+    try {
+      secrets = readFileSync(join(ROOT, '.env.local'), 'utf8')
+        .split(/\r?\n/)
+        .map((l) => l.split('=').slice(1).join('=').trim())
+        .filter((v) => v.length >= 16 && !v.startsWith('http'))
+    } catch {
+      return // no local env file is not a failure; CI has none
+    }
+    if (!secrets.length) return
+
+    const offenders: string[] = []
+    for (const file of allFiles(clientDir)) {
+      const text = readFileSync(file, 'utf8')
+      for (const secret of secrets) {
+        // Never print the secret, only where it was found.
+        if (text.includes(secret)) offenders.push(file.slice(ROOT.length + 1))
+      }
+    }
+    expect(offenders).toEqual([])
+  })
+
+  it.skipIf(!built)('ships no agent system prompt to the browser', () => {
     // The prompt is not a secret, but it belongs to the server: if it is in the
     // bundle then the route is no longer the only thing deciding what the model
     // is told, which is the property the test above protects.
-    const marker = 'You are operating a pixel-art editor by calling functions'
+    // Taken FROM the constant rather than retyped: the literal used to be pasted
+    // here, and rewriting the prompt in unit I silently stopped it matching — a
+    // guard that checks a string nothing contains passes forever.
+    const marker = AGENT_SYSTEM_PROMPT.slice(0, 60)
     const offenders: string[] = []
     for (const file of allFiles(clientDir)) {
       if (readFileSync(file, 'utf8').includes(marker)) offenders.push(file.slice(ROOT.length + 1))
@@ -175,7 +231,7 @@ describe('bundle safety', () => {
     expect(offenders).toEqual([])
   })
 
-  it.skipIf(!existsSafe(clientDir))('ships no probe hook to the browser', () => {
+  it.skipIf(!built)('ships no probe hook to the browser', () => {
     // app/page.tsx installs window.__tessera for tools/probe-layers.ts, behind a
     // NODE_ENV guard that the production build is expected to eliminate. It is a
     // read-only view of the document rather than a way to write one, but it is

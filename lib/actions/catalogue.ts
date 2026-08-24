@@ -16,6 +16,7 @@ import {
 } from '../artwork-core/layers'
 import { MAX_PALETTE, type Doc } from '../artwork-core/schema'
 import { clampScale, fitViewport, zoomAt } from '../editor/viewport'
+import { MAX_AGENT_SUMMARY } from '../agent/limits'
 import { defineAction, fail, ok, type Action, type ActionCtx } from './types'
 
 const TOOLS = [
@@ -650,9 +651,30 @@ const finish = defineAction({
   description:
     'Call when the task is complete. Give a one-sentence, past-tense summary of what ' +
     'you changed, in plain language, including anything you could not do.',
-  input: z.object({ summary: z.string().min(1).max(200) }),
+  /**
+   * MAX_AGENT_SUMMARY, not 200, and CLAMPED rather than rejected.
+   *
+   * The cap was 200 and zod rejected anything longer. run.ts reads a failed finish
+   * as `summary = 'Finished.'` and breaks the loop regardless — so a summary one
+   * character over the limit was replaced by a single word, silently, with no way
+   * for the model to learn it had happened. Measured 24 Aug 2026: claude-opus-5
+   * writes 200-400 character summaries naturally, and eval scenarios S1 and L2 both
+   * showed a correct, finished edit described to the user as "Finished."
+   *
+   * Discarding the explanation of an edit is the same failure as discarding the
+   * edit (hard rule 7). So the schema accepts prose and the action trims it.
+   */
+  input: z.object({ summary: z.string().min(1).max(2000) }),
   kind: 'query',
-  run: ({ summary }) => ok({ summary }),
+  run: ({ summary }) => {
+    const trimmed = summary.trim()
+    return ok({
+      summary:
+        trimmed.length <= MAX_AGENT_SUMMARY
+          ? trimmed
+          : `${trimmed.slice(0, MAX_AGENT_SUMMARY - 1).trimEnd()}…`,
+    })
+  },
 })
 
 // ─────────────────────────────────────────────────────────────────────────────

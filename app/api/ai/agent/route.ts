@@ -17,6 +17,7 @@ import { AGENT_SYSTEM_PROMPT } from '@/lib/agent/prompt'
 import { MAX_HISTORY_BYTES, SESSIONS_PER_HOUR } from '@/lib/agent/limits'
 import { toDeclarations } from '@/lib/actions/registry'
 import { getProvider } from '@/lib/ai/provider'
+import { parseClientProvider, type ClientProviderConfig } from '@/lib/ai/provider/config'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -66,11 +67,29 @@ export async function POST(req: Request) {
     return fail(413, 'too_large', 'This session has grown too long. Start a new one.')
   }
 
-  let body: { sessionId?: unknown; history?: unknown }
+  let body: { sessionId?: unknown; history?: unknown; provider?: unknown }
   try {
     body = JSON.parse(raw)
   } catch {
     return fail(400, 'bad_json', 'The request was malformed.')
+  }
+
+  /**
+   * Spec 18 §4.1 — the rule the rest of the BYOK design rests on.
+   *
+   * body.provider names a host this server will make an outbound request to, and it
+   * comes from the browser. It is honoured ONLY on a request that carried the user's
+   * own key. Without this, a crafted baseUrl collects the DEPLOYMENT'S key on the
+   * first request. Structural, not a check: with no key there is no config, so there
+   * is no code path where our credential meets a URL a visitor chose.
+   */
+  let clientConfig: ClientProviderConfig | undefined
+  if (userKey && body.provider !== undefined) {
+    const parsed = parseClientProvider(body.provider)
+    if (!parsed.ok) {
+      return fail(400, parsed.error.code, parsed.error.message, { byok: true })
+    }
+    clientConfig = parsed.value
   }
 
   const sessionId = typeof body.sessionId === 'string' ? body.sessionId : ''
@@ -94,7 +113,7 @@ export async function POST(req: Request) {
     }
   }
 
-  const provider = getProvider(undefined, userKey)
+  const provider = getProvider(undefined, userKey, clientConfig)
   if (!provider.converse) {
     console.error('[ai/agent] provider %s has no converse()', provider.id)
     return fail(500, 'config', 'The AI agent is not configured for this deployment.')
@@ -104,7 +123,14 @@ export async function POST(req: Request) {
     systemPrompt: AGENT_SYSTEM_PROMPT,
     history: body.history as never,
     tools: toDeclarations() as never,
-    maxOutputTokens: 4000,
+    /**
+     * 4000 truncated on a 32x32 shading task; 16000 still truncated three of
+     * fifteen eval scenarios (docs/specs/19 §5.1). Output tokens are billed for
+     * what is generated, not for the ceiling, so a generous cap costs nothing
+     * until it is used. The adapter also salvages a truncated turn now — this is
+     * the belt, that is the braces.
+     */
+    maxOutputTokens: 32_000,
   })
 
   if (!res.ok) {
@@ -128,7 +154,22 @@ export async function POST(req: Request) {
       case 'config':
         if (userKey) {
           // Their key, their problem to fix — and the only case where we can say
-          // something specific enough to be useful.
+          // something specific enough to be useful. Spec 18 §5: the relay's
+          // client refusal gets its OWN message, because the generic one sends the
+          // user off re-typing a key that was never the problem.
+          if (res.message.startsWith('bad_client')) {
+            return fail(
+              400,
+              'bad_client',
+              'This provider only accepts requests from clients it recognises. Turn on AgentRouter compatibility in the key dialog and try again.',
+              { byok: true },
+            )
+          }
+          if (res.message.startsWith('bad_model')) {
+            return fail(400, 'bad_model', "That model isn't available on this key. Pick another.", {
+              byok: true,
+            })
+          }
           return fail(400, 'bad_key', 'That API key was rejected. Check it and try again.', {
             byok: true,
           })
@@ -144,5 +185,8 @@ export async function POST(req: Request) {
     parts: res.parts,
     model: res.model,
     latencyMs: res.latencyMs,
+    // Not a secret, and the only way the quality harness can report what a run
+    // actually cost (docs/specs/19 §4).
+    usage: res.usage,
   })
 }

@@ -9,11 +9,12 @@
  */
 
 import { AgentSession, type SessionOutcome, type StepLog } from './session'
-import { MAX_CALLS_PER_TURN, MAX_STEPS } from './limits'
+import { MAX_CALLS_PER_TURN, MAX_RETRY_WAIT_S, MAX_STEPS, RETRY_ON_RATE_LIMIT } from './limits'
 import { getAction, runAction } from '../actions/registry'
 import { FINISH } from '../actions/catalogue'
 import type { ActionCtx, ActionResult } from '../actions/types'
 import type { Doc } from '../artwork-core/schema'
+import type { ClientProviderConfig } from '../ai/provider/config'
 
 // ─── wire types ──────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ type ProxyErr = { ok: false; status: number; code: string; message: string; retr
 
 export type AgentStep =
   | { type: 'thinking'; step: number; of: number }
+  | { type: 'waiting'; seconds: number; attempt: number; of: number }
   | { type: 'action'; step: number; name: string; args: unknown; result: ActionResult }
   | { type: 'needs-confirm'; name: string; args: unknown }
   | { type: 'error'; message: string; code?: string }
@@ -43,12 +45,20 @@ export type RunOptions = {
   ctx: ActionCtx
   sessionId: string
   apiKey?: string
+  /** The user's own provider choice. Only ever sent alongside their own key — see
+   *  docs/specs/18-provider-byok.md §4.1. */
+  provider?: ClientProviderConfig
   signal?: AbortSignal
   onStep?: (s: AgentStep) => void
   /** Resolve true to run a destructive action. Rejecting is a normal outcome. */
   onConfirm?: (name: string, args: unknown) => Promise<boolean>
   /** The live document, read fresh each time — the store owns it, not us. */
   currentDoc: () => Doc | null
+  /**
+   * The rate-limit wait, injectable so tests can exercise the retry without
+   * actually sleeping for a minute. Real code never passes this.
+   */
+  sleepFn?: (ms: number, signal?: AbortSignal) => Promise<boolean>
 }
 
 export type AgentOutcome = SessionOutcome & { steps: StepLog[] }
@@ -106,7 +116,40 @@ export async function runAgent(opts: RunOptions): Promise<AgentOutcome> {
     }
     opts.onStep?.({ type: 'thinking', step, of: MAX_STEPS })
 
-    const reply = await callModel(history, opts)
+    /**
+     * A transient failure must not destroy the session.
+     *
+     * Measured 24 Aug 2026 (docs/specs/19): a single upstream 429 mid-session
+     * ended the run outright, and the user lost a half-finished drawing that the
+     * model was minutes into. The provider tells us how long to wait; not waiting
+     * is a choice we were making for no reason.
+     *
+     * Extended the same session: two live requests were killed by the transport
+     * itself (Node's default fetch dispatcher has a 5-minute headersTimeout, and a
+     * detailed drawing routinely takes longer than that to generate in one turn —
+     * see anthropic.ts). That surfaces as `unavailable`, same as a genuine 5xx or
+     * a dropped connection. It is worth one retry for the same reason a 429 is:
+     * the failure was ours, not a verdict on the request.
+     *
+     * Only these two kinds are retried. A refusal, a bad key or a malformed reply
+     * will not become true by asking again, and retrying those would just spend
+     * someone's quota to reach the same answer slower.
+     */
+    let reply = await callModel(history, opts)
+    for (let attempt = 1; attempt <= RETRY_ON_RATE_LIMIT && !reply.ok; attempt++) {
+      const isRateLimit = reply.code === 'upstream_rate_limited' || reply.code === 'rate_limited'
+      const isTransient = reply.code === 'unavailable'
+      if (!isRateLimit && !isTransient) break
+
+      // A rate limit has a real retryAfter; a dropped connection does not, so a
+      // short fixed backoff stands in rather than reusing the rate-limit default.
+      const seconds = isRateLimit ? Math.min(reply.retryAfter ?? 20, MAX_RETRY_WAIT_S) : 5
+      opts.onStep?.({ type: 'waiting', seconds, attempt, of: RETRY_ON_RATE_LIMIT })
+      const slept = await (opts.sleepFn ?? sleep)(seconds * 1000, opts.signal)
+      if (!slept) break // aborted while waiting
+      reply = await callModel(history, opts)
+    }
+
     if (!reply.ok) {
       opts.onStep?.({ type: 'error', message: reply.message, code: reply.code })
       stoppedBy = 'error'
@@ -173,9 +216,26 @@ export async function runAgent(opts: RunOptions): Promise<AgentOutcome> {
   }
 
   const endDoc = opts.currentDoc() ?? startDoc
+
+  /**
+   * A session that ran out of steps never called finish, so it has no summary —
+   * and the fallback used to be the single word "Finished."
+   *
+   * Measured 24 Aug 2026 (docs/specs/19): eval scenario G2 drew a complete,
+   * pixel-exact butterfly, used all its steps, and told the user "122 pixels
+   * changed · Finished." The headline in outcome.ts only mentions the cap when
+   * NOTHING changed, so a truncated session that did draw reported itself as a
+   * finished one. Telling someone their work is done when it was cut off is the
+   * same class of dishonesty hard rule 7 forbids for artwork.
+   */
+  const fallback =
+    stoppedBy === 'cap'
+      ? `Ran out of steps after ${MAX_STEPS} turns — this may be unfinished.`
+      : 'Finished.'
+
   return session.finalise(
     endDoc,
-    summary || 'Finished.',
+    summary || fallback,
     stoppedBy,
     opts.ctx.frame(),
     opts.ctx.layer(),
@@ -204,6 +264,22 @@ async function invoke(
   return runAction(name, args, { ...scoped, confirmed: false })
 }
 
+/** Resolves false if the wait was aborted, so the caller stops instead of retrying. */
+function sleep(ms: number, signal?: AbortSignal): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) return resolve(false)
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve(true)
+    }, ms)
+    const onAbort = () => {
+      clearTimeout(timer)
+      resolve(false)
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
+
 // ─── proxy ───────────────────────────────────────────────────────────────────
 
 async function callModel(history: Turn[], opts: RunOptions): Promise<ProxyOk | ProxyErr> {
@@ -214,7 +290,11 @@ async function callModel(history: Turn[], opts: RunOptions): Promise<ProxyOk | P
         'content-type': 'application/json',
         ...(opts.apiKey ? { 'x-api-key': opts.apiKey } : {}),
       },
-      body: JSON.stringify({ sessionId: opts.sessionId, history }),
+      body: JSON.stringify({
+        sessionId: opts.sessionId,
+        history,
+        ...(opts.provider ? { provider: opts.provider } : {}),
+      }),
       signal: opts.signal,
     })
 

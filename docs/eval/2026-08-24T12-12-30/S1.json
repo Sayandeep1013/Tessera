@@ -1,0 +1,18 @@
+{
+  "id": "S1",
+  "axis": "synthesis",
+  "instruction": "Draw a red heart in the middle.",
+  "failsIf": "not recognisable, not centred, asymmetric halves",
+  "ok": true,
+  "summary": "82 pixels changed\n\nFinished.\n\n82\nadded\n0\nchanged\n0\ncleared\n+4 colours\nUndo all\nDone",
+  "steps": [],
+  "turns": 7,
+  "latencyMs": 244807,
+  "confirms": 0,
+  "changed": 82,
+  "disturbed": 0,
+  "paletteBefore": 1,
+  "paletteAfter": 9,
+  "before": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T00:00:00.000Z\"\n  }\n}",
+  "after": "{\n  \"v\": 1,\n  \"id\": \"eval-empty-16\",\n  \"name\": \"empty 16\",\n  \"w\": 16,\n  \"h\": 16,\n  \"palette\": [\n    {\n      \"c\": \"transparent\"\n    },\n    {\n      \"c\": \"#ec5a6a\",\n      \"n\": \"red light\"\n    },\n    {\n      \"c\": \"#d92b3e\",\n      \"n\": \"red base\"\n    },\n    {\n      \"c\": \"#a81628\",\n      \"n\": \"red shadow\"\n    },\n    {\n      \"c\": \"#6d0d1b\",\n      \"n\": \"red outline\"\n    },\n    {\n      \"c\": \"#ec5a6a\",\n      \"n\": \"red light\"\n    },\n    {\n      \"c\": \"#d92b3e\",\n      \"n\": \"red base\"\n    },\n    {\n      \"c\": \"#a81628\",\n      \"n\": \"red shadow\"\n    },\n    {\n      \"c\": \"#6d0d1b\",\n      \"n\": \"red outline\"\n    }\n  ],\n  \"frames\": [\n    {\n      \"ms\": 100,\n      \"layers\": [\n        {\n          \"n\": \"base\",\n          \"px\": [\n            \"................\",\n            \"................\",\n            \"................\",\n            \"...444....444...\",\n            \"..42114..42234..\",\n            \"..421124422234..\",\n            \"..422223322234..\",\n            \"..422222222234..\",\n            \"...4222222234...\",\n            \"....42222234....\",\n            \".....422234.....\",\n            \"......4234......\",\n            \".......44.......\",\n            \"................\",\n            \"................\",\n            \"................\"\n          ]\n        }\n      ]\n    }\n  ],\n  \"meta\": {\n    \"createdAt\": \"2026-08-24T00:00:00.000Z\",\n    \"updatedAt\": \"2026-08-24T12:16:37.122Z\"\n  }\n}"
+}
