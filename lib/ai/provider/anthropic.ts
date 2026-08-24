@@ -384,6 +384,17 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
      */
     if (sent.json.stop_reason === 'max_tokens') {
       const blocks = Array.isArray(sent.json.content) ? [...(sent.json.content as unknown[])] : []
+      // TEMPORARY DIAGNOSTIC, added 25 Aug 2026 — a live report of every prompt
+      // failing in ~1.7s, far too fast for real generation to hit a 32,000-token
+      // ceiling. That timing means this branch is very likely firing on a
+      // response that ISN'T what it looks like, and the salvage logic below has
+      // no visibility into why. Remove once the live cause is confirmed.
+      console.error(
+        '[anthropic] stop_reason=max_tokens latencyMs=%d blockTypes=%o usage=%o',
+        sent.latencyMs,
+        blocks.map((b) => (b as { type?: string }).type),
+        sent.json.usage,
+      )
       blocks.pop()
       const parts = fromAnthropicContent(blocks)
       if (parts.some((part) => 'functionCall' in part)) {

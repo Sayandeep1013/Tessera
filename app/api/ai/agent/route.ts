@@ -150,6 +150,11 @@ export async function POST(req: Request) {
       case 'refused':
         return fail(422, 'refused', 'The model declined this request. Try rephrasing it.')
       case 'bad_response':
+        // Diagnostic only — the user-facing message stays generic. Added 25 Aug
+        // 2026 after a live report of "any prompt fails" with a 1.7s round trip,
+        // far too fast to be real generation. res.message carries the adapter's
+        // specific reason (truncated-no-salvage vs not-JSON vs no-tool-call).
+        console.error('[ai/agent] bad_response:', res.message)
         return fail(502, 'bad_response', "The model's reply couldn't be read. Nothing changed.")
       case 'config':
         if (userKey) {
