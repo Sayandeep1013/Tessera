@@ -15,6 +15,9 @@ import { MAX_BODY_BYTES, MAX_INSTRUCTION, RATE_LIMIT_PER_HOUR } from '@/lib/ai/l
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+/** Vercel Hobby's default function timeout (10s) is tighter than a real model
+ *  call needs; 60 is the plan's ceiling. See app/api/ai/agent/route.ts. */
+export const maxDuration = 60
 
 // In-memory sliding window. A demo does not need Redis; the tradeoff (resets on
 // deploy, per-instance) is acceptable and stated in the spec.

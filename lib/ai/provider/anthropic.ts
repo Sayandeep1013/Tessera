@@ -15,7 +15,6 @@
  * Bedrock), usage reported, WAF passed only with the claude-code client profile.
  */
 
-import { Agent } from 'undici'
 import type { ClientProfile } from './config'
 import { fromAnthropicContent, toAnthropicMessages, toAnthropicTools } from './translate'
 import type {
@@ -33,25 +32,31 @@ export const DEFAULT_MODEL = 'claude-opus-5'
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**
- * A dedicated dispatcher with a real timeout.
+ * A custom `undici.Agent` dispatcher WAS here, raising fetch's default 300s
+ * `headersTimeout` so a slow-generating turn didn't get its socket killed
+ * mid-response (docs/specs/19 §5.1). REMOVED 25 Aug 2026 — it broke every
+ * request in production, including a trivial single-pixel one, in ~2 seconds,
+ * with "the model returned a response that was not JSON". Reasoning for the
+ * revert, not just the symptom:
  *
- * Measured 24 Aug 2026 (docs/specs/19 §5.1): two live requests died at EXACTLY
- * 5.1 minutes with a 503, on both a 32x32 apple and a 16x16 butterfly — not a
- * canvas-size problem, a fixed wall. Node's global fetch runs on undici's default
- * dispatcher, whose `headersTimeout` and `bodyTimeout` default to 300_000ms. A
- * capable model drawing something detailed routinely runs longer than that in a
- * single turn, and the default dispatcher was killing the socket out from under a
- * perfectly healthy response before Claude finished sending it.
+ *   1. It bypasses whatever fetch implementation Vercel's Node runtime provides
+ *      by default, on the one request path in this app that talks to a relay
+ *      already known to fingerprint its callers aggressively (§3 — the
+ *      client-identity WAF). A raw custom connection stack is exactly the kind
+ *      of thing that fingerprints differently from a cloud IP than it does from
+ *      a home network, and the failure's timing (~2s, too fast to be real
+ *      generation) is consistent with a rejection at the connection layer, not
+ *      a token budget.
+ *   2. It bought nothing on Vercel regardless: this project is on Vercel's
+ *      Hobby plan, whose serverless function `maxDuration` default (10s) and
+ *      ceiling (60s) both kill the request long before a 20-minute dispatcher
+ *      timeout could ever matter. The dispatcher solved a problem that only
+ *      existed in local dev, where nothing else was imposing a shorter limit.
  *
- * Scoped to THIS module's requests only — not `setGlobalDispatcher` — so nothing
- * else in the app (the eval harness's own fetches, the models route, a future
- * provider) inherits a 20-minute timeout it never asked for.
+ * If a genuinely long generation needs to survive on Vercel, the real fix is
+ * `export const maxDuration` on the route (Hobby caps it at 60s; a paid plan
+ * raises that) plus, eventually, streaming — not a bypassed connection stack.
  */
-const dispatcher = new Agent({
-  headersTimeout: 20 * 60 * 1000,
-  bodyTimeout: 20 * 60 * 1000,
-  connectTimeout: 30 * 1000,
-})
 
 /** The tool generate() forces, so a discriminated union survives the wire (§2.2). */
 const EDIT_TOOL = 'propose_edit'
@@ -202,10 +207,7 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
         },
         body: JSON.stringify({ model: modelId, ...body }),
         signal,
-        // Node-specific fetch extension, not a spec option — this is what
-        // actually raises the 5-minute wall. See the comment on `dispatcher`.
-        dispatcher,
-      } as RequestInit & { dispatcher: Agent })
+      })
     } catch (e) {
       if (signal?.aborted) return fail('unavailable', 'the request was cancelled')
       return fail('unavailable', String((e as Error).message ?? e).slice(0, 200))

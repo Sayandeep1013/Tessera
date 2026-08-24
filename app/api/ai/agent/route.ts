@@ -21,6 +21,17 @@ import { parseClientProvider, type ClientProviderConfig } from '@/lib/ai/provide
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+/**
+ * Vercel's own function timeout, separate from anything the provider adapter
+ * does. Hobby's default is 10s and its ceiling is 60s (Pro/Enterprise go
+ * higher) — a single agent turn against a capable model routinely takes
+ * 20-90s, so the platform default alone was very likely killing a meaningful
+ * share of turns before any provider code even ran. 60 is the most this repo's
+ * plan allows; it does not fully cover a multi-minute turn, and streaming is
+ * the real fix for that if it turns out to matter (docs/specs/19 §5.1, the
+ * note on the removed undici dispatcher in lib/ai/provider/anthropic.ts).
+ */
+export const maxDuration = 60
 
 const HOUR = 3_600_000
 

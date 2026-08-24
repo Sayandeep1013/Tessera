@@ -7,7 +7,6 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Agent } from 'undici'
 import { createAnthropicProvider } from '../anthropic'
 import type { ConverseTurn } from '../types'
 
@@ -82,37 +81,12 @@ describe('request shape (§2.1)', () => {
   })
 })
 
-describe('the dispatcher (§5.1 wall)', () => {
-  /**
-   * Measured 24 Aug 2026: two live requests died at EXACTLY 5.1 minutes with a
-   * 503 — Node's default fetch dispatcher kills a socket after a 300_000ms
-   * headersTimeout, and a detailed drawing routinely takes a whole turn longer
-   * than that. Every request MUST carry a dispatcher whose timeouts exceed that
-   * wall, or this regresses silently — nothing about a short-lived mock request
-   * would ever reveal the wall coming back.
-   */
-  it('every request carries an undici Agent with a headersTimeout past the 5-minute wall', async () => {
-    const calls = mockFetch(() => ok([]))
-    await converse()
-    const dispatcher = (calls[0]!.init as unknown as { dispatcher?: Agent }).dispatcher
-    expect(dispatcher).toBeInstanceOf(Agent)
-  })
-
-  it('generate() carries the same dispatcher as converse()', async () => {
-    const calls = mockFetch(() =>
-      ok([{ type: 'tool_use', id: 'x', name: 'propose_edit', input: {} }]),
-    )
-    await provider().generate({
-      systemPrompt: 'SYS',
-      imagePngBase64: 'AAAA',
-      userText: 'go',
-      jsonSchema: { type: 'object' },
-      maxOutputTokens: 500,
-    })
-    const dispatcher = (calls[0]!.init as unknown as { dispatcher?: Agent }).dispatcher
-    expect(dispatcher).toBeInstanceOf(Agent)
-  })
-})
+/**
+ * A custom undici.Agent dispatcher lived here, and broke every live request in
+ * production in ~2s — see the comment above `THINKING_BUDGET` in anthropic.ts
+ * for the full reasoning. Removed rather than kept-but-disabled: a passing test
+ * for infrastructure that must never be reintroduced is worse than no test.
+ */
 
 describe('client identity (§3)', () => {
   it('identifies honestly by default', async () => {
