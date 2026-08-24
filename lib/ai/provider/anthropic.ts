@@ -220,6 +220,16 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
       json = JSON.parse(text) as Record<string, unknown>
     } catch {
       if (!res.ok) return mapHttpError(res.status, {}, res.headers.get('retry-after'))
+      // TEMPORARY DIAGNOSTIC, 25 Aug 2026 — see the removed-dispatcher note above.
+      // Removing the dispatcher did not fix the live "not JSON" failure, so this
+      // is the actual raw body, status and content-type, not another guess.
+      console.error(
+        '[anthropic] non-JSON 2xx body: status=%d content-type=%s bodyLen=%d body=%s',
+        res.status,
+        res.headers.get('content-type'),
+        text.length,
+        text.slice(0, 500),
+      )
       return fail('bad_response', 'the model returned a response that was not JSON')
     }
 
