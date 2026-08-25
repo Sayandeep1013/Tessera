@@ -164,6 +164,38 @@ describe('error mapping (§5)', () => {
     expect(!r.ok && r.kind).toBe('bad_response')
   })
 
+  /**
+   * Measured live, 25 Aug 2026: every request from this app's Vercel deployment
+   * to agentrouter.org got exactly this shape — a 200 with an Aliyun WAF
+   * JavaScript challenge page instead of a real API response. An IP-reputation
+   * block, not a header or key problem; §5's `bad_client` row does not cover it
+   * because that one is a 401 with a JSON body, not a 200 with HTML. Without
+   * this row the failure reported as generic bad_response ("the model's reply
+   * couldn't be read"), which sends a BYOK user off checking a key that was
+   * never the problem.
+   */
+  it('maps a 200 HTML page to config/bad_waf, not bad_response', async () => {
+    mockFetch(() => ({
+      status: 200,
+      body: '<!doctype html>\n<meta name="aliyun_waf_aa" content="…">\n<title></title>',
+      headers: { 'content-type': 'text/html; charset=utf-8' },
+    }))
+    const r = await converse()
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.kind).toBe('config')
+    expect(!r.ok && r.message).toMatch(/^bad_waf/)
+  })
+
+  it('does not misclassify a genuinely non-JSON, non-HTML 200 as bad_waf', async () => {
+    mockFetch(() => ({
+      status: 200,
+      body: 'not json and not html either',
+      headers: { 'content-type': 'text/plain' },
+    }))
+    const r = await converse()
+    expect(!r.ok && r.kind).toBe('bad_response')
+  })
+
   it('never throws on a network failure', async () => {
     vi.stubGlobal('fetch', async () => {
       throw new Error('ECONNREFUSED')

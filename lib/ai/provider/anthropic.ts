@@ -220,16 +220,31 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
       json = JSON.parse(text) as Record<string, unknown>
     } catch {
       if (!res.ok) return mapHttpError(res.status, {}, res.headers.get('retry-after'))
-      // TEMPORARY DIAGNOSTIC, 25 Aug 2026 — see the removed-dispatcher note above.
-      // Removing the dispatcher did not fix the live "not JSON" failure, so this
-      // is the actual raw body, status and content-type, not another guess.
-      console.error(
-        '[anthropic] non-JSON 2xx body: status=%d content-type=%s bodyLen=%d body=%s',
-        res.status,
-        res.headers.get('content-type'),
-        text.length,
-        text.slice(0, 500),
-      )
+      /**
+       * A THIRD WAF shape, distinct from both rows already in the §5 table.
+       *
+       * Measured 25 Aug 2026: every request from this app's Vercel deployment to
+       * agentrouter.org got a 200 with an Aliyun WAF JavaScript challenge page
+       * (`<meta name="aliyun_waf_aa"…`) instead of a real API response — not the
+       * `unauthorized_client_error` JSON body §5 already handles (that one is a
+       * header check and the claude-code profile satisfies it), a SEPARATE,
+       * IP-reputation-based block that happens before headers are even read. No
+       * header combination defeats it; it is blocking the network Tessera's
+       * server runs on, not anything about the request. claude-cli identity
+       * headers ARE present and correct in this exact failure — confirmed by
+       * reading the request this adapter actually sent, not by assumption.
+       *
+       * Detected narrowly (HTML content-type on an unparseable 2xx) so a
+       * genuinely malformed-but-real API response still falls through to the
+       * generic bad_response below rather than being misreported.
+       */
+      const contentType = res.headers.get('content-type') ?? ''
+      if (contentType.includes('html')) {
+        return fail(
+          'config',
+          "bad_waf: this relay is blocking requests from this server's network, not from your key or your request",
+        )
+      }
       return fail('bad_response', 'the model returned a response that was not JSON')
     }
 

@@ -116,6 +116,46 @@ describe('rate limiting counts sessions, not calls', () => {
   })
 })
 
+/**
+ * Measured live, 25 Aug 2026: agentrouter.org, fronted by an Aliyun WAF, blocked
+ * every request from this app's Vercel deployment with a 200 HTML challenge page
+ * — independent of the key, the headers or the request content. Without its own
+ * mapping this reported as generic "the model's reply couldn't be read", which
+ * sends a BYOK user off re-checking a key that was never the problem. This test
+ * goes through the REAL anthropic adapter (a BYOK anthropic provider config,
+ * not AI_PROVIDER=mock) with fetch stubbed to the exact shape that was measured.
+ */
+describe('a WAF-blocked relay gets its own message (§5 bad_waf)', () => {
+  it('tells the user it is the network, not their key', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: (h: string) => (h === 'content-type' ? 'text/html; charset=utf-8' : null) },
+        text: async () => '<!doctype html>\n<meta name="aliyun_waf_aa" content="…">',
+      })) as unknown as typeof fetch,
+    )
+
+    const res = await POST(
+      req(
+        {
+          sessionId: freshSession(),
+          history: HISTORY,
+          provider: { id: 'anthropic', baseUrl: 'https://agentrouter.org', profile: 'claude-code' },
+        },
+        { 'x-api-key': 'sk-test-key' },
+      ),
+    )
+
+    expect(res.status).toBe(502)
+    const body = await res.json()
+    expect(body.code).toBe('bad_waf')
+    expect(body.message).toMatch(/blocking requests from Tessera's server/)
+    expect(body.byok).toBe(true)
+  })
+})
+
 describe('a user key is used and discarded', () => {
   it('never appears in the response', async () => {
     const key = 'AIzaSyTESTKEYVALUE123'
