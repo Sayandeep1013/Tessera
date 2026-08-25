@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { runAgent, type AgentStep } from '../run'
-import { MAX_CALLS_PER_TURN, MAX_RETRY_WAIT_S, MAX_STEPS, RETRY_ON_RATE_LIMIT } from '../limits'
+import {
+  MAX_CALLS_PER_TURN,
+  MAX_RETRY_WAIT_S,
+  MAX_STEPS,
+  RETRY_ON_RATE_LIMIT,
+  RETRY_ON_THINKING_EXHAUSTED,
+} from '../limits'
 import { createMockProvider } from '../../ai/provider/mock'
 import { loadStarter } from '../../artwork-core/create'
 import { clampLayer } from '../../artwork-core/layers'
@@ -304,6 +310,91 @@ describe('a transient transport failure is retried too', () => {
       expect(out.stoppedBy).toBe('error')
       expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(0)
     }
+  })
+})
+
+/**
+ * Measured live, 25 Aug 2026 (docs/UNITS.md §I.3): "draw a green frog, sitting,
+ * side view" burned its entire turn budget on thinking 3 times running, and also
+ * succeeded once on the identical prompt — real but not deterministic, which is
+ * why one retry is worth it. Its own counter, its own much smaller cap: unlike a
+ * rate-limit wait, every retry here is a full-price 32k-output-token attempt.
+ */
+describe('a thinking-exhausted turn is retried once, not at the rate-limit budget', () => {
+  function stubThinkingExhaustedThenOk(failures: number) {
+    const provider = createMockProvider()
+    let calls = 0
+    return vi.fn(async (_url: string, init: RequestInit) => {
+      calls++
+      if (calls <= failures) {
+        return {
+          ok: false,
+          status: 502,
+          json: async () => ({
+            code: 'thinking_exhausted',
+            message: "the model spent its whole turn thinking and didn't get to drawing",
+          }),
+        } as Response
+      }
+      const { history } = JSON.parse(String(init.body)) as { history: never }
+      const res = await provider.converse!({ systemPrompt: 'x', history, tools: [], maxOutputTokens: 100 })
+      if (!res.ok) throw new Error('unexpected: mock provider itself failed')
+      return { ok: true, status: 200, json: async () => ({ parts: res.parts }) } as Response
+    })
+  }
+
+  it('recovers when the retry succeeds', async () => {
+    vi.stubGlobal('fetch', stubThinkingExhaustedThenOk(1))
+    const h = harness()
+    const out = await h.run('__agent_prose')
+    expect(out.stoppedBy).not.toBe('error')
+    const retries = h.steps.filter((s) => s.type === 'retrying')
+    expect(retries).toHaveLength(1)
+    expect((retries[0] as { reason: string }).reason).toBe('thinking_exhausted')
+  })
+
+  it('gives up after RETRY_ON_THINKING_EXHAUSTED (1), not RETRY_ON_RATE_LIMIT (3)', async () => {
+    vi.stubGlobal('fetch', stubThinkingExhaustedThenOk(RETRY_ON_RATE_LIMIT))
+    const h = harness()
+    const out = await h.run('__agent_prose')
+    expect(out.stoppedBy).toBe('error')
+    expect(h.steps.filter((s) => s.type === 'retrying')).toHaveLength(RETRY_ON_THINKING_EXHAUSTED)
+  })
+
+  it('does not reuse or share a counter with the rate-limit retry budget', async () => {
+    // Interleave both failure kinds in one turn's retry sequence and confirm
+    // each is tracked and capped independently.
+    const provider = createMockProvider()
+    let calls = 0
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        calls++
+        if (calls === 1) {
+          return {
+            ok: false,
+            status: 429,
+            json: async () => ({ code: 'upstream_rate_limited', message: 'busy', retryAfter: 1 }),
+          } as Response
+        }
+        if (calls === 2) {
+          return {
+            ok: false,
+            status: 502,
+            json: async () => ({ code: 'thinking_exhausted', message: 'thinking_exhausted: no' }),
+          } as Response
+        }
+        const { history } = JSON.parse(String(init.body)) as { history: never }
+        const res = await provider.converse!({ systemPrompt: 'x', history, tools: [], maxOutputTokens: 100 })
+        if (!res.ok) throw new Error('unexpected')
+        return { ok: true, status: 200, json: async () => ({ parts: res.parts }) } as Response
+      }) as unknown as typeof fetch,
+    )
+    const h = harness()
+    const out = await h.run('__agent_prose')
+    expect(out.stoppedBy).not.toBe('error')
+    expect(h.steps.filter((s) => s.type === 'waiting')).toHaveLength(1)
+    expect(h.steps.filter((s) => s.type === 'retrying')).toHaveLength(1)
   })
 })
 

@@ -248,6 +248,41 @@ describe('stop reasons — checked before touching content (§5)', () => {
     expect(!r.ok && r.kind).toBe('bad_response')
   })
 
+  /**
+   * Measured live, 25 Aug 2026 (docs/UNITS.md §I.3): "draw a green frog, sitting,
+   * side view" burned the entire 32,000-output-token budget on a single
+   * `thinking` block, 3 times running, with nothing else in the content array —
+   * not the truncated-tool-call case above, which converse() already salvages.
+   * Tagged distinctly so the runner can retry it (lib/agent/run.ts), at a much
+   * smaller cap than a rate-limit retry: this one is full price every time.
+   */
+  it('tags an all-thinking, nothing-to-act-on truncation as thinking_exhausted', async () => {
+    mockFetch(() => ({
+      status: 200,
+      body: {
+        model: 'claude-opus-5',
+        stop_reason: 'max_tokens',
+        content: [{ type: 'thinking', thinking: '...' }],
+        usage: { input_tokens: 2, output_tokens: 32000 },
+      },
+    }))
+    const r = await converse()
+    expect(r.ok).toBe(false)
+    expect(!r.ok && r.kind).toBe('bad_response')
+    expect(!r.ok && r.message).toMatch(/^thinking_exhausted/)
+  })
+
+  it('does NOT tag a truncation that genuinely has no tool call for another reason', async () => {
+    mockFetch(() => ({
+      status: 200,
+      body: { model: 'm', stop_reason: 'max_tokens', content: [{ type: 'text', text: 'partial' }] },
+    }))
+    const r = await converse()
+    // Still bad_response — the tag is specifically for the all-thinking shape,
+    // not a blanket label for every unsalvageable truncation.
+    expect(!r.ok && r.message).not.toMatch(/^thinking_exhausted/)
+  })
+
   it('maps a refusal WITHOUT indexing into content', async () => {
     // A refusal carries no content block; reading one is the bug 06a §3 records
     // for Gemini, restated here for the same reason.

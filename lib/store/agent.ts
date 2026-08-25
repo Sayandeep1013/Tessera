@@ -184,6 +184,27 @@ export const useAgentStore = create<AgentState>((set, get) => ({
               ],
             })
           }
+          /**
+           * Distinct from 'waiting' on purpose — that one is a rate-limit COOLDOWN
+           * (a real wait, a real reason). This is an immediate retry after the
+           * model spent its whole turn thinking and returned nothing to act on
+           * (docs/UNITS.md §I.3). Reusing 'waiting''s "rate limit" label here
+           * would tell the user something that did not happen.
+           */
+          if (s.type === 'retrying') {
+            set({
+              log: [
+                ...get().log,
+                {
+                  id: nextId++,
+                  name: 'retrying',
+                  args: {},
+                  ok: true,
+                  detail: `the model didn't finish thinking in time · attempt ${s.attempt} of ${s.of}`,
+                },
+              ],
+            })
+          }
           if (s.type === 'action') set({ log: [...get().log, describe(s)] })
           if (s.type === 'error') {
             set({ error: s.message, needsKey: s.code === 'upstream_rate_limited' })

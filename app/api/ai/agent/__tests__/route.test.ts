@@ -156,6 +156,44 @@ describe('a WAF-blocked relay gets its own message (§5 bad_waf)', () => {
   })
 })
 
+/**
+ * Measured live, 25 Aug 2026 (docs/UNITS.md §I.3): a hard/novel prompt can burn
+ * the model's entire turn budget on thinking alone and return nothing to act on.
+ * Distinct from a generic bad_response — the user is told something true and
+ * actionable ("trying again usually works") rather than a dead end.
+ */
+describe('a thinking-exhausted turn gets its own honest message (§5 thinking_exhausted)', () => {
+  it('tells the user trying again usually works, not that the reply is unreadable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () =>
+          JSON.stringify({
+            model: 'claude-opus-5',
+            stop_reason: 'max_tokens',
+            content: [{ type: 'thinking', thinking: '...' }],
+            usage: { input_tokens: 2, output_tokens: 32000 },
+          }),
+      })) as unknown as typeof fetch,
+    )
+
+    const res = await POST(
+      req(
+        { sessionId: freshSession(), history: HISTORY, provider: { id: 'anthropic' } },
+        { 'x-api-key': 'sk-test-key' },
+      ),
+    )
+
+    expect(res.status).toBe(502)
+    const body = await res.json()
+    expect(body.code).toBe('thinking_exhausted')
+    expect(body.message).toMatch(/trying again usually works/i)
+  })
+})
+
 describe('a user key is used and discarded', () => {
   it('never appears in the response', async () => {
     const key = 'AIzaSyTESTKEYVALUE123'

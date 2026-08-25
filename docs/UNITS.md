@@ -1916,6 +1916,50 @@ Reinstated with the reasoning corrected in its own comment (`lib/ai/provider/ant
 test restored, not left removed out of excess caution. Confirmed inert on Vercel either way — this
 deployment's own `maxDuration` (60s) governs there regardless of what the dispatcher is set to.
 
+### §I.3 — `budget_tokens` is a target, not a cap, and it cost real money finding out
+
+Once the dispatcher was confirmed fixed, a live capability check — the user's own examples, "draw a
+frog" and "give this face a smile instead of sad" — was run to answer a direct question: can the
+model actually do what gets asked of it. The smile edit worked cleanly on the first try (26 cells,
+correctly mirrored, nothing else touched — a real result, not a claim). The frog did not, and what it
+hit is a **third**, previously-undiscovered defect, not a repeat of §I.1 or §I.2.
+
+**Measured:** "draw a green frog sitting, seen from the side" hit `stop_reason: 'max_tokens'` with
+`content: [{ type: 'thinking' }]` and nothing else — **the entire 32,000-token output ceiling spent
+on internal reasoning, zero drawing, not even a partial one** — three times running, across both a
+headless check and the user's own live-watched browser window. The same prompt, run a fourth time,
+succeeded in 5.5 minutes with real content. **The failure is real and it is not deterministic.**
+
+Unit I's `THINKING_BUDGET = 16_000` (of 32,000) does not prevent this. Researched rather than
+guessed a fourth time: Anthropic's own docs describe `budget_tokens` as a target the model tries to
+respect, not an enforced ceiling, and — critically — when thinking interleaves with tool use, the
+effective ceiling becomes the whole context window, not the configured budget. `anthropics/
+claude-code` has an open (closed-without-fix) issue reporting the identical symptom: thinking
+consuming an entire turn and returning nothing, with "consider disabling thinking" as the only
+suggested workaround. This is not unique to Tessera or to AgentRouter.
+
+**What shipped, not just what was found:**
+
+- `anthropic.ts`'s truncation-salvage path now distinguishes this exact shape (every block before
+  the cut was `thinking`, nothing else) from a generic unsalvageable truncation, and tags it
+  `thinking_exhausted` rather than the generic `bad_response`.
+- `run.ts` retries it — **once**, via its own counter (`RETRY_ON_THINKING_EXHAUSTED = 1`,
+  `lib/agent/limits.ts`), independent of the rate-limit retry budget. Deliberately smaller: a
+  rate-limit retry is a free wait, this one is a full-price 32k-output-token attempt every time, and
+  the evidence (1 success in ~4 tries on the same prompt) justifies exactly one extra try, not three.
+- A new `AgentStep` variant, `'retrying'`, distinct from `'waiting'` — reusing the rate-limit UI text
+  ("waiting Ns") for an immediate, no-delay retry would tell the user something that did not happen.
+  The panel now says plainly: *"the model didn't finish thinking in time."*
+- If the retry also fails, the user reads: *"The model spent its whole turn thinking and didn't get
+  to drawing. Trying again usually works."* — true, specific, and actionable, in place of the
+  generic "reply couldn't be read."
+
+**What this does NOT fix:** the underlying model behaviour. A sufficiently hard or novel prompt can
+still exhaust the retry too. The real structural fix — named in §2.3 item 11 and again here —
+is streaming: it would let the client observe generation in progress and react before paying for
+32,000 wasted tokens, rather than after. Not built this session; a real cost was paid to find out it
+is still the correct next step if this keeps happening on harder prompts than a frog.
+
 ---
 
 ## J — The selector tool: object select, multi-select, drag · NEXT

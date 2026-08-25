@@ -62,6 +62,19 @@ export const RETRY_ON_RATE_LIMIT = 3
 export const MAX_RETRY_WAIT_S = 45
 
 /**
+ * How many times a turn is retried after `thinking_exhausted` — the model spent
+ * its ENTIRE turn budget reasoning and returned nothing to act on. Deliberately
+ * smaller than `RETRY_ON_RATE_LIMIT`: a rate-limit retry is a free wait, this one
+ * is a full-price 32,000-output-token attempt every time, so the budget for
+ * "try again" is tighter. Measured 25 Aug 2026, `docs/UNITS.md §I.3`: "draw a
+ * green frog, sitting, side view" hit this 3 times running and ALSO succeeded
+ * once on the identical prompt — the failure is real but not deterministic,
+ * which is the whole justification for retrying it at all rather than only
+ * reporting it.
+ */
+export const RETRY_ON_THINKING_EXHAUSTED = 1
+
+/**
  * New palette entries per session.
  *
  * RAISED 4 -> 12, 24 Aug 2026. Four was a guard against runaway palette growth

@@ -161,11 +161,19 @@ export async function POST(req: Request) {
       case 'refused':
         return fail(422, 'refused', 'The model declined this request. Try rephrasing it.')
       case 'bad_response':
-        // Diagnostic only — the user-facing message stays generic. Added 25 Aug
-        // 2026 after a live report of "any prompt fails" with a 1.7s round trip,
-        // far too fast to be real generation. res.message carries the adapter's
-        // specific reason (truncated-no-salvage vs not-JSON vs no-tool-call).
         console.error('[ai/agent] bad_response:', res.message)
+        // A distinct code for the one bad_response cause that is worth retrying —
+        // see the comment in anthropic.ts. Everything else (a malformed body, a
+        // truncated turn with no salvageable tool call for another reason) stays
+        // the generic, non-retried message: retrying a genuinely broken response
+        // does not fix it, and the runner only retries codes it recognises.
+        if (res.message.startsWith('thinking_exhausted')) {
+          return fail(
+            502,
+            'thinking_exhausted',
+            "The model spent its whole turn thinking and didn't get to drawing. Trying again usually works.",
+          )
+        }
         return fail(502, 'bad_response', "The model's reply couldn't be read. Nothing changed.")
       case 'config':
         if (userKey) {

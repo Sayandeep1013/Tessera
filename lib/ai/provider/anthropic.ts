@@ -418,17 +418,7 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
      */
     if (sent.json.stop_reason === 'max_tokens') {
       const blocks = Array.isArray(sent.json.content) ? [...(sent.json.content as unknown[])] : []
-      // TEMPORARY DIAGNOSTIC, added 25 Aug 2026 — a live report of every prompt
-      // failing in ~1.7s, far too fast for real generation to hit a 32,000-token
-      // ceiling. That timing means this branch is very likely firing on a
-      // response that ISN'T what it looks like, and the salvage logic below has
-      // no visibility into why. Remove once the live cause is confirmed.
-      console.error(
-        '[anthropic] stop_reason=max_tokens latencyMs=%d blockTypes=%o usage=%o',
-        sent.latencyMs,
-        blocks.map((b) => (b as { type?: string }).type),
-        sent.json.usage,
-      )
+      const blockTypes = blocks.map((b) => (b as { type?: string }).type)
       blocks.pop()
       const parts = fromAnthropicContent(blocks)
       if (parts.some((part) => 'functionCall' in part)) {
@@ -439,6 +429,38 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
           model: String(sent.json.model ?? modelId),
           latencyMs: sent.latencyMs,
         }
+      }
+      /**
+       * Measured live, 25 Aug 2026: THINKING_BUDGET (16,000 of 32,000) does not
+       * prevent this — `budget_tokens` is documented as a target the model tries
+       * to respect, not an enforced ceiling, and Anthropic's own tracker has an
+       * unresolved report of the identical symptom (thinking consuming an entire
+       * turn with nothing returned). "Draw a green frog, sitting, side view" hit
+       * it 3 times running (`blockTypes: ['thinking']`, 32,000 output tokens,
+       * nothing else) — and also succeeded once on the literal same prompt, which
+       * is the whole reason this is worth retrying rather than only reporting:
+       * the failure is real but not deterministic. The runner retries it
+       * specifically, at a much smaller cap than a rate-limit wait — each retry
+       * here is a full-price 32k-output-token attempt, not a free wait.
+       *
+       * Tagged only for the exact measured shape — the whole response, including
+       * the block that got cut, was nothing but thinking. A truncation that had
+       * real text or a partial tool call in it is a different failure with no
+       * measured evidence a same-turn retry helps, so it stays the generic
+       * bad_response rather than borrowing this one's retry budget.
+       */
+      const allThinking = blockTypes.length > 0 && blockTypes.every((t) => t === 'thinking')
+      if (allThinking) {
+        console.error(
+          '[anthropic] thinking exhausted the turn: latencyMs=%d blockTypes=%o usage=%o',
+          sent.latencyMs,
+          blockTypes,
+          sent.json.usage,
+        )
+        return fail(
+          'bad_response',
+          'thinking_exhausted: the model used its entire turn budget reasoning and produced nothing to act on',
+        )
       }
       return fail('bad_response', 'the response was truncated before it was complete')
     }

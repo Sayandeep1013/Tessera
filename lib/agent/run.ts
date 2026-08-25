@@ -9,7 +9,13 @@
  */
 
 import { AgentSession, type SessionOutcome, type StepLog } from './session'
-import { MAX_CALLS_PER_TURN, MAX_RETRY_WAIT_S, MAX_STEPS, RETRY_ON_RATE_LIMIT } from './limits'
+import {
+  MAX_CALLS_PER_TURN,
+  MAX_RETRY_WAIT_S,
+  MAX_STEPS,
+  RETRY_ON_RATE_LIMIT,
+  RETRY_ON_THINKING_EXHAUSTED,
+} from './limits'
 import { getAction, runAction } from '../actions/registry'
 import { FINISH } from '../actions/catalogue'
 import type { ActionCtx, ActionResult } from '../actions/types'
@@ -34,6 +40,7 @@ type ProxyErr = { ok: false; status: number; code: string; message: string; retr
 export type AgentStep =
   | { type: 'thinking'; step: number; of: number }
   | { type: 'waiting'; seconds: number; attempt: number; of: number }
+  | { type: 'retrying'; reason: 'thinking_exhausted'; attempt: number; of: number }
   | { type: 'action'; step: number; name: string; args: unknown; result: ActionResult }
   | { type: 'needs-confirm'; name: string; args: unknown }
   | { type: 'error'; message: string; code?: string }
@@ -131,23 +138,57 @@ export async function runAgent(opts: RunOptions): Promise<AgentOutcome> {
      * a dropped connection. It is worth one retry for the same reason a 429 is:
      * the failure was ours, not a verdict on the request.
      *
-     * Only these two kinds are retried. A refusal, a bad key or a malformed reply
-     * will not become true by asking again, and retrying those would just spend
-     * someone's quota to reach the same answer slower.
+     * A refusal, a bad key or a malformed reply will not become true by asking
+     * again, and retrying those would just spend someone's quota to reach the
+     * same answer slower — those still fall through and end the session.
      */
     let reply = await callModel(history, opts)
-    for (let attempt = 1; attempt <= RETRY_ON_RATE_LIMIT && !reply.ok; attempt++) {
+    let rateLimitAttempt = 0
+    let thinkingAttempt = 0
+    while (!reply.ok) {
       const isRateLimit = reply.code === 'upstream_rate_limited' || reply.code === 'rate_limited'
       const isTransient = reply.code === 'unavailable'
-      if (!isRateLimit && !isTransient) break
+      /**
+       * Measured 25 Aug 2026, `docs/UNITS.md §I.3`: Anthropic's `budget_tokens`
+       * is a target the model tries to respect, not an enforced ceiling — on a
+       * hard or novel prompt it can spend the ENTIRE turn thinking and return
+       * nothing to act on. "Draw a green frog, sitting, side view" hit this 3
+       * times running and ALSO succeeded once on the identical prompt: the
+       * failure is real but not deterministic, which is why it is worth one
+       * retry rather than only being reported.
+       *
+       * Deliberately its OWN counter and its OWN, much smaller cap. A rate-limit
+       * retry is a free wait; this one is a full-price 32,000-output-token
+       * attempt every time, so "try again a few times" is not the same call here
+       * that it is for a 429.
+       */
+      const isThinkingExhausted = reply.code === 'thinking_exhausted'
 
-      // A rate limit has a real retryAfter; a dropped connection does not, so a
-      // short fixed backoff stands in rather than reusing the rate-limit default.
-      const seconds = isRateLimit ? Math.min(reply.retryAfter ?? 20, MAX_RETRY_WAIT_S) : 5
-      opts.onStep?.({ type: 'waiting', seconds, attempt, of: RETRY_ON_RATE_LIMIT })
-      const slept = await (opts.sleepFn ?? sleep)(seconds * 1000, opts.signal)
-      if (!slept) break // aborted while waiting
-      reply = await callModel(history, opts)
+      if ((isRateLimit || isTransient) && rateLimitAttempt < RETRY_ON_RATE_LIMIT) {
+        rateLimitAttempt++
+        // A rate limit has a real retryAfter; a dropped connection does not, so a
+        // short fixed backoff stands in rather than reusing the rate-limit default.
+        const seconds = isRateLimit ? Math.min(reply.retryAfter ?? 20, MAX_RETRY_WAIT_S) : 5
+        opts.onStep?.({ type: 'waiting', seconds, attempt: rateLimitAttempt, of: RETRY_ON_RATE_LIMIT })
+        const slept = await (opts.sleepFn ?? sleep)(seconds * 1000, opts.signal)
+        if (!slept) break // aborted while waiting
+        reply = await callModel(history, opts)
+        continue
+      }
+
+      if (isThinkingExhausted && thinkingAttempt < RETRY_ON_THINKING_EXHAUSTED) {
+        thinkingAttempt++
+        opts.onStep?.({
+          type: 'retrying',
+          reason: 'thinking_exhausted',
+          attempt: thinkingAttempt,
+          of: RETRY_ON_THINKING_EXHAUSTED,
+        })
+        reply = await callModel(history, opts)
+        continue
+      }
+
+      break
     }
 
     if (!reply.ok) {
