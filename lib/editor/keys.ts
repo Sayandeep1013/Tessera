@@ -22,3 +22,19 @@ export function isTyping(target: EventTarget | null): boolean {
 
 /** Ctrl on Windows and Linux, Cmd on a Mac. */
 export const isMod = (e: KeyboardEvent): boolean => e.ctrlKey || e.metaKey
+
+/**
+ * True when a dialog/modal overlay is open — CodePanel, Layers, Settings,
+ * Timeline, the agent's key dialog, SharePopover. Every one of them renders
+ * `role="dialog"` and every one is only mounted in the DOM while open (a
+ * closed CodePanel returns null; the rest are conditionally rendered by
+ * their parent), so this is one generic check rather than a list of store
+ * flags that would drift the moment a new dialog is added.
+ *
+ * Spec 20 §3.10: the selector's Esc/Del/arrow-nudge shortcuts must not
+ * compete with a dialog's own Escape-to-close (or, for arrows, with a
+ * focused control inside one, like a Settings segmented control).
+ */
+export function dialogOpen(): boolean {
+  return typeof document !== 'undefined' && document.querySelector('[role="dialog"]') !== null
+}

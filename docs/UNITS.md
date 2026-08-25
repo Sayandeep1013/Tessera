@@ -8,9 +8,9 @@ status is `NEXT`, then paste-follow the prompt in its block. Do not ask which
 unit to do — the ledger says.
 
 **If no unit is marked `NEXT`:** there is nothing queued, and guessing one into
-existence is not this file's job. §0.1 is what to do instead. **Not true right
-now** — as of 25 Aug 2026, unit **J (the selector tool)** is marked `NEXT`
-below, scoped and ready to build.
+existence is not this file's job. §0.1 is what to do instead. **That is the
+state right now** — unit **J (the selector tool)** is `DONE` as of 25 Aug
+2026 (9/10, `docs/specs/20-selector.md`), and no unit K has been scoped.
 
 ---
 
@@ -279,6 +279,7 @@ works; it is done when the next agent can start without asking anything.
 | **F** | Animation | **DONE** | 9 | [10](./specs/10-animation.md) |
 | **G** | GIF, sprite sheet, animated export hooks | **DONE** | 9 | [10 §0.5](./specs/10-animation.md), [08 §8–9, §13](./specs/08-exporters.md) |
 | **H** | Format tabs replace the Export popover; the panel becomes a modal | **DONE** | 9 | [08 §14](./specs/08-exporters.md), [07 §9.11](./specs/07-code-panel.md) |
+| **J** | The selector tool: object select, multi-select, drag | **DONE** | 9 | [20](./specs/20-selector.md) |
 | — | Share | **PARKED** | — | [DEFERRED](./DEFERRED.md) |
 | — | AI edit quality | **DEFERRED** | — | [HANDOFF §7](./HANDOFF.md) |
 
@@ -1962,7 +1963,108 @@ is still the correct next step if this keeps happening on harder prompts than a 
 
 ---
 
-## J — The selector tool: object select, multi-select, drag · NEXT
+## J — The selector tool: object select, multi-select, drag · DONE
+
+**25 Aug 2026 · commit pending (not yet committed — this session's instructions were to stop
+short of committing; a human reviews and commits) · 9/10**
+
+`docs/specs/20-selector.md` (the sub-spec written this session, before any code), `lib/editor/
+selection.ts` (the `Selection` type — bbox + mask — and every pure function on it: construction,
+union/subtract/isSubsetOf, the move/nudge/delete cell math, the mask-boundary tracer),
+`lib/artwork-core/ops.ts` (`floodFillPoints` generalised to take a match predicate, `blobPoints`
+added), `lib/artwork-core/commands.ts` (`mergePaintCommands`), `lib/store/editor.ts` (`Selection`
+replaces the old rectangle type; `commit(cmd, coalesce)` gains a `paint`-vs-`paint` merge branch
+alongside the existing `replace_doc` one), `lib/renderer/canvas.ts` (`renderSelection` now traces
+an `OutlineRun[]` instead of stroking a rectangle), `components/Canvas.tsx` (the `select` tool's
+click/shift-click/drag rewritten; `marquee` untouched in behaviour, only its selection now built
+via `selectionFromRect`), `lib/editor/keys.ts` (`dialogOpen()`), `app/page.tsx` (Esc/Del/
+Backspace/arrow-nudge wired into the existing global keydown handler, plus a dev-only
+`window.__tessera.selection()` read hook for the probe). 35 new unit tests (`lib/artwork-core/
+__tests__/ops.test.ts`, the new `lib/editor/__tests__/selection.test.ts`, and an extension of
+`lib/store/__tests__/doc-store.test.ts`'s coalescing block) and `tools/probe-tools-ui.ts` grew
+from ~15 checks to 69, run at both themes and a 390px viewport.
+
+**The two decisions the ledger explicitly left open, both resolved in the sub-spec (§2, §3.6):**
+the `Selection` type is a bounding box plus a mask relative to it — a filled rectangle is
+`mask.fill(1)`, not a second type — and arrow-key nudge coalescing *generalises* the existing
+`commit(cmd, coalesce)` mechanism (a new `paint`-vs-`paint` merge branch, same shape as the
+`replace_doc` one already there) rather than inventing a second one, driven by the caller passing
+`coalesce: e.repeat` — the same signal `app/page.tsx`'s space-bar handler already reads one
+function up, for the opposite reason.
+
+**One thing found and generalised beyond the letter of the ledger's decision #8:** it says to
+check `KeyDialog`, `CodePanel` and `SharePopover`'s own Escape handling before wiring a global one.
+Doing so found that *every* overlay in this codebase — those three, plus `Layers`, `Settings` and
+`Timeline` — renders `role="dialog"` and is only ever mounted while open, so `dialogOpen()`
+(`lib/editor/keys.ts`) is one generic `document.querySelector('[role="dialog"]')` check rather than
+a list of three components that happened to be the ones already in the file. It also covers the
+File menu's and dither menu's `role="menu"` popovers implicitly (neither implements its own
+arrow-key navigation) and `Settings`' segmented controls (which live inside a `role="dialog"`
+already) — verified by reasoning through every place arrow keys or Escape have meaning in this
+codebase, not just the three named.
+
+**The rectangle regression check is proven, not assumed.** `docs/specs/20-selector.md §4.2` works
+through, coordinate by coordinate, why applying the same per-side inset `strokeRect(ax+0.5, ay+0.5,
+w-1, h-1)` used to the new per-run outline tracer reproduces the *exact same four corner points*
+for a filled rectangle — not an approximation of the same shape, the same numbers. `lib/editor/
+__tests__/selection.test.ts` pins this as data (`selectionOutline` on a full rect equals exactly
+those 4 runs), and a real browser probe screenshot confirms it visually in both themes.
+
+**The coalescing mechanism was proven end-to-end, in a real browser, not just at the store-unit
+level.** Playwright's `keyboard.down()` does not simulate the OS's own key-repeat, so
+`tools/probe-tools-ui.ts` dispatches a synthetic `KeyboardEvent('keydown', { repeat: true })`
+directly (the same "browser code as a plain string, not a function" pattern `HANDOFF §5` already
+established for a synthetic paste), holds a selection through one real press plus two synthesised
+repeats, and asserts that ONE `Ctrl+Z` reverts the whole three-step move — not just the last
+repeat. This caught nothing (the mechanism was correct on the first working version), but it is
+the kind of thing that could have quietly shipped broken and looked identical in a screenshot.
+
+**One real bug found and fixed while wiring the probe, not in the feature itself:** the first draft
+of the probe's own test document was missing `id`, `name` and `meta` — all required by
+`serializedDocSchema` — so `window.__tessera.open(...)` was failing silently (`open()` returns
+`false` on a parse failure, and the probe wasn't checking it), leaving every "click-select" check
+running against the *default blank canvas* instead of the fixture. Every check still reported a
+result — several passed *by coincidence* (clicking transparent space trivially deselects; Del
+clearing already-transparent pixels trivially "succeeds") — which is exactly the failure mode
+`HANDOFF §5` warns about for a test generator that never asserts its own input is what it thinks it
+is. Found by a small standalone diagnostic script checking `open()`'s return value directly, not by
+staring at the 39 failing assertions it produced.
+
+### Score — six dimensions, overall is the lowest
+
+| # | Dimension | Score | Why not higher |
+|---|---|---|---|
+| 1 | Spec conformance | 9 | Every item in the ledger's decisions #1–#12 and the sub-spec's §3–§4 is built: click/shift-click/drag, static real-shape marching ants, transparency-aware move, arrow-nudge with coalescing, Esc, Del, no new tool-rail icon, marquee unchanged. Lasso, clipboard and flip/rotate correctly absent. `docs/specs/05-editor.md`'s Select/Marquee rows and keyboard table, which had gone stale, are corrected rather than left to mislead the next reader (rule 10) — that correction is itself part of why this isn't a silent 8. |
+| 2 | Correctness | 9 | All twelve J-E# edge cases in the sub-spec handled and verified — the enclosed-hole case (a ring-shaped blob never drags its own transparent centre along), the off-canvas drop, the hidden-layer reveal, frame/layer-agnostic action. One coarse edge, stated rather than hidden: undo does not move `editor.selection` back to the source (§7 of the spec) — pre-existing behaviour for the rectangle case, now also true of the new blob case, and deliberately not fixed here because it is a question about `undo()`'s own contract, not a selector defect. |
+| 3 | Tests | 9 | 35 new unit tests plus a 69-check browser probe (up from ~15), covering the flood-fill generalisation, the mask-boundary trace (rectangle regression, irregular blob, disjoint blobs), the move/nudge/delete cell math on a non-rectangular and multi-blob mask, and the coalescing mechanism at both the store-unit level and end-to-end with a synthesised held key. Not 10: shift-click when nothing is currently selected (falls through to "start a new selection", the same code path a plain click uses) has no dedicated test — low risk given the shared code path, but untested is untested. |
+| 4 | Integration | 9 | `commit()` is still the only writer — no new `EditorCommand` variant; move, nudge and delete all reduce to the existing `paint` command. `artwork-core` still imports nothing but zod. `lib/renderer/canvas.ts` deliberately does NOT import the `Selection` type from `lib/editor` — `renderSelection` takes a structurally-typed `OutlineRun[]`, keeping the dependency direction the same as every other type crossing that boundary (editor depends on renderer's `Viewport`, not the reverse). One new dev-only hook property, pinned out of production by the existing bundle-safety test (verified: it now runs, post-build, and passes). |
+| 5 | Design fidelity | 9 | Static marching ants preserved by construction (no animation loop touches the dash phase) and confirmed visually in both themes plus a 390px viewport — including a dedicated screenshot of two disjoint blobs each tracing their own boundary, the single most visually distinctive claim this unit makes. One honest, reasoned gap recorded in the spec itself (§4.2): a filled rectangle's dash *phase* no longer carries continuously around all four corners the way one `strokeRect` call's single subpath did, because the general tracer issues one `moveTo` per boundary run — geometrically identical, not byte-identical, and imperceptible at any zoom this app renders at. |
+| 6 | No regressions | 9 | 956 unit tests green (0 skipped, post-build — the bundle-safety guards that were previously skipped now run and pass), a clean production build, and all 16 gating browser probes green in one `npm run probes` run — including every probe unrelated to selection (file menu, canvas size, code panel, exporters, symmetry, layers, merge, timeline, tooltips, BYOK, crisp edges, agent panel, the full agent E2E flow). |
+
+**Overall: 9/10.**
+
+### Deliberately left out
+
+- **Lasso, clipboard cut/copy/paste, flip/rotate.** Explicitly out of scope per the user's own
+  `AskUserQuestion` choice, recorded in this unit's own block above. Not a gap; a decision.
+- **Agent/AI awareness of selection.** `lib/actions/catalogue.ts` gains no selection-related
+  action — this is a pointer-and-keyboard UI tool, matching the scope decided.
+- **Undo/redo carrying `editor.selection` back to where it was.** Pre-existing for the rectangle
+  case, now also true of the blob case — `docs/specs/20-selector.md §7` states it rather than
+  hiding it. Fixing it is a question about what `undo()`'s own contract should cover (cursor? tool?
+  selection?), bigger than this unit, and worth its own unit if it turns out to matter in practice.
+- **Byte-identical dash-phase continuity** with the old single-`strokeRect` rendering, at a
+  rectangle's corners. Geometrically identical (proven, §4.2), not pixel-identical in how the dash
+  pattern phases across a corner — a fully general fix is continuous contour-tracing per connected
+  component (with hole handling for a ring-shaped blob), real complexity bought for a sub-pixel
+  cosmetic difference on a *static* overlay. Recorded, not hidden.
+- **A dedicated test for shift-click with nothing currently selected.** The code path is shared
+  with the plain-click "start a new selection" branch (already tested), so the risk is low, but it
+  is genuinely untested as its own case.
+
+---
+
+## J — the original handover, kept for reference
 
 Not a lettered-unit-from-a-plan — named directly in the user's own prompt (`§0.1`, point 2),
 scoped through an `AskUserQuestion` exchange earlier in the same session that produced unit I, and

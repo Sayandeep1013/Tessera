@@ -87,9 +87,11 @@ wins.** As of 25 Aug 2026:
 
 - **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
   tiers, the "Mosaic" visual identity, IndexedDB autosave, layers, the whole File menu including
-  paste image, the code panel, exporters, animation, and — unit I — a real Anthropic-compatible
+  paste image, the code panel, exporters, animation, — unit I — a real Anthropic-compatible
   provider (Claude via AgentRouter or direct, alongside the original Gemini free tier), rebuilt BYOK,
-  and a re-run AI-quality gate. Every unit **9/10**.
+  and a re-run AI-quality gate, and — unit J — the selector tool: object select and multi-select on
+  the existing `select` (V) tool, transparency-aware drag, arrow-nudge, Esc, Del
+  (`docs/specs/20-selector.md`). Every unit **9/10**.
 - **AI edit quality is NO LONGER the deferred item it was through unit H.** Re-tested against
   `claude-opus-5`: 14 of 15 scenarios scored ≥ 9, ten a clean 10 (`PHASE-0-FINDINGS.md §2`). The old
   "model capability, not engineering" verdict was wrong — it was reached against a free-tier model
@@ -102,9 +104,9 @@ wins.** As of 25 Aug 2026:
   misleading generic error, but AgentRouter itself may simply not work from this deployment.
   Direct `api.anthropic.com` is expected to be unaffected but was not yet verified with a real key
   — see `UNITS.md §I.1`'s open item.
-- **Next:** `docs/UNITS.md` marks unit **J, the selector tool** (object select, multi-select, drag)
-  as `NEXT`, scoped and ready — read that block before starting, it has the research and the
-  decisions already made. Share stays parked (`docs/DEFERRED.md`).
+- **Next:** no unit is marked `NEXT` in `docs/UNITS.md` — J was the last lettered unit and it is
+  done. See `UNITS.md §0.1` for what that state means (scope a new unit from the user's own prompt;
+  do not invent one). Share stays parked (`docs/DEFERRED.md`).
 - **Model:** two paths now. The deployment's own free tier is still `gemini-3.1-flash-lite` (5
   requests/minute, ~5 requests per session — unchanged). A visitor's own key can also be Claude
   (`claude-opus-5`) via Anthropic direct or AgentRouter, subject to the WAF caveat above.

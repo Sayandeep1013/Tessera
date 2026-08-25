@@ -1,16 +1,23 @@
 # Session handoff — Tessera
 
-**Written:** 14 Aug 2026 · last commit `bd8333a` (unit **H**, the code panel
-became a format-tab modal, replacing the Export popover) · branch `main`.
+**Written:** 14 Aug 2026, last updated 25 Aug 2026 (unit **J**, the selector tool) · branch `main`.
+Unit J's own commit is pending — this session's instructions were to stop short of committing; a
+human reviews and commits. The most recent commit actually on `main` as this was written is
+`e30c8a2` ("Write the session handoff: unit I's live incident, unit J scoped and queued"); a
+concurrent session was also active on `lib/ai/provider/` and `app/api/ai/agent/` during unit J and
+may have pushed further commits there since — check `git log` rather than trusting this line's
+hash for the AI-provider path.
 **Live:** https://tessera-brown-pi.vercel.app — Vercel project `tessera`,
 git-connected to `main`, so every push deploys.
-**Green:** 783 tests across 51 files · production build clean · 6 viewports
-clean · and **every** browser probe in one run (`npm run probes`) —
-`probe-file-menu` 134/134, `probe-code-panel` 104/104, `probe-canvas-size` 70/70,
-`probe-export` 128/128, `probe-symmetry` 20/20, `probe-layers` 42/42,
-`probe-merge` 24/24, `probe-timeline` 63/63, `probe-tooltip` 23/23,
-`probe-agent-ui` 18/18, `probe-crisp` 4/4, `probe-tools-ui`, `e2e-agent`,
-`probe-zoom`. Zero runtime errors, both themes, wide/mobile/narrow viewports.
+**Green (unit J's own run):** 956 unit tests across 57 files (0 skipped, post-build) · production
+build clean · and **every** browser probe in one `npm run probes` run — `probe-tools-ui` grew from
+~15 checks to 69 (54 new, covering the selector: click/shift-click/drag/nudge/Esc/Del and a
+marquee-regression check, both themes plus 390px), every other probe unaffected and still green
+(`check-responsive`, `probe-file-menu`, `probe-canvas-size`, `probe-code-panel`, `probe-export`,
+`probe-symmetry`, `probe-layers`, `probe-merge`, `probe-timeline`, `probe-tooltip`, `probe-byok`,
+`probe-crisp`, `probe-agent-ui`, `e2e-agent`, `probe-zoom` reporting). Zero console errors, both
+themes, wide/mobile/narrow viewports. The numbers above §7 (783 tests, H as the last unit) predate
+units I and J and are kept only as history — this line is the current one.
 
 ---
 
@@ -29,7 +36,8 @@ the next one, so it is not repeated here.** It also carries the finishing
 protocol: what an agent must do before it stops, so the next one can start
 without asking anything.
 
-**There is no unit marked `NEXT` right now.** H, the last lettered unit in the ledger, is done.
+**There is no unit marked `NEXT` right now.** J, the last lettered unit in the ledger (the selector
+tool — object select, multi-select, drag, `docs/specs/20-selector.md`), is done.
 **`UNITS.md §0.1`** is the protocol for exactly this state — what to do if the user's prompt names a
 task (scope it as a new lettered unit, same loop, same ledger shape), what to do if it doesn't (answer
 the question; don't build), and what NOT to do (`Share` and AI edit quality are parked/deferred by
@@ -151,7 +159,7 @@ looked fine in a screenshot until magnified.
 |---|---|
 | Document model (`lib/artwork-core/`) | Complete. Codec, ops, commands, diff, fixtures. Imports nothing but zod. |
 | Renderer (`lib/renderer/`) | Full-viewport canvas, DPR capped at 2, difference-blended grid, selection overlay, sprite→SVG. |
-| Editor input | 8 tools all working: brush, eraser, fill, shapes, gradient, marquee, select/move, eyedropper. Dither (Bayer 4×4). Scroll pans, pinch zooms. |
+| Editor input | 8 tools all working: brush, eraser, fill, shapes, gradient, marquee, select/move, eyedropper. Dither (Bayer 4×4). Scroll pans, pinch zooms. Select (V) does object select as of unit J — click a blob, shift-click to add/remove another, drag the whole (possibly multi-blob) group, transparency-aware; arrow-nudge, Esc, Del/Backspace. Marquee (M) unchanged. `docs/specs/20-selector.md`. |
 | Chrome | Top bar, tool rail, zoom bar, palette popover, File menu, dither menu. |
 | File menu | Complete — it is now exactly the menu `17 §1` draws. New… (confirms when there is work at stake), Open recent, Open…, Paste image, Duplicate, an Examples disclosure, Download .tessera.json, Export PNG, and Clear — red, undoable, and it says its cost first. `⌘N`/`⌘O`/`⌘V`/`⌘S` wired. **Scored 9/10** three times — `17-file-menu.md §7`, `§8` and `§9`. |
 | Paste image | Clipboard or file → fitted (box-average down, integer nearest-neighbour up, centred) → median-cut to ≤36 palette entries, reusing existing ones within a redmean distance of 24 → one undoable command. Reports the colour count. **Scored 9/10** — `17-file-menu.md §9`. |
@@ -410,6 +418,25 @@ Every one of these has already cost time in this repo.
   front of the same relay, serving a 200 HTML challenge page instead of a 401 JSON error, and no
   header combination reaches it — it never gets far enough to read headers. If a live symptom looks
   identical to a WAF you already solved, read the raw body before assuming it is the same WAF.
+- **A git worktree has no `node_modules` of its own, and `next dev --turbopack` does not walk up to
+  find the parent checkout's one the way plain Node module resolution does.** `npm test` and
+  `npm run typecheck` worked fine in a fresh worktree — `vitest`/`tsc` resolve packages by walking
+  up parent directories, which eventually reaches the main checkout's `node_modules` several levels
+  above the worktree. Turbopack does its own root detection instead, found the worktree directory
+  itself, and failed with "Could not find the Next.js package (next/package.json)" — a confusing
+  error that looks like a broken install, not a resolution-root mismatch. `npm ci` inside the
+  worktree (step 2 of the verification sequence, §0.2 above) fixes it, and is required anyway; the
+  trap is trusting `npm test` passing as proof the environment is fully set up for `next dev` too.
+- **`window.__tessera.open(json)` fails SILENTLY on a schema mismatch — it returns `false` and
+  changes nothing, rather than throwing.** A probe's own test-fixture JSON that forgets `id`,
+  `name` or `meta` (all required by `serializedDocSchema`) leaves the app on whatever document was
+  already loaded — usually the default blank canvas — and every subsequent check still produces a
+  pass/fail verdict, just against the wrong document. Several checks passed *by coincidence* (a
+  click on transparent space trivially "deselects"; clearing already-empty pixels trivially
+  "succeeds"), which is the same failure shape `HANDOFF §5` already warns about for a test generator
+  that never checks its own input is what it thinks it is. Always check `open()`'s return value —
+  or better, read `window.__tessera.size()` back right after calling it — before trusting anything
+  that follows. Found unit J's selector probe this way; see `tools/probe-tools-ui.ts`.
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyOps, floodFillPoints, linePoints, rectPoints, type Op } from '../ops'
+import { applyOps, blobPoints, floodFillPoints, linePoints, rectPoints, type Op } from '../ops'
 import { encodeRows } from '../codec'
 import { MAX_PALETTE, type PaletteEntry } from '../schema'
 import { docLayers, docOf } from './helpers'
@@ -54,6 +54,56 @@ describe('geometry primitives', () => {
     const d = docOf(['.1', '1.'], PAL)
     const px = d.frames[0]!.layers[0]!.px
     expect(floodFillPoints(px, 2, 2, 0, 0)).toEqual([[0, 0]])
+  })
+
+  // docs/specs/20-selector.md §3.2 — object-select's match rule, generalised
+  // from the default "same palette index" rather than a second algorithm.
+  describe('floodFillPoints — custom match predicate', () => {
+    it('a custom predicate overrides the default exact-index match', () => {
+      const d = docOf(['12', '21'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      // Every cell matches under "always true" — the whole canvas joins.
+      expect(floodFillPoints(px, 2, 2, 0, 0, () => true)).toHaveLength(4)
+    })
+
+    it('the default predicate is unaffected — every existing caller is untouched', () => {
+      const d = docOf(['111', '1.1', '111'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      expect(floodFillPoints(px, 3, 3, 1, 1)).toEqual([[1, 1]])
+    })
+  })
+
+  describe('blobPoints', () => {
+    it('two touching-but-different colours select as one blob', () => {
+      // index 1 and index 2, both non-transparent, sharing an edge.
+      const d = docOf(['12', '..'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      const cells = blobPoints(px, 2, 2, 0, 0)
+      expect(cells.map((c) => c.join(','))).toEqual(
+        expect.arrayContaining(['0,0', '1,0']),
+      )
+      expect(cells).toHaveLength(2)
+    })
+
+    it('a transparent seed selects nothing, rather than "the transparent region"', () => {
+      const d = docOf(['1.', '..'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      expect(blobPoints(px, 2, 2, 1, 0)).toEqual([])
+      expect(blobPoints(px, 2, 2, 1, 1)).toEqual([])
+    })
+
+    it('is 4-connected, not 8-connected, same as the underlying flood fill', () => {
+      const d = docOf(['.1', '1.'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      expect(blobPoints(px, 2, 2, 1, 0)).toEqual([[1, 0]])
+    })
+
+    it('does not cross a transparent gap, even a single-cell one', () => {
+      const d = docOf(['1.2'], PAL)
+      const px = d.frames[0]!.layers[0]!.px
+      expect(blobPoints(px, 3, 1, 0, 0)).toEqual([[0, 0]])
+      expect(blobPoints(px, 3, 1, 2, 0)).toEqual([[2, 0]])
+    })
   })
 })
 

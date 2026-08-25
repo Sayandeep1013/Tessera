@@ -32,12 +32,12 @@ This is the single invariant that makes undo trustworthy.
 
 | Tool | Key | Behaviour |
 |---|---|---|
-| Select | `V` | Rectangular marquee; move/delete the selected region. Phase 3. |
+| Select | `V` | Click a blob to select it, shift-click to add/remove another, drag to move the whole (possibly multi-blob) selection. See [20 — the selector tool](./20-selector.md). |
 | Brush | `B` | Paints the current index. Shape `square`\|`round`, size 1–8. |
 | Eraser | `E` | Paints index 0. Same shape and size controls. |
 | Fill | `F` | 4-connected flood fill via `floodFillPoints`. |
 | Rectangle | `R` | Drag to draw; `Shift` constrains to a square; outline or filled per the toolbar. |
-| Marquee | `M` | Rectangular selection. Phase 3. |
+| Marquee | `M` | Drags out a rectangular selection — unchanged by 20-selector.md, which generalises `select`'s own interactions, not marquee's. |
 | Eyedropper | `I` | Sets the current colour index from the pixel under the cursor. Does not commit a command. |
 | Pan | `Space` (hold) / middle-drag | Temporary; releases back to the previous tool. |
 
@@ -175,7 +175,9 @@ These are separate values and are never conflated ([02 §6](./02-design-system.m
 | `[` / `]` | Brush size down / up |
 | `X` | Swap current colour with index 0 |
 | `Space` (hold) | Temporary pan |
-| `Esc` | Cancel stroke, close popover, reject proposal |
+| `Esc` | Cancel stroke, close popover, reject proposal, deselect (20-selector.md §3.7) |
+| `Delete` / `Backspace` | Clear the current selection's masked pixels to transparent (20-selector.md §3.5) |
+| `↑` `↓` `←` `→` | Nudge the current selection one cell; held-repeat coalesces to one undo step (20-selector.md §3.6) |
 | `?` | Shortcut sheet |
 | `⌥` (hold) | Temporary eyedropper |
 

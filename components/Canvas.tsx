@@ -19,10 +19,14 @@ import {
 } from '@/lib/editor/viewport'
 import { brushMask } from '@/lib/editor/brush'
 import { mirrored } from '@/lib/editor/symmetry'
-import { floodFillPoints, linePoints, rectPoints } from '@/lib/artwork-core/ops'
+import { blobPoints, floodFillPoints, linePoints, rectPoints } from '@/lib/artwork-core/ops'
 import { compositeAt } from '@/lib/artwork-core/layers'
 import { densityFor, ditherPasses, gradientCells } from '@/lib/editor/dither'
 import { paintCommand, type PaintCell } from '@/lib/artwork-core/commands'
+import {
+  inSelection, isSubsetOf, movePreviewCells, selectionCells, selectionFromPoints,
+  selectionFromRect, selectionOutline, subtractSelection, translateSelection, unionSelection,
+} from '@/lib/editor/selection'
 
 /**
  * Radians-free feel constant: 0.0015 makes a typical trackpad flick move about
@@ -162,7 +166,7 @@ export function Canvas() {
       }
 
       const sel = useEditorStore.getState().selection
-      if (sel) renderSelection(ctx, sel, viewport)
+      if (sel) renderSelection(ctx, selectionOutline(sel), viewport)
     }
     raf = requestAnimationFrame(tick)
 
@@ -332,28 +336,52 @@ export function Canvas() {
       // ── marquee: drag a selection rectangle ──
       if (ed.tool === 'marquee') {
         dragFrom.current = { x, y }
-        ed.setSelection({ x, y, w: 1, h: 1 })
+        ed.setSelection(selectionFromRect(x, y, 1, 1))
         return
       }
 
-      // ── select: drag the contents of the selection ──
+      // ── select: click/shift-click a blob, or drag the current selection ──
+      // See docs/specs/20-selector.md §3.1-§3.4.
       if (ed.tool === 'select') {
         const sel = ed.selection
-        if (!sel || x < sel.x || y < sel.y || x >= sel.x + sel.w || y >= sel.y + sel.h) {
-          // Clicking outside drops the selection, which is what every editor does
-          // and is the only discoverable way to get rid of one.
-          ed.setSelection(null)
+        const seedValue = px[y * doc.w + x]!
+
+        if (e.shiftKey) {
+          // Toggle: transparent is a no-op, otherwise flood-fill the blob and
+          // union it in, or subtract it if it is already fully selected. Never
+          // starts a drag — toggling membership and moving are two gestures.
+          if (seedValue === 0) return
+          const blob = selectionFromPoints(blobPoints(px, doc.w, doc.h, x, y))
+          if (sel && isSubsetOf(blob, sel)) {
+            const next = subtractSelection(sel, blob)
+            ed.setSelection(next.w > 0 && next.h > 0 ? next : null)
+          } else {
+            ed.setSelection(sel ? unionSelection(sel, blob) : blob)
+          }
           return
         }
-        const lifted: Array<[number, number, number]> = []
-        for (let sy = sel.y; sy < sel.y + sel.h; sy++) {
-          for (let sx = sel.x; sx < sel.x + sel.w; sx++) {
-            lifted.push([sx - sel.x, sy - sel.y, px[sy * doc.w + sx]!])
-          }
+
+        if (sel && inSelection(sel, x, y)) {
+          // A drag starting inside the mask moves the WHOLE current selection
+          // — every selected cell, however many disjoint blobs — not just the
+          // blob under the cursor (decision #5).
+          const lifted: Array<[number, number, number]> = selectionCells(sel).map(
+            ([sx, sy]) => [sx - sel.x, sy - sel.y, px[sy * doc.w + sx]!],
+          )
+          moving.current = { cells: lifted, from: { x, y } }
+          dragFrom.current = { x, y }
+          stroke.current = new Map()
+          return
         }
-        moving.current = { cells: lifted, from: { x, y } }
-        dragFrom.current = { x, y }
-        stroke.current = new Map()
+
+        // Not inside the mask: transparent deselects (today's "click outside
+        // drops it", generalised from "outside the rect" to "on nothing");
+        // non-transparent replaces the selection with the blob there.
+        if (seedValue === 0) {
+          ed.setSelection(null)
+        } else {
+          ed.setSelection(selectionFromPoints(blobPoints(px, doc.w, doc.h, x, y)))
+        }
         return
       }
 
@@ -420,12 +448,12 @@ export function Canvas() {
       const start = dragFrom.current
       if (start) {
         if (ed.tool === 'marquee') {
-          ed.setSelection({
-            x: Math.max(0, Math.min(start.x, x)),
-            y: Math.max(0, Math.min(start.y, y)),
-            w: Math.min(doc.w, Math.abs(x - start.x) + 1),
-            h: Math.min(doc.h, Math.abs(y - start.y) + 1),
-          })
+          ed.setSelection(selectionFromRect(
+            Math.max(0, Math.min(start.x, x)),
+            Math.max(0, Math.min(start.y, y)),
+            Math.min(doc.w, Math.abs(x - start.x) + 1),
+            Math.min(doc.h, Math.abs(y - start.y) + 1),
+          ))
           return
         }
 
@@ -436,20 +464,7 @@ export function Canvas() {
           const dy = y - moving.current.from.y
           // Clear the source, then stamp the lifted pixels at the offset. Both go
           // through one preview so the whole move is a single undo step.
-          const cells: Array<[number, number]> = []
-          const values = new Map<string, number>()
-          for (let sy = sel.y; sy < sel.y + sel.h; sy++) {
-            for (let sx = sel.x; sx < sel.x + sel.w; sx++) {
-              cells.push([sx, sy])
-              values.set(`${sx},${sy}`, 0)
-            }
-          }
-          for (const [ox, oy, value] of moving.current.cells) {
-            const tx = sel.x + ox + dx
-            const ty = sel.y + oy + dy
-            if (!values.has(`${tx},${ty}`)) cells.push([tx, ty])
-            values.set(`${tx},${ty}`, value)
-          }
+          const { cells, values } = movePreviewCells(sel, moving.current.cells, dx, dy)
           previewMoved(cells, values)
           return
         }
@@ -518,11 +533,7 @@ export function Canvas() {
     if (wasMoving && start && ed.selection) {
       const cursor = ed.cursor
       if (cursor) {
-        ed.setSelection({
-          ...ed.selection,
-          x: ed.selection.x + (cursor.x - start.x),
-          y: ed.selection.y + (cursor.y - start.y),
-        })
+        ed.setSelection(translateSelection(ed.selection, cursor.x - start.x, cursor.y - start.y))
       }
     }
   }, [])

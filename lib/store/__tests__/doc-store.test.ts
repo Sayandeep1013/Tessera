@@ -312,3 +312,72 @@ describe('commit(cmd, coalesce)', () => {
     expect(useDocStore.getState().past).toHaveLength(1)
   })
 })
+
+/**
+ * The selector's arrow-key nudge coalescing — docs/specs/20-selector.md §3.6.
+ * `paint`-vs-`paint` merging, generalising the same `commit(cmd, coalesce)`
+ * mechanism `replace_doc` already uses above, driven by the caller passing
+ * `coalesce: e.repeat` — every repeat of a held key merges into one entry,
+ * a fresh press starts a new one.
+ */
+describe('commit(cmd, coalesce) — paint merging', () => {
+  const nudge = (dx: number): EditorCommand => ({
+    type: 'paint', label: 'Nudge selection', frame: 0, layer: 0,
+    cells: [[0, 0, 0, 0], [1, 0, 0, dx]], // fake cell math, just needs before !== after somewhere
+  })
+
+  it('a held key\'s repeats merge into one undo entry, keeping the earliest before', () => {
+    const start = createDoc({ id: 'a', w: 4, h: 1 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 0, cells: [[0, 0, 0, 1]],
+    }, false) // first press: e.repeat is false
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 0, cells: [[0, 0, 1, 2]],
+    }, true) // held repeat
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 0, cells: [[0, 0, 2, 3]],
+    }, true) // held repeat
+
+    expect(useDocStore.getState().past).toHaveLength(1)
+    const merged = useDocStore.getState().past[0]!
+    expect(merged.type).toBe('paint')
+    expect((merged as EditorCommand & { type: 'paint' }).cells).toEqual([[0, 0, 0, 3]])
+
+    useDocStore.getState().undo()
+    expect(useDocStore.getState().doc!.frames[0]!.layers[0]!.px[0]).toBe(0) // back to the start, not step 2
+  })
+
+  it('a fresh (non-repeat) press starts a new step, even with the same label', () => {
+    const start = createDoc({ id: 'a', w: 4, h: 1 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit(nudge(1), false)
+    useDocStore.getState().commit(nudge(1), false) // e.repeat false — a new gesture
+    expect(useDocStore.getState().past).toHaveLength(2)
+  })
+
+  it('refuses to merge across a different frame or layer', () => {
+    const start = createDoc({ id: 'a', w: 4, h: 1 })
+    start.frames[0]!.layers.push({ n: 'over', px: new Uint8Array(4) })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 0, cells: [[0, 0, 0, 1]],
+    }, false)
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 1, cells: [[0, 0, 0, 1]],
+    }, true)
+    expect(useDocStore.getState().past).toHaveLength(2)
+  })
+
+  it('still refuses to merge a paint into a non-paint command on top', () => {
+    const start = createDoc({ id: 'a', w: 4, h: 1 })
+    useDocStore.getState().setDoc(start)
+    useDocStore.getState().commit({
+      type: 'replace_doc', label: 'Nudge selection', before: start, after: { ...start, name: 'x' },
+    })
+    useDocStore.getState().commit({
+      type: 'paint', label: 'Nudge selection', frame: 0, layer: 0, cells: [[0, 0, 0, 1]],
+    }, true)
+    expect(useDocStore.getState().past).toHaveLength(2)
+  })
+})

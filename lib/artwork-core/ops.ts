@@ -98,15 +98,26 @@ export function linePoints(
   return points
 }
 
-/** 4-connected flood fill. Returns the filled cells; does not mutate. */
+/**
+ * 4-connected flood fill. Returns the filled cells; does not mutate.
+ *
+ * `matches` decides whether a neighbour joins the fill — defaults to "same
+ * palette index as the seed", which is what bucket-fill and the `flood_fill`
+ * op both need, so every existing caller is unaffected. Object-select
+ * (docs/specs/20-selector.md §3.2) passes a different rule — "any
+ * non-transparent index" — so a multi-coloured shape selects as one blob
+ * rather than one colour patch. One flood fill, two match rules, rather than
+ * a second algorithm living next to this one.
+ */
 export function floodFillPoints(
   px: Uint8Array,
   w: number,
   h: number,
   sx: number,
   sy: number,
+  matches: (value: number, seed: number) => boolean = (v, seed) => v === seed,
 ): Array<[number, number]> {
-  const target = px[sy * w + sx]!
+  const seed = px[sy * w + sx]!
   const seen = new Uint8Array(w * h)
   const out: Array<[number, number]> = []
   const stack: number[] = [sy * w + sx]
@@ -114,7 +125,7 @@ export function floodFillPoints(
   while (stack.length) {
     const p = stack.pop()!
     if (seen[p]) continue
-    if (px[p] !== target) continue
+    if (!matches(px[p]!, seed)) continue
     seen[p] = 1
     const x = p % w
     const y = (p - x) / w
@@ -125,6 +136,18 @@ export function floodFillPoints(
     if (y < h - 1) stack.push(p + w)
   }
   return out
+}
+
+/**
+ * The non-transparent blob containing (sx, sy) — object-select's match rule
+ * (spec 20 §3.2). Empty when the seed itself is transparent: the caller
+ * wants "select the item here", and there is no item on a transparent pixel
+ * — this matches `matches(0, 0)` being false even without the short-circuit,
+ * so the guard is for clarity rather than correctness.
+ */
+export function blobPoints(px: Uint8Array, w: number, h: number, sx: number, sy: number): Array<[number, number]> {
+  if (px[sy * w + sx] === 0) return []
+  return floodFillPoints(px, w, h, sx, sy, (v) => v !== 0)
 }
 
 /** Cells on a rectangle outline, or the whole rectangle when filled. */

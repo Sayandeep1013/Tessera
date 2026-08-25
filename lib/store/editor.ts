@@ -10,7 +10,7 @@
 
 import { create } from 'zustand'
 import type { Doc } from '../artwork-core/schema'
-import { applyCommand, invertCommand, type EditorCommand } from '../artwork-core/commands'
+import { applyCommand, invertCommand, mergePaintCommands, type EditorCommand } from '../artwork-core/commands'
 import { clampLayer } from '../artwork-core/layers'
 import { clampFrame } from '../artwork-core/frames'
 import type { Viewport } from '../renderer/canvas'
@@ -18,6 +18,7 @@ import type { BrushShape } from '../editor/brush'
 import type { DitherMode } from '../editor/dither'
 import { CODE_DEFAULT_W, clampCodeWidth } from '../editor/code-panel'
 import { clampTab, type FormatTabId } from '../editor/export-menu'
+import type { Selection } from '../editor/selection'
 
 /** Spec 16 §1. Auto follows the zoom, as the renderer always has. */
 export type GridMode = 'auto' | 'on' | 'off'
@@ -158,17 +159,38 @@ export const useDocStore = create<DocState>((set, get) => {
       // to where the burst of typing started, which is a coalesce that saves
       // nothing.
       const top = past[past.length - 1]
-      if (coalesce && top && top.type === 'replace_doc' && cmd.type === 'replace_doc' &&
-          top.label === cmd.label) {
-        set({
-          doc: next,
-          frame: nextFrame,
-          layer: nextLayer,
-          past: [...past.slice(0, -1), { ...cmd, before: top.before }],
-          future: [],
-        })
-        scheduleSave()
-        return
+      if (coalesce && top && top.label === cmd.label) {
+        if (top.type === 'replace_doc' && cmd.type === 'replace_doc') {
+          set({
+            doc: next,
+            frame: nextFrame,
+            layer: nextLayer,
+            past: [...past.slice(0, -1), { ...cmd, before: top.before }],
+            future: [],
+          })
+          scheduleSave()
+          return
+        }
+        // The selector's arrow-key nudge (docs/specs/20-selector.md §3.6):
+        // e.repeat drives `coalesce` so a held key's repeats merge into one
+        // undo entry instead of one per repaint. Same shape as the
+        // replace_doc merge above — one mechanism, two command types. Frame
+        // and layer must also match: merging cell coordinates across a layer
+        // switch mid-hold would be meaningless.
+        if (
+          top.type === 'paint' && cmd.type === 'paint' &&
+          top.frame === cmd.frame && top.layer === cmd.layer
+        ) {
+          set({
+            doc: next,
+            frame: nextFrame,
+            layer: nextLayer,
+            past: [...past.slice(0, -1), mergePaintCommands(top, cmd)],
+            future: [],
+          })
+          scheduleSave()
+          return
+        }
       }
 
       const trimmed = past.length >= HISTORY_CAP ? past.slice(past.length - HISTORY_CAP + 1) : past
@@ -253,8 +275,14 @@ type EditorState = {
   symmetry: Symmetry
   panning: boolean
   dither: DitherMode
-  /** Document-space rectangle, or null. Set by the marquee, moved by select. */
-  selection: { x: number; y: number; w: number; h: number } | null
+  /**
+   * A bounding box plus a mask, or null. Set by the marquee (a filled
+   * rectangle) or by click/shift-click object-select (a blob or several
+   * disjoint ones); moved by drag or arrow-nudge. See
+   * docs/specs/20-selector.md §2 — a rectangle is a mask special case, not a
+   * second type.
+   */
+  selection: Selection | null
   /**
    * Whether the layer panel is on screen. UI state, so it lives here rather than
    * in the document store — but the button that toggles it is in the header and
@@ -331,7 +359,7 @@ type EditorState = {
   setSymmetry: (s: Symmetry) => void
   setPanning: (p: boolean) => void
   setDither: (d: DitherMode) => void
-  setSelection: (s: { x: number; y: number; w: number; h: number } | null) => void
+  setSelection: (s: Selection | null) => void
   setLayersOpen: (open: boolean) => void
   setSettingsOpen: (open: boolean) => void
   setTimelineOpen: (open: boolean) => void

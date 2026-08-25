@@ -485,37 +485,67 @@ export function renderCursor(
 }
 
 /**
- * Selection rectangle.
+ * A single boundary run — a straight stretch of the selection mask's edge, in
+ * document cell-space. See lib/editor/selection.ts's `OutlineRun` and
+ * docs/specs/20-selector.md §4; duplicated structurally here (not imported)
+ * so this file's own purity constraint holds — it knows about line segments,
+ * not about masks or selections.
+ */
+type OutlineRun = { side: 'top' | 'bottom' | 'left' | 'right'; at: number; a: number; b: number }
+
+/**
+ * Marching ants, minus the marching — traces the selection mask's real edges.
  *
  * Drawn as a two-tone dashed border — white under, dark dashes over — for the
  * same reason the grid is composited rather than coloured: the selection can
  * land on any artwork colour, and a single-tone outline disappears against one
- * of them. This is the classic "marching ants" treatment minus the marching;
- * looping motion in the periphery is a vestibular trigger and this is the one
- * overlay that would run continuously.
+ * of them. Static rather than animated: looping motion in the periphery is a
+ * vestibular trigger and this is the one overlay that would run continuously.
+ *
+ * Each run is inset 0.5 cell-pixels toward the selected side — top/left runs
+ * shift their perpendicular coordinate +0.5, bottom/right shift -0.5, and
+ * both of a run's own along-axis ends get the same treatment. This is
+ * `strokeRect(ax+0.5, ay+0.5, w-1, h-1)`'s own inset convention, generalised:
+ * for a filled rectangle (one run per side, spanning the full extent) it
+ * reproduces the exact same four corner points this function used to draw
+ * with `strokeRect` — docs/specs/20-selector.md §4.2 works through why. Two
+ * runs that meet at a real corner get the same inset from both sides, so
+ * blob and multi-blob outlines join flush too.
  */
 export function renderSelection(
   ctx: CanvasRenderingContext2D,
-  sel: { x: number; y: number; w: number; h: number },
+  runs: ReadonlyArray<OutlineRun>,
   vp: Viewport,
 ): void {
-  const ax = Math.round(vp.offsetX) + sel.x * vp.scale
-  const ay = Math.round(vp.offsetY) + sel.y * vp.scale
-  const w = sel.w * vp.scale
-  const h = sel.h * vp.scale
+  if (runs.length === 0) return
+  const s = vp.scale
+  const ox = Math.round(vp.offsetX)
+  const oy = Math.round(vp.offsetY)
+
+  const segments = runs.map((r) => {
+    if (r.side === 'top' || r.side === 'bottom') {
+      const y = oy + r.at * s + (r.side === 'top' ? 0.5 : -0.5)
+      return { x1: ox + r.a * s + 0.5, y1: y, x2: ox + r.b * s - 0.5, y2: y }
+    }
+    const x = ox + r.at * s + (r.side === 'left' ? 0.5 : -0.5)
+    return { x1: x, y1: oy + r.a * s + 0.5, x2: x, y2: oy + r.b * s - 0.5 }
+  })
 
   ctx.save()
   ctx.lineWidth = 1
-  // Half-pixel offset so a 1px stroke lands on the pixel rather than straddling
-  // two and rendering as a 2px blur.
-  const r = [ax + 0.5, ay + 0.5, w - 1, h - 1] as const
 
-  ctx.setLineDash([])
-  ctx.strokeStyle = '#ffffff'
-  ctx.strokeRect(...r)
+  const strokeAll = (color: string, dash: number[]) => {
+    ctx.beginPath()
+    for (const seg of segments) {
+      ctx.moveTo(seg.x1, seg.y1)
+      ctx.lineTo(seg.x2, seg.y2)
+    }
+    ctx.setLineDash(dash)
+    ctx.strokeStyle = color
+    ctx.stroke()
+  }
 
-  ctx.setLineDash([4, 4])
-  ctx.strokeStyle = '#000000'
-  ctx.strokeRect(...r)
+  strokeAll('#ffffff', [])
+  strokeAll('#000000', [4, 4])
   ctx.restore()
 }

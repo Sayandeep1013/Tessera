@@ -18,9 +18,11 @@ import { loadLatestDraft } from '@/lib/persist/idb'
 import { fitViewport, stepScale } from '@/lib/editor/viewport'
 // Shared with Chrome.tsx, which owns the File menu's own shortcuts. Spec 17 §3:
 // one guard for "is the user typing", not one per handler.
-import { isTyping } from '@/lib/editor/keys'
+import { dialogOpen, isTyping } from '@/lib/editor/keys'
 import { NOTICE_MS } from '@/lib/editor/paste'
 import { parseDoc, serializeDoc } from '@/lib/artwork-core/codec'
+import { paintCommand } from '@/lib/artwork-core/commands'
+import { selectionClearCells, selectionPaintCells, translateSelection } from '@/lib/editor/selection'
 
 export default function EditorPage() {
   const doc = useDocStore((s) => s.doc)
@@ -147,6 +149,16 @@ export default function EditorPage() {
         return d ? serializeDoc(d) : null
       },
       viewport: () => useEditorStore.getState().viewport,
+      /**
+       * Unit J: a selection's mask is not reliably observable from a
+       * screenshot (a shift-click removing one of several blobs, say), the
+       * same reason `layers()` exists above. Dev-only, read-only — reading
+       * `editor.selection` directly, never `setSelection`.
+       */
+      selection: () => {
+        const s = useEditorStore.getState().selection
+        return s ? { x: s.x, y: s.y, w: s.w, h: s.h, mask: Array.from(s.mask) } : null
+      },
       /**
        * Unit I: the AI quality harness (tools/eval-ai.ts) has to put a KNOWN
        * document in front of the agent before every scenario, or a rating
@@ -281,6 +293,68 @@ export default function EditorPage() {
           if (!ds.doc || to >= ds.doc.frames.length) break
           ds.commit({ type: 'frame_move', label: 'Reorder frame', from: ds.frame, to })
           ds.setFrame(to)
+          break
+        }
+
+        // The selector — spec 20 §3.5-§3.7. Acts on `editor.selection`
+        // whichever tool is active (§3.9), and never while a dialog is open
+        // (§3.10) — a dialog's own Escape, or a focused control inside one,
+        // takes priority.
+        case 'escape': {
+          if (ed.selection && !dialogOpen()) ed.setSelection(null)
+          break
+        }
+
+        case 'delete':
+        case 'backspace': {
+          const sel = ed.selection
+          if (!sel || dialogOpen()) break
+          e.preventDefault()
+          let d = ds.doc
+          // Reveal a hidden active layer first, as its own undo step — same
+          // pattern Canvas.tsx's onPointerDown uses before a stroke or move.
+          if (d?.frames[ds.frame]?.layers[ds.layer]?.hidden) {
+            ds.commit({
+              type: 'layer_visible', label: 'Show layer', frame: ds.frame, at: ds.layer,
+              before: true, after: false,
+            })
+            d = ds.doc
+          }
+          const px = d?.frames[ds.frame]?.layers[ds.layer]?.px
+          if (px && d) {
+            ds.commit(paintCommand('Clear selection', ds.frame, ds.layer, selectionClearCells(px, d.w, sel)))
+          }
+          break
+        }
+
+        case 'arrowup': case 'arrowdown': case 'arrowleft': case 'arrowright': {
+          const sel = ed.selection
+          if (!sel || dialogOpen()) break
+          e.preventDefault()
+          const [dx, dy] =
+            e.key === 'ArrowUp' ? [0, -1] :
+            e.key === 'ArrowDown' ? [0, 1] :
+            e.key === 'ArrowLeft' ? [-1, 0] : [1, 0]
+          let d = ds.doc
+          if (d?.frames[ds.frame]?.layers[ds.layer]?.hidden) {
+            ds.commit({
+              type: 'layer_visible', label: 'Show layer', frame: ds.frame, at: ds.layer,
+              before: true, after: false,
+            })
+            d = ds.doc
+          }
+          const px = d?.frames[ds.frame]?.layers[ds.layer]?.px
+          if (px && d) {
+            // e.repeat coalesces a held key's repeats into one undo entry —
+            // the store merges consecutive same-label `paint` commands on the
+            // same frame/layer, spec 20 §3.6.
+            ds.commit(
+              paintCommand('Nudge selection', ds.frame, ds.layer, selectionPaintCells(px, d.w, d.h, sel, dx, dy)),
+              e.repeat,
+            )
+            const moved = translateSelection(sel, dx, dy)
+            ed.setSelection(moved)
+          }
           break
         }
       }

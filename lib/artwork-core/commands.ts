@@ -365,3 +365,25 @@ export function paintCommand(
   const real = [...cells].filter(([, , before, after]) => before !== after)
   return real.length ? { type: 'paint', label, frame, layer, cells: real } : null
 }
+
+/**
+ * Merge two `paint` commands touching the same frame and layer, keeping each
+ * touched cell's EARLIEST `before` and LATEST `after`. Used to coalesce a
+ * held key's repeated nudges into one undo entry — see
+ * docs/specs/20-selector.md §3.6. The caller (`useDocStore.commit`) is
+ * responsible for checking frame/layer/label already match before calling
+ * this; it does not re-check them.
+ */
+export function mergePaintCommands(
+  top: EditorCommand & { type: 'paint' },
+  next: EditorCommand & { type: 'paint' },
+): EditorCommand {
+  const map = new Map<string, PaintCell>()
+  for (const c of top.cells) map.set(`${c[0]},${c[1]}`, c)
+  for (const [x, y, before, after] of next.cells) {
+    const key = `${x},${y}`
+    const existing = map.get(key)
+    map.set(key, [x, y, existing ? existing[2] : before, after])
+  }
+  return { ...next, cells: [...map.values()] }
+}
