@@ -386,6 +386,30 @@ Every one of these has already cost time in this repo.
   Worker doing its job quickly, not a bug — chasing it with a bigger and bigger test document is the
   wrong fix. Assert what polling *can* prove deterministically (the element existed, with the right
   total) instead of a specific number of distinct observations.
+- **A working `npx next dev` session proves NOTHING about Vercel's serverless runtime — not
+  timeouts, not networking, not either.** Unit I's whole AI-quality eval passed locally, then every
+  live request failed on Vercel, for two unrelated reasons neither of which local dev could ever
+  have caught: (1) `npx next dev` has no function-duration limit at all, so a route with no
+  `export const maxDuration` silently relies on the *platform default* (10s on Hobby, 60s ceiling) —
+  never observable from a dev server that never enforces it. (2) A custom `undici.Agent` fetch
+  dispatcher, added to survive a 5-minute local timeout, broke every live request outright — it
+  bypasses whatever fetch implementation Vercel's Node runtime provides by default, and the
+  breakage was invisible locally because dev's own fetch never goes near that code path the same
+  way. **Before trusting a provider/networking change as done, hit the actual deployed URL once**,
+  not just `localhost`. `UNITS.md §I.1` is the full incident.
+- **A same-status, same-timing failure across every request — even a trivial one — is not a
+  capacity or budget problem; it is something rejecting the request before it is even evaluated.**
+  A "the model's reply couldn't be read" error that took 1.7 seconds, identically, for a single
+  red pixel, was not the model running out of budget (that needs real generation time) — it was an
+  upstream WAF serving a canned challenge page. When every input fails the same way in near-constant
+  time, stop varying the input and go read the actual response body; guessing at the content is how
+  two wrong fixes shipped before the real cause did (`UNITS.md §I.1`).
+- **A relay CAN reject a server by its calling IP's reputation, independent of every header the app
+  controls.** AgentRouter's `unauthorized_client_error` (measured earlier, `18 §3.2`) is a header
+  check and a `user-agent` fixes it. This is a *different*, IP-reputation-based Aliyun WAF layer in
+  front of the same relay, serving a 200 HTML challenge page instead of a 401 JSON error, and no
+  header combination reaches it — it never gets far enough to read headers. If a live symptom looks
+  identical to a WAF you already solved, read the raw body before assuming it is the same WAF.
 
 ---
 

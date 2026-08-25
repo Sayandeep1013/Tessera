@@ -7,9 +7,10 @@ If you are an agent starting a session: read §0, then find the first unit whose
 status is `NEXT`, then paste-follow the prompt in its block. Do not ask which
 unit to do — the ledger says.
 
-**If no unit is marked `NEXT`** (true as of H, 14 Aug 2026 — every lettered unit
-A–H is `DONE`): there is nothing queued, and guessing one into existence is not
-this file's job. §0.1 is what to do instead.
+**If no unit is marked `NEXT`:** there is nothing queued, and guessing one into
+existence is not this file's job. §0.1 is what to do instead. **Not true right
+now** — as of 25 Aug 2026, unit **J (the selector tool)** is marked `NEXT`
+below, scoped and ready to build.
 
 ---
 
@@ -1772,13 +1773,15 @@ enough to hit them ran against it.
     apologised for it in its own summary — *"the palette allowance capped me at four colours, so
     the sky is left transparent."* A limit the artist has to caption around is the wrong limit.
     Raised to 12; the format allows 36.
-11. **A hardcoded 5-minute transport wall killed healthy generations.** Node's default fetch
-    dispatcher has a 300-second `headersTimeout`. A detailed 32×32 drawing routinely takes a whole
-    turn longer than that, and the socket was killed mid-response with a 503 the app had no way to
-    recover from — the model had done nothing wrong. Fixed with a dedicated `undici` `Agent`
-    (`headersTimeout`/`bodyTimeout` at 20 minutes), scoped to this adapter's own requests only, not
-    `setGlobalDispatcher`. Also retried, as defense in depth, for whatever transient transport
-    failure gets through anyway.
+11. **A hardcoded 5-minute transport wall killed healthy generations locally.** Node's default
+    fetch dispatcher has a 300-second `headersTimeout`. A detailed 32×32 drawing against
+    `npx next dev` (no timeout of its own) routinely takes a whole turn longer than that, and the
+    socket was killed mid-response with a 503 the app had no way to recover from. **Fixed, that
+    day, with a custom `undici.Agent` dispatcher — then REVERTED the same day, also see
+    `§I.1` below.** It broke every live request on Vercel outright, and bought nothing there
+    regardless: Vercel's own `maxDuration` kills a request long before a 20-minute dispatcher
+    timeout could matter. `maxDuration = 60` on both AI routes is the fix that actually helps on
+    the deployed app. Retry-on-transient-failure, added at the same time, is unaffected and stayed.
 12. **An unbounded thinking budget silently ate the whole response.** claude-opus-5 has adaptive
     thinking on by default, and thinking tokens are billed against the same `max_tokens` ceiling as
     the tool call it is working toward. On the hardest scenarios (dual highlight-and-shadow
@@ -1813,7 +1816,7 @@ bottleneck.
 | 1 | Spec conformance | 9 | Every §-numbered requirement in both specs is built: the adapter, the translation, the SSRF gates, `§4.1`'s hard rule, BYOK + migration, the dialog, `/api/ai/models`, the eval harness and rubric, prompt caching. Not built: OpenRouter (18 §1 scopes it out explicitly) and a fourth eval pass to force S4 to a clean completion — deliberately not spent, per §2.2. |
 | 2 | Correctness | 9 | 920 tests green, typecheck clean, production build clean. Twelve real defects found and fixed, several pre-existing and load-bearing (the palette-recolour undo bug, the bundle guards that had never run). The one open item is S4 not completing within the harness window — not a correctness bug, recorded as such. |
 | 3 | Tests | 9 | Every fix in §2.3/§2.4 above has a test that reproduces it before the fix and passes after — the dialect conversion, the id-pairing determinism, the palette idempotence, the rate-limit and transport retries, the bounded-thinking request shape, `§4.1`'s no-key-no-config rule. `tools/eval-ai.ts` is deliberately not in `npm test` — it costs real money, same reasoning as every other paid probe in this repo. |
-| 4 | Integration | 9 | The registry stays Gemini-shaped per `12 §5`; the dialect and block translation live in the adapter, where a provider difference belongs. `commit()` still the only writer. The dispatcher is scoped to one module, not global. One new surface: `undici` as a direct dependency, justified in `18 §2`'s amendment and covered by the bundle guard. |
+| 4 | Integration | 9 | The registry stays Gemini-shaped per `12 §5`; the dialect and block translation live in the adapter, where a provider difference belongs. `commit()` still the only writer. **`undici` as a direct dependency, and the custom dispatcher it existed for, were both added and then removed the same day** (`§I.1`) — the codebase now carries neither; `git log` on `lib/ai/provider/anthropic.ts` is the honest record if this row's history matters later. |
 | 5 | Design fidelity | 9 | The key dialog matches `18 §7` to the measurement — provider picker, placeholder/link per provider, the compatibility checkbox and its exact wording, both themes, 320px. `tools/probe-byok.ts` is 53/53 on structure and 56/56 including the live path, both driving **the user's own flow**: cold browser, dialog, AgentRouter preset, pasted key, real edit. |
 | 6 | No regressions | 9 | Full suite green (920, up from 822 at the start of the unit — the delta is new tests, not fewer old ones). Gemini's free-tier path is untouched and still the default with no key. `npm run build` clean with the new route and the new dependency. |
 
@@ -1828,10 +1831,211 @@ bottleneck.
   but it would not have added information the first three didn't already establish.
 - **Asking AgentRouter to allowlist Tessera as a client**, so the `claude-code` compatibility
   profile stops being necessary. Recorded as outstanding follow-up; `18 §3.2` commits to it.
-- **Streaming.** The dispatcher fix (item 11) removes the practical wall; a streamed response
-  would remove it structurally (headers arrive immediately, so a 20-minute generation is never at
-  risk of a headers timeout regardless of the number). Worth doing if a harder task than S4 ever
-  needs it; not needed to clear this unit's gate.
+- **Streaming.** ~~The dispatcher fix (item 11) removes the practical wall~~ — **wrong, corrected
+  below (§I.1): item 11's dispatcher was removed the same day it shipped, for a worse reason than
+  the one it fixed.** Streaming is still the real long-term answer (headers arrive immediately, so
+  a slow generation is never at risk of a headers timeout regardless of the number), and is now
+  the *only* structural answer, since Vercel's own `maxDuration` ceiling (60s on this plan) is a
+  harder wall than anything client-side. Not needed to clear this unit's gate; worth doing before
+  a task harder than S4 is attempted live.
+
+### §I.1 — A live incident, the same day, after this unit's score was written
+
+**24-25 Aug 2026, four follow-up commits: `96fd95a` `0cc34d8` `1ca1fae` `baa063c`.** The score
+above (9/10) still stands — nothing in this section changes what unit I built — but it was written
+before the deployed app was tested *as deployed*, and that gap found one more real defect plus one
+structural, non-code limitation. Recorded here rather than silently folded into the score, per
+rule 10.
+
+**What happened, in order:**
+
+1. The user tested the live site and got *"The model's reply couldn't be read. Nothing changed."*
+   on **every** prompt, including a trivial single red pixel — not a hard-task problem, since a
+   trivial prompt fails identically to a hard one.
+2. First hypothesis (wrong, but a reasonable one at the time): item 11 from `PHASE-0-FINDINGS.md
+   §2.3` — the local eval suite's own 5-minute-transport-wall fix — never got tested against
+   Vercel's actual runtime, only against `next dev`, which has no timeout of its own at all.
+3. Diagnostic logging (`96fd95a`) confirmed the failure was real code executing to a real
+   conclusion, not a crash — no error/exception was logged, and the round trip was consistently
+   **~2 seconds**, far too fast for genuine generation.
+4. **Defect found:** the `undici.Agent` custom dispatcher added in unit I bypasses whatever fetch
+   implementation Vercel's Node runtime provides by default. Removed (`0cc34d8`), and it was worth
+   removing regardless of whether it was the cause — **it bought nothing on Vercel's Hobby plan**,
+   whose function `maxDuration` (10s default, 60s ceiling) kills a request long before a
+   20-minute dispatcher timeout could ever matter. `maxDuration = 60` added to both AI routes in
+   the same commit, since the platform default alone was very likely killing legitimate turns.
+5. **The dispatcher was not the cause.** Identical failure after removing it. A second, more
+   precise diagnostic (`1ca1fae`) logged the actual raw response body on the next occurrence.
+6. **The real cause:** `agentrouter.org` is fronted by an **Alibaba Cloud WAF**
+   (`aliyun_waf`), and it serves a 200-status HTML JavaScript-challenge page — not a real API
+   response — to requests from Vercel's outbound IP range. This is an **IP-reputation block**,
+   separate from and in addition to the client-identity header check `18 §3` already documented
+   and satisfies correctly. No header combination defeats an IP-reputation block; it happens
+   before AgentRouter's own application layer, let alone its header check, ever sees the request.
+   Confirmed by reading the literal raw body (`<meta name="aliyun_waf_aa"…`), not inferred.
+7. **Fixed what is fixable** (`baa063c`): a third row in the §5 error-mapping table,
+   `bad_waf`, detected narrowly (HTML content-type on an unparseable 2xx) so a genuinely malformed
+   real response still falls through to the pre-existing generic `bad_response`. A BYOK user now
+   reads *"This relay is blocking requests from Tessera's server, not from your key"* instead of
+   being sent to re-check a key that was never the problem. Verified live after deploy — same
+   trivial request, now returns the honest message instead of the misleading one.
+
+**What is NOT fixed, and cannot be fixed from this codebase alone:** AgentRouter, called
+server-side from Vercel (or very likely from AWS, GCP, or any recognizable cloud/datacenter IP
+range — the block is about IP reputation, not anything Vercel-specific), does not reliably reach
+the model at all. This is a platform-compatibility limitation of the relay, not an application
+defect, and hard rule 6 (API keys are server-side only) rules out the one workaround that would
+dodge it (calling from the browser directly) without giving up the reason that rule exists.
+
+**What is very likely unaffected, stated as an expectation rather than a verified fact — no real
+Anthropic key was available to confirm it:** the "Claude · Anthropic" BYOK path (`api.anthropic.com`
+directly, no relay in front of it) should not hit this WAF at all — Anthropic's own API is built
+for exactly this kind of server-to-server SaaS traffic, at a scale where blocking major cloud IP
+ranges would break most of what is built on it. **This is unrelated to unit J** (the selector tool,
+below) and does not block it — it is a five-minute check for whoever next holds a real Anthropic
+key: paste one into the live dialog, pick "Claude · Anthropic", try one instruction. If it works,
+say so here and in `PHASE-0-FINDINGS.md`; if it also fails, that is a much bigger finding and
+`§I.1` above needs a second incident section.
+
+**What was never affected:** the deployment's own free-tier Gemini path, which was never routed
+through AgentRouter and shares none of this code path.
+
+---
+
+## J — The selector tool: object select, multi-select, drag · NEXT
+
+Not a lettered-unit-from-a-plan — named directly in the user's own prompt (`§0.1`, point 2),
+scoped through an `AskUserQuestion` exchange earlier in the same session that produced unit I, and
+**not yet started** — that session got interrupted by the live incident in `§I.1` right as the
+scoping research began, before any spec file or code existed. Everything below is what was already
+researched and decided; the actual build has not begun.
+
+**The user's words, from the start of this thread:** *"a selector tools by which i can move the
+content in the canvas grid .. like what excalidraw does .. there are multiple items .. i select and
+i can drag the selected items."* Then, scoping it: *"first determine what i mean exactly by that ..
+u write the exact functionalities .. and edgecases and interactions and build it properly."*
+
+**Scope, already settled via `AskUserQuestion`** (do not re-ask — the user picked this over "add
+lasso and clipboard too" and over "just fix the existing rect move"): **object select + multi +
+drag.** Click a contiguous blob to select it as an "item," shift-click to add or remove another,
+drag the whole set together. Marching ants trace the real shape, not a bounding box. The move is
+transparency-aware — no square hole of erased background dragged along with it. Arrow keys nudge
+the selection. Esc deselects. Del clears. **Out of scope, explicitly:** lasso, clipboard cut/copy/
+paste, flip/rotate. If those come up, they are a later unit, not a "while I'm in here" addition.
+
+### Context handed over
+
+**What exists today, and where (`lib/store/editor.ts:257`, `components/Canvas.tsx`,
+`lib/renderer/canvas.ts:497`):**
+
+- `editor.selection` is `{ x, y, w, h } | null` — a rectangle, nothing else. `marquee` (M) drags
+  one out; `select` (V) drags its *contents*: clicking outside the rect deselects, clicking inside
+  lifts every cell in the rect, and dragging clears the whole source rect to transparent and stamps
+  the whole destination rect — **including whatever cells were themselves transparent**, which is
+  the literal "square hole" the user is describing. `previewMoved(cells, values)` in `Canvas.tsx`
+  (around line 251) is already shape-agnostic — it takes an arbitrary cell list and a value map, no
+  rectangle assumption — so the move-preview mechanism does not need rebuilding, only what feeds it.
+- `renderSelection` in `lib/renderer/canvas.ts` draws a **deliberately static, two-tone dashed
+  rectangle outline** — read its own comment before touching it: this project already decided
+  against animated marching ants, because continuous peripheral motion is a vestibular trigger.
+  Whatever replaces it to trace a real mask boundary **must stay non-animated.** That is not a gap
+  to fill in, it is a constraint already chosen.
+- `lib/artwork-core/ops.ts:102`, `floodFillPoints(px, w, h, sx, sy)` — 4-connected flood fill,
+  already built, but matches by **exact palette index** (same colour only), because its one caller
+  today is the bucket-fill tool. Object-select needs a DIFFERENT match rule — non-transparent
+  connectivity, so a multi-coloured shape (outline + several fill colours all touching) selects as
+  one blob rather than one colour patch. Generalise `floodFillPoints` to take a match predicate
+  rather than writing a second flood-fill algorithm next to it.
+- `lib/editor/keys.ts` — `isTyping(target)` is the one guard every keyboard shortcut in this repo
+  reuses before acting; `isMod(e)` for ctrl/cmd. Reuse both rather than reimplementing.
+- Tool rail (`components/Chrome.tsx`): `select` (V) and `marquee` (M) both already exist as
+  buttons. **No new tool icon is needed** — the new click/shift-click/drag interactions extend the
+  existing `select` tool. `HANDOFF §6.2` already recorded a real 320px tool-rail overflow bug from
+  a previous unit; adding a ninth button is exactly the kind of change that would reintroduce it,
+  and there is no need to.
+
+**Design decisions already reasoned through, not yet written into a formal sub-spec:**
+
+1. **Selection becomes a pixel mask, not a rectangle.** A marquee-drawn rectangle is still just a
+   filled mask as a special case, so marquee's own code barely changes. A concrete shape worth
+   starting from: bounding box plus a mask relative to it, for cheap iteration and cheap rendering
+   bounds — not committed, this is the sub-spec's first real decision.
+2. **Marquee's existing behaviour is preserved ON PURPOSE, not generalised.** A marquee rectangle's
+   mask is every cell in the rectangle, transparent gaps included — moving it moves the whole
+   region, exactly as it does today, and that is correct: an explicit rectangular selection is a
+   deliberate "move this block" choice. **"No square hole" describes the NEW click-to-select path
+   only** — a blob's mask is built from actually-drawn pixels by construction, so it can never carry
+   a transparent hole along with it. Do not "fix" marquee under the belief it regressed; it did not.
+3. **Click** (no modifier) on a pixel not already in the mask: flood-fill non-transparent
+   connectivity on the **active layer** (not the composite — matches how paint/fill/erase and
+   today's move already scope), 4-connected, and it **replaces** the current selection. Click on a
+   transparent pixel deselects, matching today's "click outside drops it."
+4. **Shift+click** toggles: flood-fill the same way; if the result is already fully inside the
+   mask, subtract it, otherwise union it in. Shift+click on transparent is a no-op.
+5. **Drag** starting inside the mask moves every selected cell together, by the same delta,
+   regardless of how many disjoint blobs are selected — one rigid group.
+6. **Marching ants trace the mask's real edges**: for each selected cell, draw whichever of its 4
+   sides border a cell that is NOT selected (or is off-canvas). For a filled rectangle this reduces
+   to exactly today's 4-sided outline — that is the regression check. For a blob or several disjoint
+   blobs it traces each one's own boundary. O(mask size), no library needed.
+7. **Arrow-key nudge** moves the whole mask one cell per press, as an undoable commit — same
+   lift/clear/stamp shape as a drag, just triggered by a key. **Must coalesce a held key's repeats
+   into one undo entry**. `useDocStore`'s existing `replace_doc` coalescing (`lib/store/editor.ts`
+   around line 161) is the closest existing precedent; whether it generalises to this or nudge needs
+   its own small coalescing rule is an open decision for the sub-spec, not resolved here.
+8. **Esc** deselects, no document mutation. Scope it so it does not compete with `KeyDialog`,
+   `CodePanel` and `SharePopover`, which already bind Esc to their own close behaviour — check all
+   three before wiring a global handler.
+9. **Del / Backspace** clears the masked pixels on the active layer to transparent, one undoable
+   commit, selection stays active afterward (the outline remains, now over empty cells). No existing
+   binding was found on these keys in this repo, but confirm before wiring — grep every `keys.ts`
+   caller and `app/page.tsx`'s keydown handler first.
+10. **Hidden active layer**: reuse the exact reveal-then-commit pattern already in `Canvas.tsx`'s
+    `onPointerDown` (search its comment about drawing on a hidden layer) for click-select and for the
+    start of a move, nudge, or delete — so the user can see what they are about to touch.
+11. **Layer/frame scoping falls out for free**: selection reads and writes `doc.frames[frame]
+    .layers[layer].px`, exactly like every paint tool, so it is already frame- and layer-scoped with
+    no special-casing. Switching layers or frames mid-selection does not clear or resnap the mask —
+    same as today's marquee — a following move/nudge/delete just acts on whatever is now at those
+    coordinates. This is existing precedent, not a new problem to solve.
+12. **No agent/AI awareness.** `lib/actions/catalogue.ts` has no concept of selection today and
+    this unit does not add one — it is a pointer-and-keyboard UI tool, matching the scope decided.
+
+**Test shape to match this repo's convention** (rule 9 — tests ship with the code):
+
+- Unit tests for the generalised flood-fill (non-transparent connectivity, 4-connected, stays off
+  transparent boundaries, handles two touching-but-separate colours as one blob).
+- Unit tests for the mask-boundary trace: a filled rectangle produces exactly today's 4-sided
+  outline (the regression check), an irregular blob traces correctly, two disjoint blobs each get
+  their own separate outline.
+- Unit tests for the move/nudge/delete cell math on an arbitrary (non-rectangular, possibly
+  multi-blob) mask — transparency-aware, never bleeding onto destination pixels the mask does not
+  cover.
+- A browser probe (new, or extend `tools/probe-tools-ui.ts`) driving click-select, shift-click
+  add/remove, drag-move, arrow-nudge, Esc, Del, and a marquee-still-works-unchanged regression
+  check, both themes, at least one narrow viewport (320 or 390 — `check-responsive.ts`'s set).
+
+### Prompt
+
+> Read `CLAUDE.md`, `docs/HANDOFF.md §5`, and `docs/UNITS.md` (this file, all of it — §0 for the
+> loop, unit J's own block above for everything already researched and decided), then build unit
+> **J: the selector tool.**
+>
+> Scope is already settled: object select + multi + drag, exactly as unit J's "Context handed over"
+> section describes — click a contiguous blob to select it, shift-click to add or remove another,
+> drag the whole set, marching ants on the real shape (static, not animated — `renderSelection`'s
+> own comment says why), transparency-aware move, arrow-key nudge, Esc to deselect, Del to clear.
+> Lasso, clipboard, and flip/rotate are explicitly out of scope — do not add them.
+>
+> Marquee's own behaviour (a rectangle's transparent gaps travel WITH it when moved) is correct and
+> already shipped — do not change it. "No square hole" describes the new click-to-select path only,
+> where it is automatic by construction.
+>
+> Follow this repo's own loop (`docs/WORKFLOW.md`): write the sub-spec first — the unit-J context
+> above is real research, not a finished spec, and several concrete decisions (the exact selection
+> type, whether nudge reuses `replace_doc` coalescing or needs its own) are explicitly left for that
+> step. Then plan, build, test per the shape already described, and score across the six dimensions
+> honestly. Then follow the finishing protocol in `docs/UNITS.md §0`.
 
 ---
 

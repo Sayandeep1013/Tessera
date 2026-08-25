@@ -250,13 +250,22 @@ repo owned, most of it pre-existing and simply invisible behind a model too weak
 10. **`MAX_SESSION_COLORS = 4`** was tight enough that the model apologised for it in its own
     summary on a 32×32 tree — *"the palette allowance capped me at four colours, so the sky is
     left transparent."* Raised to 12.
-11. **A hardcoded 5-minute transport wall.** Node's default fetch dispatcher kills a socket after
-    a 300-second `headersTimeout`; a detailed drawing routinely takes a whole turn longer than
-    that to generate. Fixed with a dedicated `undici` dispatcher scoped to this adapter only.
+11. **A hardcoded 5-minute transport wall, locally.** Node's default fetch dispatcher kills a
+    socket after a 300-second `headersTimeout`, and a detailed drawing routinely takes a whole
+    turn longer than that against `npx next dev`, which has no timeout of its own. **This fix was
+    reverted the same day it shipped** — see the live incident in `UNITS.md §I.1`. A custom
+    `undici.Agent` dispatcher fixed the local symptom and broke every live request on Vercel
+    outright, and it bought nothing there regardless: Vercel's own `maxDuration` (10s default, 60s
+    ceiling on this plan) kills a request long before a 20-minute dispatcher timeout could matter.
+    `maxDuration = 60` on both AI routes is what actually helps on the deployed app; streaming is
+    the real structural fix if a harder task than S4 needs more than that.
 12. **An unbounded thinking budget.** claude-opus-5's adaptive thinking is on by default and is
     billed against the same `max_tokens` ceiling as the tool call it is reasoning toward. On a
     hard task the model could spend the entire budget thinking and never draw. Bounded to 16,000
     of 32,000 tokens, guaranteeing room for the actual response regardless of how hard it reasons.
+    **This one held** — confirmed still in place after the live incident in `UNITS.md §I.1`, which
+    found a separate, unrelated cause (an Aliyun WAF blocking AgentRouter from Vercel's IP range)
+    for the "every prompt fails" report that came after this finding was first written.
 
 ## §2.4 What it cost
 

@@ -81,24 +81,33 @@ MOCK_SERVER=1 APP_URL=http://localhost:3100 npm run probes
 
 ## Current state
 
-See `docs/HANDOFF.md` for the full picture. In brief, as of 12 Aug 2026:
+See `docs/HANDOFF.md` for the full picture, and `docs/UNITS.md` for the actual ledger — this
+section is a summary of it and goes stale between updates, so if the two disagree, **the ledger
+wins.** As of 25 Aug 2026:
 
 - **Shipped:** the document model, renderer, all 8 tools, dithering, the full chrome, 4 responsive
-  tiers, the "Mosaic" visual identity, IndexedDB autosave, the AI agent (25 actions, look-act-verify
-  loop, one-undo sessions, bring-your-own-key), layers (#46), the whole File menu including
-  paste image (clipboard → fit → median-cut quantise → one undoable command), and the code panel —
-  the document's own bytes, editable, both ways. Every unit **9/10**.
-- **Next:** whatever `docs/UNITS.md` marks `NEXT` — it is the ledger and this line is not. As of
-  C that is **D, the exporters**, with layers phase 2 and animation
-  behind it. Share is parked (`docs/DEFERRED.md`). Read `docs/specs/14-layers.md §9`
-  before the animation unit: layers are per-frame, and whether a layer belongs to one frame or all
-  of them is the decision that unit left open.
-- **Deferred:** Phase 6, AI edit quality. Phase 0 failed its gate 0/9; a re-test after the agent
-  loop and at 32x32 produces recognisable, correctly-placed edits that damage nothing, but the
-  output is still not artist-grade. Recorded in `docs/PHASE-0-FINDINGS.md`. The remaining gap is
-  model capability rather than engineering, and the standing decision is not to spend time there.
-- **Model:** `gemini-3.1-flash-lite` on the free tier. 5 requests/minute is the binding limit, and
-  one agent session is about five requests.
+  tiers, the "Mosaic" visual identity, IndexedDB autosave, layers, the whole File menu including
+  paste image, the code panel, exporters, animation, and — unit I — a real Anthropic-compatible
+  provider (Claude via AgentRouter or direct, alongside the original Gemini free tier), rebuilt BYOK,
+  and a re-run AI-quality gate. Every unit **9/10**.
+- **AI edit quality is NO LONGER the deferred item it was through unit H.** Re-tested against
+  `claude-opus-5`: 14 of 15 scenarios scored ≥ 9, ten a clean 10 (`PHASE-0-FINDINGS.md §2`). The old
+  "model capability, not engineering" verdict was wrong — it was reached against a free-tier model
+  that was the only one this project could reach at the time. **Do not cite that old verdict; it is
+  superseded and the file says so.**
+- **A live, structural finding from the same day, `UNITS.md §I.1`:** AgentRouter, called
+  server-side (which hard rule 6 requires), is blocked by an Aliyun WAF on requests from Vercel's
+  IP range — a 200 HTML challenge page, not a real API response, independent of key or headers.
+  Not fixable from this codebase. The app now reports this honestly (`bad_waf`) instead of a
+  misleading generic error, but AgentRouter itself may simply not work from this deployment.
+  Direct `api.anthropic.com` is expected to be unaffected but was not yet verified with a real key
+  — see `UNITS.md §I.1`'s open item.
+- **Next:** `docs/UNITS.md` marks unit **J, the selector tool** (object select, multi-select, drag)
+  as `NEXT`, scoped and ready — read that block before starting, it has the research and the
+  decisions already made. Share stays parked (`docs/DEFERRED.md`).
+- **Model:** two paths now. The deployment's own free tier is still `gemini-3.1-flash-lite` (5
+  requests/minute, ~5 requests per session — unchanged). A visitor's own key can also be Claude
+  (`claude-opus-5`) via Anthropic direct or AgentRouter, subject to the WAF caveat above.
 
 ## Commands, beyond the basics
 
