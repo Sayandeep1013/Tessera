@@ -195,17 +195,15 @@ export async function POST(req: Request) {
             })
           }
           if (res.message.startsWith('bad_waf')) {
-            // Measured 25 Aug 2026: agentrouter.org, fronted by an Aliyun WAF,
+            // Measured 25 Aug 2026, confirmed twice with two independent
+            // AgentRouter keys: agentrouter.org, fronted by an Aliyun WAF,
             // blocks requests from this server's own network with a 200 HTML
             // challenge page — independent of the key, the headers, or the
-            // request content. Telling the user to check their key here would
-            // send them re-typing something that was never the problem.
-            return fail(
-              502,
-              'bad_waf',
-              "This relay is blocking requests from Tessera's server, not from your key. Try Claude · Anthropic instead, or a different relay.",
-              { byok: true },
-            )
+            // request content. One plain sentence, not a technical breakdown —
+            // the user asked for exactly this and no more.
+            return fail(502, 'bad_waf', 'AgentRouter is blocked for this site right now. Try Claude · Anthropic instead.', {
+              byok: true,
+            })
           }
           return fail(400, 'bad_key', 'That API key was rejected. Check it and try again.', {
             byok: true,

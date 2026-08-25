@@ -151,7 +151,7 @@ describe('a WAF-blocked relay gets its own message (§5 bad_waf)', () => {
     expect(res.status).toBe(502)
     const body = await res.json()
     expect(body.code).toBe('bad_waf')
-    expect(body.message).toMatch(/blocking requests from Tessera's server/)
+    expect(body.message).toMatch(/AgentRouter is blocked/)
     expect(body.byok).toBe(true)
   })
 })
