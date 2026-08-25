@@ -252,13 +252,13 @@ repo owned, most of it pre-existing and simply invisible behind a model too weak
     left transparent."* Raised to 12.
 11. **A hardcoded 5-minute transport wall, locally.** Node's default fetch dispatcher kills a
     socket after a 300-second `headersTimeout`, and a detailed drawing routinely takes a whole
-    turn longer than that against `npx next dev`, which has no timeout of its own. **This fix was
-    reverted the same day it shipped** — see the live incident in `UNITS.md §I.1`. A custom
-    `undici.Agent` dispatcher fixed the local symptom and broke every live request on Vercel
-    outright, and it bought nothing there regardless: Vercel's own `maxDuration` (10s default, 60s
-    ceiling on this plan) kills a request long before a 20-minute dispatcher timeout could matter.
-    `maxDuration = 60` on both AI routes is what actually helps on the deployed app; streaming is
-    the real structural fix if a harder task than S4 needs more than that.
+    turn longer than that against `npx next dev`, which has no timeout of its own. Fixed with a
+    custom `undici.Agent` dispatcher. **Removed the same day on a wrong hypothesis, reinstated the
+    same day once the real cause of a live bug was found and the dispatcher confirmed innocent of
+    it** — full story in `UNITS.md §I.1`–`§I.2`. It stays in place: confirmed inert on Vercel
+    either way (`maxDuration = 60` governs there regardless), and locally it is the only thing
+    standing between a hard task and a wall that has nothing to do with the model's own budget —
+    a live check asking for a frog hit exactly that wall the moment the dispatcher was gone.
 12. **An unbounded thinking budget.** claude-opus-5's adaptive thinking is on by default and is
     billed against the same `max_tokens` ceiling as the tool call it is reasoning toward. On a
     hard task the model could spend the entire budget thinking and never draw. Bounded to 16,000

@@ -6,6 +6,7 @@
  * with a different purpose.
  */
 
+import { Agent } from 'undici'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createAnthropicProvider } from '../anthropic'
 import type { ConverseTurn } from '../types'
@@ -82,11 +83,35 @@ describe('request shape (§2.1)', () => {
 })
 
 /**
- * A custom undici.Agent dispatcher lived here, and broke every live request in
- * production in ~2s — see the comment above `THINKING_BUDGET` in anthropic.ts
- * for the full reasoning. Removed rather than kept-but-disabled: a passing test
- * for infrastructure that must never be reintroduced is worse than no test.
+ * Removed once as the prime suspect for a live "every prompt fails" report,
+ * then reinstated once the real cause (an unrelated WAF, `docs/UNITS.md §I.1`)
+ * was found and the dispatcher was confirmed innocent — same failure, present
+ * or absent. Reinstated with its test, not just its code: a fix that vanished
+ * once without a test defending it is exactly the kind that vanishes twice.
  */
+describe('the dispatcher (§5.1 wall, corrected in UNITS.md §I.1)', () => {
+  it('every request carries an undici Agent with a headersTimeout past the 5-minute wall', async () => {
+    const calls = mockFetch(() => ok([]))
+    await converse()
+    const dispatcher = (calls[0]!.init as unknown as { dispatcher?: Agent }).dispatcher
+    expect(dispatcher).toBeInstanceOf(Agent)
+  })
+
+  it('generate() carries the same dispatcher as converse()', async () => {
+    const calls = mockFetch(() =>
+      ok([{ type: 'tool_use', id: 'x', name: 'propose_edit', input: {} }]),
+    )
+    await provider().generate({
+      systemPrompt: 'SYS',
+      imagePngBase64: 'AAAA',
+      userText: 'go',
+      jsonSchema: { type: 'object' },
+      maxOutputTokens: 500,
+    })
+    const dispatcher = (calls[0]!.init as unknown as { dispatcher?: Agent }).dispatcher
+    expect(dispatcher).toBeInstanceOf(Agent)
+  })
+})
 
 describe('client identity (§3)', () => {
   it('identifies honestly by default', async () => {

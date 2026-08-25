@@ -1816,7 +1816,7 @@ bottleneck.
 | 1 | Spec conformance | 9 | Every §-numbered requirement in both specs is built: the adapter, the translation, the SSRF gates, `§4.1`'s hard rule, BYOK + migration, the dialog, `/api/ai/models`, the eval harness and rubric, prompt caching. Not built: OpenRouter (18 §1 scopes it out explicitly) and a fourth eval pass to force S4 to a clean completion — deliberately not spent, per §2.2. |
 | 2 | Correctness | 9 | 920 tests green, typecheck clean, production build clean. Twelve real defects found and fixed, several pre-existing and load-bearing (the palette-recolour undo bug, the bundle guards that had never run). The one open item is S4 not completing within the harness window — not a correctness bug, recorded as such. |
 | 3 | Tests | 9 | Every fix in §2.3/§2.4 above has a test that reproduces it before the fix and passes after — the dialect conversion, the id-pairing determinism, the palette idempotence, the rate-limit and transport retries, the bounded-thinking request shape, `§4.1`'s no-key-no-config rule. `tools/eval-ai.ts` is deliberately not in `npm test` — it costs real money, same reasoning as every other paid probe in this repo. |
-| 4 | Integration | 9 | The registry stays Gemini-shaped per `12 §5`; the dialect and block translation live in the adapter, where a provider difference belongs. `commit()` still the only writer. **`undici` as a direct dependency, and the custom dispatcher it existed for, were both added and then removed the same day** (`§I.1`) — the codebase now carries neither; `git log` on `lib/ai/provider/anthropic.ts` is the honest record if this row's history matters later. |
+| 4 | Integration | 9 | The registry stays Gemini-shaped per `12 §5`; the dialect and block translation live in the adapter, where a provider difference belongs. `commit()` still the only writer. **`undici` and its dispatcher were added, removed, and reinstated, all the same day** (`§I.1`) — added as the honest fix for a real local-dev wall, removed on a wrong hypothesis about a live bug, reinstated once that hypothesis was disproven and the dispatcher confirmed innocent. The codebase carries it now; `git log` on `lib/ai/provider/anthropic.ts` is the honest record of the churn if it matters later. |
 | 5 | Design fidelity | 9 | The key dialog matches `18 §7` to the measurement — provider picker, placeholder/link per provider, the compatibility checkbox and its exact wording, both themes, 320px. `tools/probe-byok.ts` is 53/53 on structure and 56/56 including the live path, both driving **the user's own flow**: cold browser, dialog, AgentRouter preset, pasted key, real edit. |
 | 6 | No regressions | 9 | Full suite green (920, up from 822 at the start of the unit — the delta is new tests, not fewer old ones). Gemini's free-tier path is untouched and still the default with no key. `npm run build` clean with the new route and the new dependency. |
 
@@ -1899,6 +1899,22 @@ say so here and in `PHASE-0-FINDINGS.md`; if it also fails, that is a much bigge
 
 **What was never affected:** the deployment's own free-tier Gemini path, which was never routed
 through AgentRouter and shares none of this code path.
+
+### §I.2 — The dispatcher, reinstated, same day
+
+The custom `undici.Agent` dispatcher removed in step 4 above was **reinstated**, still 25 Aug 2026,
+once the WAF was confirmed as the sole cause. The removal was based on a real, reasonable-at-the-
+time hypothesis — a raw custom connection stack fingerprinting differently than default fetch,
+against a relay already known to fingerprint aggressively — and that hypothesis turned out to be
+**wrong**: the identical failure occurred with the dispatcher both present (step 1) and absent
+(step 5), which is exactly the evidence needed to clear it. Meanwhile a live check run right after
+the WAF fix — asking the deployed-and-local app to draw a frog — hit the *original* problem the
+dispatcher existed to solve: a turn still legitimately working at 5.1 minutes got its socket killed
+by fetch's bare 300s `headersTimeout`, locally, where nothing else imposes a shorter limit.
+
+Reinstated with the reasoning corrected in its own comment (`lib/ai/provider/anthropic.ts`) and its
+test restored, not left removed out of excess caution. Confirmed inert on Vercel either way — this
+deployment's own `maxDuration` (60s) governs there regardless of what the dispatcher is set to.
 
 ---
 

@@ -15,6 +15,7 @@
  * Bedrock), usage reported, WAF passed only with the claude-code client profile.
  */
 
+import { Agent } from 'undici'
 import type { ClientProfile } from './config'
 import { fromAnthropicContent, toAnthropicMessages, toAnthropicTools } from './translate'
 import type {
@@ -32,31 +33,34 @@ export const DEFAULT_MODEL = 'claude-opus-5'
 const ANTHROPIC_VERSION = '2023-06-01'
 
 /**
- * A custom `undici.Agent` dispatcher WAS here, raising fetch's default 300s
- * `headersTimeout` so a slow-generating turn didn't get its socket killed
- * mid-response (docs/specs/19 §5.1). REMOVED 25 Aug 2026 — it broke every
- * request in production, including a trivial single-pixel one, in ~2 seconds,
- * with "the model returned a response that was not JSON". Reasoning for the
- * revert, not just the symptom:
+ * A dedicated dispatcher, raising fetch's default 300s `headersTimeout` so a
+ * slow-generating turn does not get its socket killed mid-response.
  *
- *   1. It bypasses whatever fetch implementation Vercel's Node runtime provides
- *      by default, on the one request path in this app that talks to a relay
- *      already known to fingerprint its callers aggressively (§3 — the
- *      client-identity WAF). A raw custom connection stack is exactly the kind
- *      of thing that fingerprints differently from a cloud IP than it does from
- *      a home network, and the failure's timing (~2s, too fast to be real
- *      generation) is consistent with a rejection at the connection layer, not
- *      a token budget.
- *   2. It bought nothing on Vercel regardless: this project is on Vercel's
- *      Hobby plan, whose serverless function `maxDuration` default (10s) and
- *      ceiling (60s) both kill the request long before a 20-minute dispatcher
- *      timeout could ever matter. The dispatcher solved a problem that only
- *      existed in local dev, where nothing else was imposing a shorter limit.
+ * REMOVED, then REINSTATED, both 25 Aug 2026 — the full story, corrected as it
+ * unfolded, is `docs/UNITS.md §I.1`. Short version: this was removed as the
+ * prime suspect for a live "every prompt fails" report, on a plausible theory
+ * (a raw custom connection stack fingerprinting differently than default fetch,
+ * against a relay already known to fingerprint aggressively). **That theory was
+ * wrong** — the real cause, found afterward by reading the actual response
+ * body, was an Aliyun WAF blocking Vercel's IP range outright, and it produced
+ * the identical failure with the dispatcher both present and absent. Removing
+ * it fixed nothing on Vercel; it only cost local dev the thing it was built
+ * for, which promptly bit: a live check right after asked for a frog and hit
+ * the bare 300s wall at 5.1 minutes into a genuinely still-working turn.
  *
- * If a genuinely long generation needs to survive on Vercel, the real fix is
- * `export const maxDuration` on the route (Hobby caps it at 60s; a paid plan
- * raises that) plus, eventually, streaming — not a bypassed connection stack.
+ * Safe to keep unconditionally: on Vercel this deployment's own `maxDuration`
+ * (60s, this plan's ceiling) kills a function long before a 20-minute
+ * dispatcher timeout could ever matter, so its presence there is inert either
+ * way — confirmed, not assumed, since the WAF blocked identically with and
+ * without it. Locally, where nothing else imposes a shorter limit, it is the
+ * only thing standing between a hard task and a wall that has nothing to do
+ * with the model's own budget.
  */
+const dispatcher = new Agent({
+  headersTimeout: 20 * 60 * 1000,
+  bodyTimeout: 20 * 60 * 1000,
+  connectTimeout: 30 * 1000,
+})
 
 /** The tool generate() forces, so a discriminated union survives the wire (§2.2). */
 const EDIT_TOOL = 'propose_edit'
@@ -207,7 +211,10 @@ export function createAnthropicProvider(opts: AnthropicOptions): AiProvider {
         },
         body: JSON.stringify({ model: modelId, ...body }),
         signal,
-      })
+        // Node-specific fetch extension, not a spec option. See the comment on
+        // `dispatcher` — confirmed inert on Vercel, load-bearing locally.
+        dispatcher,
+      } as RequestInit & { dispatcher: Agent })
     } catch (e) {
       if (signal?.aborted) return fail('unavailable', 'the request was cancelled')
       return fail('unavailable', String((e as Error).message ?? e).slice(0, 200))
